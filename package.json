@@ -1,5 +1,11 @@
 {
   "name": "sorak",
   "private": true,
-  "packageManager": "pnpm@12.8.1"
+  "packageManager": "pnpm@12.8.1",
+  "scripts": {
+    "dev": "node -e \"require('fs').mkdirSync('apps/web/dist',{recursive:true})\" && wrangler dev -c apps/api/wrangler.jsonc -c apps/realtime/wrangler.jsonc"
+  },
+  "devDependencies": {
+    "wrangler": "~4.145.0"
+  }
 }
