@@ -1,21 +1,5 @@
 {
-  "name": "@sorak/shared",
-  "version": "0.1.0",
+  "name": "sorak",
   "private": true,
-  "description": "Kontrak bersama Sorak: protokol WebSocket, skema Zod, bentuk storage Durable Object, dan event Queue.",
-  "type": "module",
-  "exports": {
-    ".": "./src/index.ts"
-  },
-  "scripts": {
-    "typecheck": "tsc --noEmit",
-    "test": "vitest run"
-  },
-  "dependencies": {
-    "zod": "^4.6.5"
-  },
-  "devDependencies": {
-    "typescript": "^7.0.2",
-    "vitest": "^5.0.3"
-  }
+  "packageManager": "pnpm@12.8.1"
 }
