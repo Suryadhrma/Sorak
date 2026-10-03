@@ -1,12 +1,16 @@
 import { Hono } from "hono";
 import { csrf } from "hono/csrf";
 import { HTTPException } from "hono/http-exception";
+import { z } from "zod";
 import { ErrorCode, Pin } from "@sorak/shared";
 import { apiError } from "./api-error.ts";
 import { authRoutes } from "./auth.ts";
 import { log } from "./log.ts";
 import { quizRoutes } from "./quiz-routes.ts";
 import { requireHost } from "./session.ts";
+
+// Pesan Zod sampai ke guru lewat `fields` di editor, jadi pakai Bahasa Indonesia.
+z.config(z.locales.id());
 
 export const app = new Hono<{ Bindings: Env }>();
 

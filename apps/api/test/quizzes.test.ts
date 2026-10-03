@@ -147,6 +147,17 @@ describe("validasi body", () => {
     expect(Object.keys(body.error.fields).sort()).toEqual(["questions.0.correctIndex", "title"]);
   });
 
+  it("pesan validasi bawaan Zod berbahasa Indonesia", async () => {
+    const host = await signedInHost();
+    const res = await host.send("/api/quizzes", {
+      method: "POST",
+      json: quizInput({ questions: [question("Soal", { options: ["Satu-satunya"] })] }),
+    });
+
+    const body = await res.json<{ error: { fields: Record<string, string> } }>();
+    expect(body.error.fields["questions.0.options"]).toMatch(/^Terlalu kecil/);
+  });
+
   it("JSON rusak: 400 VALIDATION_FAILED", async () => {
     const host = await signedInHost();
     const res = await host.send("/api/quizzes", { method: "POST", body: "{bukan json" });
