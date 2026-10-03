@@ -16,6 +16,8 @@ export default {};
 export default defineConfig(async () => {
   // Dibaca di Node (akses file), lalu diteruskan ke Worker test sebagai binding.
   const migrations = await readD1Migrations("migrations");
+  // Pemecah query yang sama dengan migrasi, supaya test menjalankan seed persis per pernyataan.
+  const seed = await readD1Migrations("seed");
   return {
     plugins: [
       cloudflareTest({
@@ -23,6 +25,7 @@ export default defineConfig(async () => {
         miniflare: {
           bindings: {
             TEST_MIGRATIONS: migrations,
+            TEST_SEED: seed,
             // Nilai khusus test; Google di-mock lewat globalThis.fetch.
             APP_ORIGIN: "https://sorak.test",
             GOOGLE_CLIENT_ID: "test-client.apps.googleusercontent.com",

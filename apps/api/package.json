@@ -7,7 +7,8 @@
     "types": "wrangler types",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "db:migrate:local": "wrangler d1 migrations apply sorak-db --local"
+    "db:migrate:local": "wrangler d1 migrations apply sorak-db --local",
+    "db:seed:local": "wrangler d1 execute sorak-db --local --file seed/local.sql"
   },
   "dependencies": {
     "@sorak/shared": "workspace:*",
