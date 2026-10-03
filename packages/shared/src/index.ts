@@ -6,3 +6,6 @@ export * from "./close-codes.ts";
 export * from "./codec.ts";
 export * from "./room-storage.ts";
 export * from "./events.ts";
+export * from "./api/quiz.ts";
+export * from "./api/host.ts";
+export * from "./api/errors.ts";

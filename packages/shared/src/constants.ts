@@ -65,3 +65,22 @@ export const RATE_LIMIT = {
 export const MAX_CONSECUTIVE_INVALID_MESSAGES = 3;
 
 export const REACTIONS = ["clap", "fire", "laugh", "wow", "heart"] as const;
+
+/* Batas REST kuis dan akun host; harus sama dengan CHECK di apps/api/migrations/0001_init.sql. */
+export const QUIZ_TITLE_MAX_LENGTH = 120;
+export const QUIZ_DESCRIPTION_MAX_LENGTH = 500;
+export const EXPLANATION_MAX_LENGTH = 500;
+export const DISPLAY_NAME_MAX_LENGTH = 60;
+export const DEFAULT_TIME_LIMIT_SEC = 20;
+
+/** Batas baris halaman "Kuis saya". */
+export const QUIZ_LIST_LIMIT = 100;
+
+/** Batas body POST/PUT kuis. 50 soal penuh berhuruf Arab (2 byte per karakter di UTF-8) sekitar 130 KB. */
+export const QUIZ_BODY_MAX_BYTES = 262_144;
+
+/** Umur cookie sesi host: 7 hari. */
+export const SESSION_TTL_SEC = 604_800;
+
+/** Umur cookie state OAuth: cukup untuk memilih akun di halaman Google. */
+export const OAUTH_STATE_TTL_SEC = 600;
