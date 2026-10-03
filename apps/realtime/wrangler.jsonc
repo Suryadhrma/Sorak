@@ -2,7 +2,7 @@
   "$schema": "../../node_modules/wrangler/config-schema.json",
   "name": "sorak-realtime",
   "main": "src/index.ts",
-  "compatibility_date": "2026-10-02",
+  "compatibility_date": "2026-08-22",
   "workers_dev": false,
   "durable_objects": {
     "bindings": [{ "name": "GAME_ROOM", "class_name": "GameRoom" }]

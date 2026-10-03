@@ -1,23 +1,7 @@
+import { createExecutionContext, createMessageBatch, getQueueResult } from "cloudflare:test";
 import { describe, expect, it } from "vitest";
 import type { GameEndedEvent } from "@sorak/shared";
-import { consumeGameEvents } from "../src/game-events.ts";
-
-function queueMessage(body: unknown) {
-  const calls = { ack: 0, retry: 0 };
-  const message: Message<unknown> = {
-    id: "m1",
-    timestamp: new Date(0),
-    body,
-    attempts: 1,
-    ack: () => {
-      calls.ack += 1;
-    },
-    retry: () => {
-      calls.retry += 1;
-    },
-  };
-  return { message, calls };
-}
+import worker from "../src/index.ts";
 
 const validEvent: GameEndedEvent = {
   type: "game_ended",
@@ -48,16 +32,23 @@ const validEvent: GameEndedEvent = {
   ],
 };
 
-describe("consumeGameEvents", () => {
-  it("meng-ack event yang valid", () => {
-    const { message, calls } = queueMessage(validEvent);
-    consumeGameEvents([message]);
-    expect(calls).toEqual({ ack: 1, retry: 0 });
+async function consume(body: unknown) {
+  const batch = createMessageBatch("sorak-game-events", [{ id: "m1", timestamp: new Date(0), attempts: 1, body }]);
+  const ctx = createExecutionContext();
+  await worker.queue(batch);
+  return getQueueResult(batch, ctx);
+}
+
+describe("consumer sorak-game-events", () => {
+  it("meng-ack event yang valid", async () => {
+    const result = await consume(validEvent);
+    expect(result.explicitAcks).toEqual(["m1"]);
+    expect(result.retryMessages).toEqual([]);
   });
 
-  it("meng-ack event tidak valid tanpa retry", () => {
-    const { message, calls } = queueMessage({ type: "game_ended", v: 1 });
-    consumeGameEvents([message]);
-    expect(calls).toEqual({ ack: 1, retry: 0 });
+  it("meng-ack event tidak valid tanpa retry", async () => {
+    const result = await consume({ type: "game_ended", v: 1 });
+    expect(result.explicitAcks).toEqual(["m1"]);
+    expect(result.retryMessages).toEqual([]);
   });
 });
