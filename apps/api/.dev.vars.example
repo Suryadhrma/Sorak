@@ -1,0 +1,6 @@
+# Salin ke .dev.vars (di-gitignore) lalu isi. Lokal, APP_ORIGIN = http://localhost:5173.
+APP_ORIGIN=
+GOOGLE_CLIENT_ID=
+GOOGLE_CLIENT_SECRET=
+# String acak 32 byte, misalnya: node -e "console.log(crypto.randomBytes(32).toString('base64url'))"
+JWT_SECRET=

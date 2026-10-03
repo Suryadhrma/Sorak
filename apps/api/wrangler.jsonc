@@ -3,6 +3,10 @@
   "name": "sorak",
   "main": "src/index.ts",
   "compatibility_date": "2026-08-22",
+  // Lokal ditimpa .dev.vars. GOOGLE_CLIENT_SECRET dan JWT_SECRET lewat wrangler secret put.
+  "vars": {
+    "APP_ORIGIN": "https://sorak.helpu.workers.dev"
+  },
   "assets": {
     "directory": "../web/dist",
     "not_found_handling": "single-page-application",

@@ -21,7 +21,14 @@ export default defineConfig(async () => {
       cloudflareTest({
         wrangler: { configPath: "./wrangler.jsonc" },
         miniflare: {
-          bindings: { TEST_MIGRATIONS: migrations },
+          bindings: {
+            TEST_MIGRATIONS: migrations,
+            // Nilai khusus test; Google di-mock lewat globalThis.fetch.
+            APP_ORIGIN: "https://sorak.test",
+            GOOGLE_CLIENT_ID: "test-client.apps.googleusercontent.com",
+            GOOGLE_CLIENT_SECRET: "test-client-secret",
+            JWT_SECRET: "test-jwt-secret-0123456789abcdefghijklmnop",
+          },
           workers: [
             {
               name: "sorak-realtime",
