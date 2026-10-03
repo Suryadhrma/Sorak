@@ -1,4 +1,5 @@
 import { env } from "cloudflare:workers";
+import { sign } from "hono/jwt";
 import { app } from "../src/app.ts";
 
 /** Sama dengan APP_ORIGIN di vitest.config.ts. */
@@ -24,4 +25,18 @@ export async function insertHost(host: { id: string; email: string; sessionVersi
   )
     .bind(host.id, host.email, host.subject ?? `sub-${host.id}`, host.sessionVersion ?? 0, now, now)
     .run();
+}
+
+/** Host baru yang sudah login: `send` mengirim request dengan cookie sesinya, dari origin yang sama. */
+export async function signedInHost() {
+  const id = crypto.randomUUID();
+  await insertHost({ id, email: `${id}@example.com` });
+  const token = await sign({ sub: id, sv: 0, exp: Math.floor(Date.now() / 1000) + 3600 }, env.JWT_SECRET, "HS256");
+  const send = (path: string, init: { method?: string; json?: unknown; body?: string } = {}) => {
+    const headers: Record<string, string> = { Cookie: `sorak_session=${token}`, Origin: ORIGIN };
+    if (init.json !== undefined || init.body !== undefined) headers["Content-Type"] = "application/json";
+    const body = init.body ?? (init.json === undefined ? undefined : JSON.stringify(init.json));
+    return request(path, { method: init.method ?? "GET", headers, body });
+  };
+  return { id, send };
 }

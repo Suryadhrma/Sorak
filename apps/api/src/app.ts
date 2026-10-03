@@ -5,6 +5,7 @@ import { ErrorCode, Pin } from "@sorak/shared";
 import { apiError } from "./api-error.ts";
 import { authRoutes } from "./auth.ts";
 import { log } from "./log.ts";
+import { quizRoutes } from "./quiz-routes.ts";
 import { requireHost } from "./session.ts";
 
 export const app = new Hono<{ Bindings: Env }>();
@@ -23,6 +24,8 @@ app.get("/api/health", (c) => c.json({ status: "ok" }));
 app.route("/api/auth", authRoutes);
 
 app.get("/api/me", requireHost, (c) => c.json(c.var.host));
+
+app.route("/api/quizzes", quizRoutes);
 
 app.get("/ws/:role{play|host}/:pin", async (c) => {
   const pin = Pin.safeParse(c.req.param("pin"));

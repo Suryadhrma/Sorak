@@ -20,3 +20,14 @@ export const ApiError = z.object({
   }),
 });
 export type ApiError = z.infer<typeof ApiError>;
+
+/** Issue Zod jadi `fields` ApiError: path bertitik (`questions.3.correctIndex`) ke pesan pertama di path itu. */
+export function fieldErrors(issues: readonly { path: readonly PropertyKey[]; message: string }[]): Record<string, string> {
+  const fields: Record<string, string> = {};
+  for (const issue of issues) {
+    const path = issue.path.map(String).join(".");
+    // Satu kotak cukup satu pesan; yang pertama biasanya yang paling mendasar.
+    fields[path] ??= issue.message;
+  }
+  return fields;
+}

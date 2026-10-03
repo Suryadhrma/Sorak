@@ -11,6 +11,7 @@ import {
   QuestionInput,
   QuizInput,
   TIME_LIMIT_MAX_SEC,
+  fieldErrors,
   type QuestionInput as QuestionInputType,
 } from "../src/index.ts";
 
@@ -92,5 +93,20 @@ describe("anggaran ukuran body kuis", () => {
 
     expect(QuizInput.safeParse(quiz).success).toBe(true);
     expect(new TextEncoder().encode(JSON.stringify(quiz)).byteLength).toBeLessThan(QUIZ_BODY_MAX_BYTES);
+  });
+});
+
+describe("fieldErrors", () => {
+  it("memetakan path bertitik ke pesan pertama di path itu", () => {
+    const result = QuizInput.safeParse({ title: "", description: null, questions: [question(), question({ options: ["A"], correctIndex: 5 })] });
+    expect(result.success).toBe(false);
+    const fields = fieldErrors(result.error?.issues ?? []);
+    expect(Object.keys(fields).sort()).toEqual(["questions.1.correctIndex", "questions.1.options", "title"]);
+    expect(fields.title).toBe("Judul tidak boleh kosong");
+  });
+
+  it("issue di akar body memakai path kosong", () => {
+    const result = QuizInput.safeParse("bukan objek");
+    expect(Object.keys(fieldErrors(result.error?.issues ?? []))).toEqual([""]);
   });
 });
