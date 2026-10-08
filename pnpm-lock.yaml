@@ -190,7 +190,7 @@ importers:
         version: 7.0.2
       vitest:
         specifier: ^4.1.11
-        version: 4.1.11(vite@8.3.1(esbuild@0.28.1))
+        version: 4.1.11(vite@8.3.1)
       wrangler:
         specifier: ~4.145.0
         version: 4.145.0
@@ -201,9 +201,15 @@ importers:
         specifier: workspace:*
         version: link:../../packages/shared
     devDependencies:
+      '@cloudflare/vitest-pool-workers':
+        specifier: ^0.22.0
+        version: 0.22.0(@vitest/runner@4.1.11)(@vitest/snapshot@4.1.11)(vitest@4.1.11(vite@8.3.1(esbuild@0.28.1)))
       typescript:
         specifier: ^7.0.2
         version: 7.0.2
+      vitest:
+        specifier: ^4.1.11
+        version: 4.1.11(vite@8.3.1)
       wrangler:
         specifier: ~4.145.0
         version: 4.145.0
@@ -243,7 +249,7 @@ importers:
         version: 8.3.1(esbuild@0.28.1)
       vitest:
         specifier: ^4.1.11
-        version: 4.1.11(vite@8.3.1(esbuild@0.28.1))
+        version: 4.1.11(vite@8.3.1)
 
   packages/shared:
     dependencies:
@@ -256,7 +262,7 @@ importers:
         version: 7.0.2
       vitest:
         specifier: ^4.1.11
-        version: 4.1.11(vite@8.3.1(esbuild@0.28.1))
+        version: 4.1.11(vite@8.3.1)
 
 packages:
 
@@ -1592,7 +1598,7 @@ snapshots:
       cjs-module-lexer: 1.2.3
       esbuild: 0.28.1
       miniflare: 5.20260815.0-alpha
-      vitest: 4.1.11(vite@8.3.1(esbuild@0.28.1))
+      vitest: 4.1.11(vite@8.3.1)
       wrangler: 4.124.0
       zod: 4.4.3
     transitivePeerDependencies:
@@ -2096,7 +2102,7 @@ snapshots:
       chai: 6.3.0
       tinyrainbow: 3.2.0
 
-  '@vitest/mocker@4.1.11(vite@8.3.1(esbuild@0.28.1))':
+  '@vitest/mocker@4.1.11(vite@8.3.1)':
     dependencies:
       '@vitest/spy': 4.1.11
       estree-walker: 3.0.3
@@ -2462,10 +2468,10 @@ snapshots:
       esbuild: 0.28.1
       fsevents: 2.3.3
 
-  vitest@4.1.11(vite@8.3.1(esbuild@0.28.1)):
+  vitest@4.1.11(vite@8.3.1):
     dependencies:
       '@vitest/expect': 4.1.11
-      '@vitest/mocker': 4.1.11(vite@8.3.1(esbuild@0.28.1))
+      '@vitest/mocker': 4.1.11(vite@8.3.1)
       '@vitest/pretty-format': 4.1.11
       '@vitest/runner': 4.1.11
       '@vitest/snapshot': 4.1.11
