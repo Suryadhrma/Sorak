@@ -7,6 +7,9 @@ export const ApiErrorCode = z.enum([
   "NOT_FOUND",
   "CONFLICT",
   "PAYLOAD_TOO_LARGE",
+  "RATE_LIMITED",
+  "ROOM_FULL",
+  "GAME_ALREADY_STARTED",
   "INTERNAL",
 ]);
 export type ApiErrorCode = z.infer<typeof ApiErrorCode>;

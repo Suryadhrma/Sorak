@@ -1,5 +1,5 @@
 import type { z } from "zod";
-import { MAX_CLIENT_MESSAGE_BYTES } from "./constants.ts";
+import { MAX_CLIENT_MESSAGE_BYTES, PROTOCOL_VERSION } from "./constants.ts";
 import { HostMessage, PlayerMessage, type ClientMessage } from "./client-messages.ts";
 import { HostServerMessage, PlayerServerMessage, type ServerMessage } from "./server-messages.ts";
 
@@ -8,15 +8,17 @@ import { HostServerMessage, PlayerServerMessage, type ServerMessage } from "./se
  * dan teks yang diterima kembali jadi objek yang sudah divalidasi.
  *
  * Urutan pengecekan sengaja dari yang paling murah ke paling mahal:
- * jenis data → ukuran → JSON.parse → validasi skema.
+ * jenis data → ukuran → JSON.parse → versi protokol → validasi skema.
  * Pesan raksasa atau sampah ditolak sebelum memakan CPU.
  */
 
-export type DecodeFailure = "binary" | "too_large" | "invalid_json" | "invalid_schema";
+export type DecodeFailure = "binary" | "too_large" | "invalid_json" | "unsupported_version" | "invalid_schema";
 
 export type DecodeResult<T> =
   | { ok: true; data: T }
-  | { ok: false; reason: DecodeFailure; detail?: string };
+  | { ok: false; reason: Exclude<DecodeFailure, "invalid_schema"> }
+  /** issuePaths (`["nickname"]`) membuat GameRoom bisa membalas kode yang tepat, misalnya NICKNAME_INVALID. */
+  | { ok: false; reason: "invalid_schema"; detail: string; issuePaths: string[] };
 
 const encoder = new TextEncoder();
 
@@ -39,15 +41,28 @@ function decodeWith<T>(schema: z.ZodType<T>, raw: unknown, maxBytes: number | nu
     return { ok: false, reason: "invalid_json" };
   }
 
+  if (hasOtherVersion(json)) return { ok: false, reason: "unsupported_version" };
+
   const result = schema.safeParse(json);
   if (!result.success) {
     const detail = result.error.issues
       .slice(0, 3)
       .map((issue) => `${issue.path.join(".") || "(root)"}: ${issue.message}`)
       .join("; ");
-    return { ok: false, reason: "invalid_schema", detail };
+    const issuePaths = [...new Set(result.error.issues.map((issue) => issue.path.join(".")))];
+    return { ok: false, reason: "invalid_schema", detail, issuePaths };
   }
   return { ok: true, data: result.data };
+}
+
+/**
+ * Pesan berbentuk benar (`t` dan `v` ada) tapi dari versi protokol lain. Dibedakan dari pesan rusak,
+ * supaya klien lama diminta memuat ulang halaman, bukan dihitung sebagai pengirim sampah.
+ */
+function hasOtherVersion(json: unknown): boolean {
+  if (typeof json !== "object" || json === null) return false;
+  if (!("t" in json) || !("v" in json)) return false;
+  return typeof json.t === "string" && json.v !== PROTOCOL_VERSION;
 }
 
 /** Dipakai GameRoom untuk pesan dari HP pemain. */

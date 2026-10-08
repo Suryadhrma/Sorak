@@ -1,7 +1,10 @@
 import { describe, expect, it } from "vitest";
 import {
+  ApiError,
+  CreateRoomInput,
   EXPLANATION_MAX_LENGTH,
   MAX_OPTIONS,
+  MAX_PLAYERS_PER_ROOM,
   MAX_QUESTIONS_PER_QUIZ,
   OPTION_MAX_LENGTH,
   PROMPT_MAX_LENGTH,
@@ -10,6 +13,7 @@ import {
   QUIZ_TITLE_MAX_LENGTH,
   QuestionInput,
   QuizInput,
+  RoomLookup,
   TIME_LIMIT_MAX_SEC,
   fieldErrors,
   type QuestionInput as QuestionInputType,
@@ -108,5 +112,22 @@ describe("fieldErrors", () => {
   it("issue di akar body memakai path kosong", () => {
     const result = QuizInput.safeParse("bukan objek");
     expect(Object.keys(fieldErrors(result.error?.issues ?? []))).toEqual([""]);
+  });
+});
+
+describe("REST room", () => {
+  it("membuat room butuh quizId berbentuk UUID", () => {
+    expect(CreateRoomInput.safeParse({ quizId: "7c9e6679-7425-40de-944b-e07fc1f90ae7" }).success).toBe(true);
+    expect(CreateRoomInput.safeParse({ quizId: "kuis-1" }).success).toBe(false);
+  });
+
+  it("hasil cek PIN: PIN 6 digit dan jumlah pemain dalam batas room", () => {
+    expect(RoomLookup.safeParse({ pin: "004213", playerCount: 0 }).success).toBe(true);
+    expect(RoomLookup.safeParse({ pin: "4213", playerCount: 0 }).success).toBe(false);
+    expect(RoomLookup.safeParse({ pin: "004213", playerCount: MAX_PLAYERS_PER_ROOM + 1 }).success).toBe(false);
+  });
+
+  it.each(["RATE_LIMITED", "ROOM_FULL", "GAME_ALREADY_STARTED"])("ApiError mengenal kode %s", (code) => {
+    expect(ApiError.safeParse({ error: { code, message: "x" } }).success).toBe(true);
   });
 });

@@ -138,9 +138,19 @@ export function pendingAnswerKey(playerId: string, questionIndex: number): strin
 
 // ---------- Attachment (kantong di tiap sambungan) ----------
 
-/** Socket yang sudah terbuka tapi belum mengirim join/resume/host_hello. */
-export const PendingAttachment = z.object({
-  role: z.literal("pending"),
+/**
+ * Socket yang sudah terbuka tapi belum mengirim pesan pembuka. Dua bentuk, supaya GameRoom tahu
+ * jalur masuknya: pemain hanya boleh join/resume, host hanya boleh host_hello.
+ */
+export const PendingPlayerAttachment = z.object({
+  role: z.literal("pending_player"),
+  connectedAt: Timestamp,
+});
+
+/** hostId sudah diverifikasi Worker dari cookie sesi. */
+export const PendingHostAttachment = z.object({
+  role: z.literal("pending_host"),
+  hostId: z.string().min(1),
   connectedAt: Timestamp,
 });
 
@@ -164,7 +174,12 @@ export const PlayerAttachment = z.object({
 });
 export type PlayerAttachment = z.infer<typeof PlayerAttachment>;
 
-export const SocketAttachment = z.discriminatedUnion("role", [PendingAttachment, HostAttachment, PlayerAttachment]);
+export const SocketAttachment = z.discriminatedUnion("role", [
+  PendingPlayerAttachment,
+  PendingHostAttachment,
+  HostAttachment,
+  PlayerAttachment,
+]);
 export type SocketAttachment = z.infer<typeof SocketAttachment>;
 
 // ---------- Helper ----------

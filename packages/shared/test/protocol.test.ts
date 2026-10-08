@@ -4,6 +4,9 @@ import {
   CloseCode,
   GameEndedEvent,
   HostServerMessage,
+  InitRoomInput,
+  InitRoomResult,
+  JoinInfo,
   MAX_CLIENT_MESSAGE_BYTES,
   MAX_PLAYERS_PER_ROOM,
   MAX_QUESTIONS_PER_QUIZ,
@@ -15,6 +18,8 @@ import {
   PlayerServerMessage,
   QUEUE_MESSAGE_MAX_BYTES,
   QuizSnapshot,
+  STALE_SOCKET_MS,
+  SocketAttachment,
   decodeHostMessage,
   decodePlayerMessage,
   decodePlayerServerMessage,
@@ -63,8 +68,23 @@ describe("pesan pemain", () => {
     expect(nicknameKey("DIMAS  ajah")).toBe(nicknameKey("dimas Ajah"));
   });
 
-  it("menolak versi protokol yang berbeda", () => {
-    expect(decodePlayerMessage(join({ v: 2 })).ok).toBe(false);
+  it("membedakan versi protokol lain dari pesan rusak", () => {
+    expect(decodePlayerMessage(join({ v: 2 }))).toEqual({ ok: false, reason: "unsupported_version" });
+    expect(decodeHostMessage(JSON.stringify({ t: "host_hello", v: 2 }))).toEqual({ ok: false, reason: "unsupported_version" });
+  });
+
+  it("pesan tanpa v atau tanpa t bukan masalah versi", () => {
+    const noVersion = decodePlayerMessage(JSON.stringify({ t: "join", nickname: "Dimas" }));
+    const noType = decodePlayerMessage(JSON.stringify({ v: 2 }));
+    expect(!noVersion.ok && noVersion.reason).toBe("invalid_schema");
+    expect(!noType.ok && noType.reason).toBe("invalid_schema");
+  });
+
+  it("menyebut path field yang gagal, supaya nickname salah bisa dibedakan dari pesan sampah", () => {
+    const badNickname = decodePlayerMessage(join({ nickname: "Dimas🔥" }));
+    const unknownType = decodePlayerMessage(JSON.stringify({ t: "give_me_points" }));
+    expect(!badNickname.ok && badNickname.reason === "invalid_schema" && badNickname.issuePaths).toEqual(["nickname"]);
+    expect(!unknownType.ok && unknownType.reason === "invalid_schema" && unknownType.issuePaths).toEqual(["t"]);
   });
 
   it("menolak field tambahan yang tidak dikenal (strict)", () => {
@@ -301,6 +321,59 @@ describe("anggaran ukuran (kasus terburuk)", () => {
     const size = bytes(event);
     console.info(`event game_ended terbesar: ${(size / 1024).toFixed(1)} KB`);
     expect(size).toBeLessThan(QUEUE_MESSAGE_MAX_BYTES);
+  });
+});
+
+describe("attachment socket pending", () => {
+  it("menerima kedua bentuk pending", () => {
+    expect(SocketAttachment.safeParse({ role: "pending_player", connectedAt: 1 }).success).toBe(true);
+    expect(SocketAttachment.safeParse({ role: "pending_host", hostId: "h1", connectedAt: 1 }).success).toBe(true);
+  });
+
+  it("pending host tanpa hostId dan bentuk lama 'pending' ditolak", () => {
+    expect(SocketAttachment.safeParse({ role: "pending_host", connectedAt: 1 }).success).toBe(false);
+    expect(SocketAttachment.safeParse({ role: "pending", connectedAt: 1 }).success).toBe(false);
+  });
+});
+
+describe("kontrol room (Worker ke GameRoom)", () => {
+  const input = {
+    gameId: "7c9e6679-7425-40de-944b-e07fc1f90ae7",
+    hostId: "h1",
+    pin: "004213",
+    scoringMode: "classic",
+    teamMode: false,
+    quiz: { quizId: "q1", title: "Kuis", questions: [storedQuestion] },
+  };
+
+  it("menerima input init yang valid, termasuk PIN berawalan nol", () => {
+    expect(InitRoomInput.safeParse(input).success).toBe(true);
+  });
+
+  it.each([
+    ["PIN 5 digit", { pin: "12345" }],
+    ["gameId bukan UUID", { gameId: "game-1" }],
+    ["kuis tanpa soal", { quiz: { quizId: null, title: "Kosong", questions: [] } }],
+  ])("menolak input init dengan %s", (_label, patch) => {
+    expect(InitRoomInput.safeParse({ ...input, ...patch }).success).toBe(false);
+  });
+
+  it("hasil init: sukses atau PIN sudah dipakai, alasan lain ditolak", () => {
+    expect(InitRoomResult.safeParse({ ok: true }).success).toBe(true);
+    expect(InitRoomResult.safeParse({ ok: false, reason: "pin_in_use" }).success).toBe(true);
+    expect(InitRoomResult.safeParse({ ok: false, reason: "busy" }).success).toBe(false);
+  });
+
+  it("join info menerima field baru dari versi GameRoom yang lebih baru (version skew)", () => {
+    expect(JoinInfo.safeParse({ status: "open", playerCount: 3, newField: 1 }).success).toBe(true);
+    expect(JoinInfo.safeParse({ status: "closed", playerCount: 3 }).success).toBe(false);
+    expect(JoinInfo.safeParse({ status: "full", playerCount: MAX_PLAYERS_PER_ROOM + 1 }).success).toBe(false);
+  });
+});
+
+describe("batas socket basi", () => {
+  it("memberi toleransi satu ping hilang: dua interval ditambah timeout", () => {
+    expect(STALE_SOCKET_MS).toBe(35_000);
   });
 });
 

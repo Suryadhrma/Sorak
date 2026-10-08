@@ -52,6 +52,13 @@ export const HEARTBEAT = {
   timeoutMs: 5_000,
 } as const;
 
+/**
+ * Socket pemain tanpa pong selama ini dianggap mati (HP hilang sinyal tanpa sempat menutup koneksi).
+ * Dua interval ping + timeout: socket sehat pun bisa punya pong berumur hampir satu interval,
+ * dan sinyal jelek bisa menelatkan satu ping.
+ */
+export const STALE_SOCKET_MS = HEARTBEAT.intervalMs * 2 + HEARTBEAT.timeoutMs;
+
 /** Jeda reconnect bertahap (exponential backoff); jitter ditambahkan oleh klien. */
 export const RECONNECT_BACKOFF_MS = [500, 1000, 2000, 5000] as const;
 
@@ -84,3 +91,16 @@ export const SESSION_TTL_SEC = 604_800;
 
 /** Umur cookie state OAuth: cukup untuk memilih akun di halaman Google. */
 export const OAUTH_STATE_TTL_SEC = 600;
+
+/** Percobaan membuat PIN yang belum dipakai room lain sebelum menyerah. */
+export const PIN_CREATE_ATTEMPTS = 5;
+
+/** Lobby tanpa satu pun layar host tersambung selama ini ditutup, supaya PIN bebas lagi. */
+export const LOBBY_IDLE_TIMEOUT_MS = 1_800_000;
+
+/**
+ * Batas cek PIN + WebSocket pemain per IP (ADR 0005). Satu WiFi sekolah = satu IP (NAT),
+ * jadi cukup untuk 60 siswa masuk dalam semenit. Nilai yang berlaku ditulis di binding
+ * `ratelimits` apps/api/wrangler.jsonc; test api memastikan keduanya sama.
+ */
+export const PIN_LOOKUP_LIMIT = { limit: 120, periodSec: 60 } as const;
