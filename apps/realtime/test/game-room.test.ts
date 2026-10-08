@@ -36,6 +36,19 @@ describe("kontrol room", () => {
     expect(await joinInfo(pin)).toEqual({ status: "not_found", playerCount: 0 });
   });
 
+  it("menolak Taruhan Yakin sampai mode itu dinilai (Hari 7)", async () => {
+    const pin = uniquePin();
+    expect((await initRoom(pin, { ...initInput(pin), scoringMode: "confidence" })).status).toBe(400);
+    expect(await joinInfo(pin)).toEqual({ status: "not_found", playerCount: 0 });
+  });
+
+  it("menyimpan mode skor yang dipilih dan mengirimnya ke pemain", async () => {
+    const pin = uniquePin();
+    await initRoom(pin, initInput(pin, { mode: "accurate" }));
+    const { welcome } = await joinedPlayer(pin, "Andi");
+    expect(welcome).toMatchObject({ room: { scoringMode: "accurate" } });
+  });
+
   it("room yang sudah lewat lobby menjawab started", async () => {
     const pin = uniquePin();
     await initRoom(pin);
