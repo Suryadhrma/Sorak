@@ -157,13 +157,21 @@ describe("GET /api/rooms/:pin", () => {
     expect(res.status).toBe(404);
   });
 
-  it(`request ke-${PIN_LOOKUP_LIMIT.limit + 1} dari IP yang sama -> 429`, async () => {
-    const ip = "203.0.113.121";
-    for (let i = 0; i < PIN_LOOKUP_LIMIT.limit; i++) expect((await lookup("100200", ip)).status).toBe(404);
-    const res = await lookup("100200", ip);
+  // Binding asli menghitung per jendela 60 detik; saat semua paket dites paralel, 120 request bisa melewati
+  // batas jendela dan hitungannya mulai dari nol (test tidak stabil). Yang diuji di sini pemetaan "batas habis"
+  // ke 429 dan kunci per IP, bukan ketepatan hitungan Cloudflare, jadi binding diganti fake yang selalu habis.
+  it("batas tebakan PIN habis -> 429 RATE_LIMITED, dengan IP sebagai kunci", async () => {
+    const limit = vi.spyOn(env.PIN_LOOKUP, "limit").mockResolvedValue({ success: false });
+    const res = await lookup("100200", "203.0.113.121");
     expect(res.status).toBe(429);
     expect(await res.json()).toMatchObject({ error: { code: "RATE_LIMITED" } });
-    expect((await lookup("100200", "203.0.113.122")).status).toBe(404);
+    expect(limit).toHaveBeenCalledWith({ key: "203.0.113.121" });
+  });
+
+  it("WebSocket pemain memakai batas yang sama", async () => {
+    vi.spyOn(env.PIN_LOOKUP, "limit").mockResolvedValue({ success: false });
+    const res = await request("/ws/play/100201", { headers: { Upgrade: "websocket", "CF-Connecting-IP": "203.0.113.121" } });
+    expect(res.status).toBe(429);
   });
 
   it("PIN_LOOKUP_LIMIT sama dengan binding ratelimits di wrangler.jsonc", () => {

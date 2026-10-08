@@ -1,5 +1,13 @@
 import { env } from "cloudflare:workers";
-import { ROOM_CONTROL_ORIGIN, RoomControlPath, RoomHeader, type InitRoomInput, type RoomRoute } from "@sorak/shared";
+import {
+  ROOM_CONTROL_ORIGIN,
+  RoomControlPath,
+  RoomHeader,
+  type InitRoomInput,
+  type RoomRoute,
+  type StoredQuestion,
+} from "@sorak/shared";
+import { expect } from "vitest";
 
 export const HOST_ID = "host-1";
 
@@ -14,19 +22,22 @@ export function roomStub(pin: string) {
   return env.GAME_ROOM.getByName(`room:${pin}`);
 }
 
-export function initInput(pin: string): InitRoomInput {
+/** Soal ke-i: jawaban benar selalu opsi 1, batas waktu 20 detik. */
+export function testQuestion(i: number): StoredQuestion {
+  return { questionId: `q${i}`, prompt: `Soal ${i + 1}`, options: ["A", "B", "C"], correctIndex: 1, timeLimitSec: 20, imageUrl: null };
+}
+
+export function initInput(pin: string, options: { questions?: number; mode?: "classic" | "accurate" } = {}): InitRoomInput {
   return {
     gameId: crypto.randomUUID(),
     hostId: HOST_ID,
     pin,
-    scoringMode: "classic",
+    scoringMode: options.mode ?? "classic",
     teamMode: false,
     quiz: {
       quizId: "quiz-1",
       title: "Kuis Uji",
-      questions: [
-        { questionId: "q1", prompt: "1 + 1?", options: ["1", "2"], correctIndex: 1, timeLimitSec: 20, imageUrl: null },
-      ],
+      questions: Array.from({ length: options.questions ?? 1 }, (_, i) => testQuestion(i)),
     },
   };
 }
@@ -106,4 +117,11 @@ export async function connectedHost(pin: string): Promise<{ client: Client; welc
   const client = await connect(pin, "host", HOST_ID);
   client.send({ t: "host_hello", v: 1 });
   return { client, welcome: await client.next() };
+}
+
+/** Pesan berikutnya harus cocok dengan bentuk ini (urutan pesan ikut diuji). */
+export async function expectNext(client: Client, expected: Record<string, unknown>): Promise<Record<string, unknown>> {
+  const message = (await client.next()) as Record<string, unknown>;
+  expect(message).toMatchObject(expected);
+  return message;
 }

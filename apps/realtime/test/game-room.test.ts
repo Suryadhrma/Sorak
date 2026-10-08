@@ -125,6 +125,8 @@ describe("join", () => {
     expect(await stale.client.closed).toMatchObject({ code: CloseCode.GOING_AWAY });
   });
 
+  // 200 socket sungguhan: sekitar 2 detik kalau jalan sendiri, tapi bisa lewat 5 detik saat pnpm -r test
+  // menjalankan semua paket paralel. Batas waktunya dilonggarkan khusus untuk test ini.
   it("room penuh -> ROOM_FULL dan 4010; satu socket basi memberi tempat", async () => {
     const pin = uniquePin();
     await initRoom(pin);
@@ -142,7 +144,7 @@ describe("join", () => {
     vi.setSystemTime(Date.now() + STALE_SOCKET_MS + 1000);
     const afterStale = await joinedPlayer(pin, "Telat");
     expect(afterStale.welcome).toMatchObject({ t: "welcome", nickname: "Telat" });
-  });
+  }, 15_000);
 });
 
 describe("pesan pertama dan batas", () => {
@@ -256,13 +258,6 @@ describe("host", () => {
     expect(await client.closed).toMatchObject({ code: CloseCode.ROOM_NOT_FOUND });
   });
 
-  it("start belum tersedia -> NOT_ALLOWED_NOW", async () => {
-    const pin = uniquePin();
-    await initRoom(pin);
-    const host = await connectedHost(pin);
-    host.client.send({ t: "start" });
-    expect(await host.client.next()).toMatchObject({ t: "error", code: "NOT_ALLOWED_NOW" });
-  });
 });
 
 describe("putus dan penutupan room", () => {

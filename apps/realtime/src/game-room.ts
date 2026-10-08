@@ -1,17 +1,26 @@
 import { DurableObject } from "cloudflare:workers";
 import {
   CloseCode,
+  ENDED_RETENTION_MS,
+  GRACE_MS,
   HEARTBEAT,
   InitRoomInput,
+  LEADERBOARD_SIZE,
   LOBBY_IDLE_TIMEOUT_MS,
   MAX_CONSECUTIVE_INVALID_MESSAGES,
   MAX_PLAYERS_PER_ROOM,
+  PODIUM_SIZE,
   PROTOCOL_VERSION,
+  PendingAnswer,
+  QuestionStatsList,
   QuizSnapshot,
+  REVEAL_IDLE_TIMEOUT_MS,
+  Roster,
   RoomControlPath,
   RoomHeader,
   RoomRoute,
   RoomState,
+  Scoreboard,
   SocketAttachment,
   StorageKey,
   decodeHostMessage,
@@ -19,6 +28,8 @@ import {
   encodeServerMessage,
   isAllowedInPhase,
   nicknameKey,
+  pendingAnswerKey,
+  toPublicQuestion,
   type DecodeResult,
   type ErrorCode,
   type HostMessage,
@@ -26,23 +37,41 @@ import {
   type JoinInfo,
   type PlayerAttachment,
   type PlayerMessage,
+  type QuestionStats,
   type RoomInfo,
   type RosterEntry,
+  type ScoringMode,
   type ServerMessage,
+
 } from "@sorak/shared";
 import { log } from "./log.ts";
+import { nextPhase, type PhaseEvent, type PhaseTarget } from "./phase.ts";
 import { takeToken, type TokenBucket } from "./rate-limit.ts";
+import { emptyScore, rankPlayers, revealQuestion } from "./reveal.ts";
+import type { ScoredMode } from "./scoring.ts";
 import { hashSessionToken, newSessionToken } from "./session-token.ts";
 import { isStale } from "./stale.ts";
 
 type DecodeFailure = Extract<DecodeResult<unknown>, { ok: false }>;
 type PlayerSocket = [WebSocket, PlayerAttachment];
+type AnswerMessage = Extract<PlayerMessage, { t: "answer" }>;
+type StoredRosterEntry = Roster[number];
 
+/**
+ * Cangkang imperatif game: membaca state, memanggil fungsi murni (phase.ts, scoring.ts, reveal.ts),
+ * lalu menulis storage dan mengirim pesan. Aturan permainannya sendiri tidak ada di file ini.
+ */
 export class GameRoom extends DurableObject<Env> {
   private state: RoomState | null = null;
   private quiz: QuizSnapshot | null = null;
+  /** Snapshot pemain saat Mulai; satu-satunya daftar peserta selama game, termasuk yang sudah putus. */
+  private roster: Roster = [];
+  private scoreboard: Scoreboard = {};
+  private qstats: QuestionStats[] = [];
+  /** Jawaban soal aktif dari pemain yang socket-nya sudah tertutup (key pending:<playerId>:<q>). */
+  private readonly pendingAnswers = new Map<string, PendingAnswer>();
   /**
-   * Roster hidup: satu-satunya sumber kebenaran siapa yang tersambung, dibangun ulang dari attachment
+   * Socket hidup: satu-satunya sumber kebenaran siapa yang tersambung, dibangun ulang dari attachment
    * setiap bangun dari hibernasi. Socket yang ditutup server langsung dikeluarkan dari sini, karena
    * HP yang hilang sinyal tidak pernah membalas close dan getWebSockets() masih bisa mengembalikannya.
    */
@@ -59,11 +88,24 @@ export class GameRoom extends DurableObject<Env> {
   }
 
   private async load(): Promise<void> {
-    const stored = await this.ctx.storage.get([StorageKey.state, StorageKey.quiz]);
+    const stored = await this.ctx.storage.get([
+      StorageKey.state,
+      StorageKey.quiz,
+      StorageKey.roster,
+      StorageKey.scoreboard,
+      StorageKey.qstats,
+    ]);
     const state = stored.get(StorageKey.state);
     const quiz = stored.get(StorageKey.quiz);
     this.state = state === undefined ? null : RoomState.parse(state);
     this.quiz = quiz === undefined ? null : QuizSnapshot.parse(quiz);
+    this.roster = Roster.parse(stored.get(StorageKey.roster) ?? []);
+    this.scoreboard = Scoreboard.parse(stored.get(StorageKey.scoreboard) ?? {});
+    this.qstats = QuestionStatsList.parse(stored.get(StorageKey.qstats) ?? []);
+    for (const value of (await this.ctx.storage.list({ prefix: StorageKey.pendingPrefix })).values()) {
+      const answer = PendingAnswer.parse(value);
+      this.pendingAnswers.set(answer.playerId, answer);
+    }
 
     for (const ws of this.ctx.getWebSockets()) {
       if (ws.readyState !== WebSocket.OPEN) continue;
@@ -92,6 +134,10 @@ export class GameRoom extends DurableObject<Env> {
     if (!input.success) {
       // Worker selalu mengirim input yang sudah divalidasi; sampai di sini berarti bug atau version skew.
       log.error("room_init_invalid", { detail: input.error.message });
+      return new Response(null, { status: 400 });
+    }
+    if (input.data.scoringMode === "confidence") {
+      log.error("room_init_invalid", { detail: "Taruhan Yakin belum didukung" });
       return new Response(null, { status: 400 });
     }
     if (this.state) return Response.json({ ok: false, reason: "pin_in_use" } satisfies InitRoomResult);
@@ -176,16 +222,16 @@ export class GameRoom extends DurableObject<Env> {
       const decoded = decodeHostMessage(message);
       if (!decoded.ok) return this.reject(ws, decoded, false);
       this.invalidStreaks.delete(ws);
-      return this.onHostMessage(ws, attachment.role === "pending_host", attachment.hostId, decoded.data);
+      return this.onHostMessage(ws, attachment.role === "pending_host", attachment.hostId, decoded.data, now);
     }
 
     const decoded = decodePlayerMessage(message);
     if (!decoded.ok) return this.reject(ws, decoded, true);
     this.invalidStreaks.delete(ws);
-    return this.onPlayerMessage(ws, attachment.role === "pending_player", decoded.data, now);
+    return this.onPlayerMessage(ws, attachment, decoded.data, now);
   }
 
-  private reject(ws: WebSocket, failure: DecodeFailure, fromPlayer: boolean): void {
+  private async reject(ws: WebSocket, failure: DecodeFailure, fromPlayer: boolean): Promise<void> {
     if (failure.reason === "unsupported_version") {
       this.sendError(ws, "UNSUPPORTED_VERSION", "Versi aplikasi sudah usang. Muat ulang halaman.");
       return this.close(ws, CloseCode.UNSUPPORTED_VERSION, "Versi protokol tidak didukung");
@@ -198,18 +244,25 @@ export class GameRoom extends DurableObject<Env> {
     if (fromPlayer && onlyNickname) {
       return this.sendError(ws, "NICKNAME_INVALID", "Nickname hanya boleh huruf, angka, spasi, titik, _ dan -");
     }
+    return this.badMessage(ws);
+  }
 
+  private async badMessage(ws: WebSocket): Promise<void> {
     const streak = (this.invalidStreaks.get(ws) ?? 0) + 1;
     this.invalidStreaks.set(ws, streak);
     this.sendError(ws, "BAD_MESSAGE", "Pesan tidak valid");
-    if (streak >= MAX_CONSECUTIVE_INVALID_MESSAGES) this.close(ws, CloseCode.TOO_MANY_INVALID, "Terlalu banyak pesan rusak");
+    if (streak >= MAX_CONSECUTIVE_INVALID_MESSAGES) {
+      await this.close(ws, CloseCode.TOO_MANY_INVALID, "Terlalu banyak pesan rusak");
+    }
   }
 
-  private async onPlayerMessage(ws: WebSocket, pending: boolean, message: PlayerMessage, now: number): Promise<void> {
+  private async onPlayerMessage(ws: WebSocket, attachment: SocketAttachment, message: PlayerMessage, now: number): Promise<void> {
+    const pending = attachment.role === "pending_player";
     const opening = message.t === "join" || message.t === "resume";
     if (pending && !opening) return this.sendError(ws, "NOT_JOINED", "Masuk dulu dengan nickname");
     if (!pending && opening) return this.sendError(ws, "NOT_ALLOWED_NOW", "Kamu sudah masuk");
     const phase = this.state?.phase ?? "lobby";
+    if (opening && phase !== "lobby") return this.refuseLateArrival(ws, message.t);
     if (!isAllowedInPhase(message.t, phase)) return log.info("player_message_ignored", { t: message.t, phase });
 
     switch (message.t) {
@@ -217,17 +270,27 @@ export class GameRoom extends DurableObject<Env> {
         return this.join(ws, message.nickname, now);
       case "resume":
         return this.resume(ws, message.sessionToken, now);
-      case "ack":
       case "answer":
+        if (attachment.role !== "player") return;
+        return this.answer(ws, attachment, message, now);
+      case "ack":
       case "react":
-        // Soal dikerjakan Hari 3, reaksi menyusul; pesan sah tapi belum ada yang menanganinya.
+        // ack dipakai untuk mengukur latency mulai Hari 4; reaksi menyusul.
         return log.info("player_message_ignored", { t: message.t, phase });
       default:
         return message satisfies never;
     }
   }
 
-  private async onHostMessage(ws: WebSocket, pending: boolean, hostId: string, message: HostMessage): Promise<void> {
+  /** Join dan resume hanya di lobby; resume di tengah game dikerjakan Hari 4. */
+  private async refuseLateArrival(ws: WebSocket, type: "join" | "resume"): Promise<void> {
+    const message =
+      type === "join" ? "Permainan sudah dimulai." : "Masuk ulang di tengah game tersedia di versi berikutnya.";
+    this.sendError(ws, "GAME_ALREADY_STARTED", message);
+    return this.close(ws, CloseCode.GAME_ALREADY_STARTED, "Permainan sudah dimulai");
+  }
+
+  private async onHostMessage(ws: WebSocket, pending: boolean, hostId: string, message: HostMessage, now: number): Promise<void> {
     const opening = message.t === "host_hello";
     if (pending && !opening) return this.sendError(ws, "NOT_JOINED", "Kirim host_hello dulu");
     if (!pending && opening) return this.sendError(ws, "NOT_ALLOWED_NOW", "Layar host sudah tersambung");
@@ -236,15 +299,17 @@ export class GameRoom extends DurableObject<Env> {
 
     switch (message.t) {
       case "host_hello":
-        return this.hostHello(ws, hostId);
+        return this.hostHello(ws, hostId, now);
       case "start":
+        return this.startGame(ws, now);
       case "next":
-        return this.sendError(ws, "NOT_ALLOWED_NOW", "Tombol Mulai belum tersedia");
+        return this.next(now);
       case "kick":
         // Moderasi dikerjakan bersama kick di Hari 4.
         return log.info("host_message_ignored", { t: message.t, phase });
       case "end":
-        return this.closeRoom("ended_by_host");
+        if (phase === "lobby") return this.closeRoom("cancelled_by_host");
+        return this.endGame("end", now);
       default:
         return message satisfies never;
     }
@@ -259,7 +324,7 @@ export class GameRoom extends DurableObject<Env> {
 
     if (this.players().length >= MAX_PLAYERS_PER_ROOM) {
       for (const [other, player] of this.players()) {
-        if (this.isStaleSocket(other, player, now)) this.close(other, CloseCode.GOING_AWAY, "Koneksi tidak aktif");
+        if (this.isStaleSocket(other, player, now)) await this.close(other, CloseCode.GOING_AWAY, "Koneksi tidak aktif");
       }
       if (this.players().length >= MAX_PLAYERS_PER_ROOM) {
         this.sendError(ws, "ROOM_FULL", "Room sudah penuh");
@@ -274,7 +339,7 @@ export class GameRoom extends DurableObject<Env> {
       if (!this.isStaleSocket(holderWs, holderPlayer, now)) {
         return this.sendError(ws, "NICKNAME_TAKEN", "Nickname sudah dipakai pemain lain");
       }
-      this.close(holderWs, CloseCode.GOING_AWAY, "Koneksi tidak aktif");
+      await this.close(holderWs, CloseCode.GOING_AWAY, "Koneksi tidak aktif");
     }
 
     const player: PlayerAttachment = {
@@ -293,7 +358,7 @@ export class GameRoom extends DurableObject<Env> {
     this.attach(ws, player);
     const playerCount = this.players().length;
     this.send(ws, this.welcome(player, sessionToken));
-    this.broadcast("host", { t: "player_joined", player: toRosterEntry(player), playerCount });
+    this.broadcast("host", { t: "player_joined", player: toRosterEntry(player, true), playerCount });
     this.broadcast("player", { t: "lobby", playerCount });
   }
 
@@ -301,7 +366,7 @@ export class GameRoom extends DurableObject<Env> {
     const tokenHash = await hashSessionToken(sessionToken);
     if (!this.sockets.has(ws)) return;
 
-    // Di lobby roster hanya ada di attachment socket yang masih terbuka. Resume di tahap lain: Hari 4.
+    // Di lobby roster hanya ada di attachment socket yang masih terbuka.
     const previous = this.players().find(([other, player]) => other !== ws && player.tokenHash === tokenHash);
     if (!previous) {
       this.sendError(ws, "SESSION_INVALID", "Sesi tidak dikenal. Masuk lagi dengan nickname.");
@@ -318,28 +383,190 @@ export class GameRoom extends DurableObject<Env> {
     this.send(ws, this.welcome(resumed, null));
   }
 
-  private hostHello(ws: WebSocket, hostId: string): void {
+  private async startGame(ws: WebSocket, now: number): Promise<void> {
+    const players = this.players();
+    if (players.length === 0) return this.sendError(ws, "NOT_ALLOWED_NOW", "Belum ada pemain");
+    if (!this.transition("start")) return;
+
+    this.roster = players.map(([, player]) => toStoredRosterEntry(player));
+    this.scoreboard = {};
+    this.qstats = [];
+    await this.startQuestion(0, now, true);
+    log.info("game_started", { pin: this.state?.pin, players: this.roster.length });
+  }
+
+  private async startQuestion(index: number, now: number, firstQuestion: boolean): Promise<void> {
+    const { state, quiz } = this.requireRoom();
+    const question = quiz.questions[index];
+    if (!question) throw new Error(`soal ${index} tidak ada di kuis`);
+
+    const deadlineAt = now + question.timeLimitSec * 1000;
+    this.state = {
+      ...state,
+      phase: "question",
+      questionIndex: index,
+      questionSentAt: now,
+      deadlineAt,
+      startedAt: state.startedAt ?? now,
+    };
+    this.pendingAnswers.clear();
+    for (const [socket, player] of this.players()) this.attach(socket, { ...player, answer: null });
+
+    await this.ctx.storage.put({
+      [StorageKey.state]: this.state,
+      // Roster ditulis sekali saja selama game, bersama soal pertama.
+      ...(firstQuestion ? { [StorageKey.roster]: this.roster } : {}),
+    });
+    await this.ctx.storage.setAlarm(deadlineAt);
+    this.broadcastAll({ t: "question", ...toPublicQuestion(question, index, quiz.questions.length) });
+  }
+
+  private async answer(ws: WebSocket, player: PlayerAttachment, message: AnswerMessage, now: number): Promise<void> {
+    const { state, quiz } = this.requireRoom();
+    if (message.q !== state.questionIndex) {
+      return log.info("answer_ignored", { reason: "not_active_question", q: message.q, active: state.questionIndex });
+    }
+    const question = quiz.questions[message.q];
+    if (!question) throw new Error(`soal aktif ${message.q} tidak ada di kuis`);
+    if (message.choice >= question.options.length) return this.badMessage(ws);
+
+    // Idempotent: tombol ditekan berkali-kali tetap satu jawaban, dan klien tetap mendapat konfirmasi.
+    if (player.answer?.q === message.q) return this.send(ws, { t: "answer_received", q: message.q });
+
+    const timeLimitMs = question.timeLimitSec * 1000;
+    // Jam server saja sampai kompensasi latency Hari 4; jawaban di masa toleransi dinilai benar/salah dengan t = T.
+    const tMs = state.phase === "grace" ? timeLimitMs : Math.min(Math.max(now - (state.questionSentAt ?? now), 0), timeLimitMs);
+    this.attach(ws, { ...player, answer: { q: message.q, choice: message.choice, tMs, confidence: null } });
+    this.send(ws, { t: "answer_received", q: message.q });
+    this.broadcast("host", { t: "answer_count", q: message.q, answered: this.answeredCount(message.q), total: this.roster.length });
+
+    const openPlayers = this.players();
+    // Tanpa satu pun pemain tersambung, "semua sudah menjawab" selalu benar; tunggu alarm deadline saja.
+    const everyoneAnswered = openPlayers.length > 0 && openPlayers.every(([, other]) => other.answer?.q === message.q);
+    if (state.phase === "question" && everyoneAnswered) await this.toGrace("all_answered", now);
+  }
+
+  private async toGrace(event: Extract<PhaseEvent, "deadline" | "all_answered">, now: number): Promise<void> {
     const { state } = this.requireRoom();
+    if (!this.transition(event) || state.questionIndex === null) return;
+    this.state = { ...state, phase: "grace" };
+    await this.ctx.storage.put(StorageKey.state, this.state);
+    // Menggantikan alarm deadline: satu objek hanya punya satu alarm.
+    await this.ctx.storage.setAlarm(now + GRACE_MS);
+    this.broadcastAll({ t: "grace", q: state.questionIndex, ms: GRACE_MS });
+  }
+
+  private async reveal(now: number): Promise<void> {
+    const { state, quiz } = this.requireRoom();
+    const q = state.questionIndex;
+    const question = q === null ? undefined : quiz.questions[q];
+    if (q === null || !question || !this.transition("grace_over")) return;
+
+    const answers = [...this.openAnswers(q), ...this.pendingAnswers.values()];
+    const revealed = revealQuestion({
+      question,
+      questionIndex: q,
+      mode: scoredMode(state.scoringMode),
+      roster: this.roster,
+      scoreboard: this.scoreboard,
+      answers,
+    });
+    this.scoreboard = revealed.scoreboard;
+    this.qstats[q] = revealed.stats;
+    this.state = { ...state, phase: "reveal", deadlineAt: null };
+
+    await this.ctx.storage.put({
+      [StorageKey.state]: this.state,
+      [StorageKey.scoreboard]: this.scoreboard,
+      [StorageKey.qstats]: this.qstats,
+    });
+    const pendingKeys = [...this.pendingAnswers.keys()].map((playerId) => pendingAnswerKey(playerId, q));
+    if (pendingKeys.length > 0) await this.ctx.storage.delete(pendingKeys);
+    this.pendingAnswers.clear();
+    await this.ctx.storage.setAlarm(now + REVEAL_IDLE_TIMEOUT_MS);
+
+    const results = new Map(revealed.results.map((result) => [result.playerId, result]));
+    for (const [socket, player] of this.players()) {
+      const result = results.get(player.playerId);
+      if (!result) continue;
+      this.attach(socket, { ...player, score: result.score, streak: result.streak });
+      this.send(socket, { t: "result", q, correctIndex: question.correctIndex, ...result });
+    }
+    this.broadcast("host", this.revealMessage(q));
+  }
+
+  private async next(now: number): Promise<void> {
+    const { state, quiz } = this.requireRoom();
+    const nextIndex = (state.questionIndex ?? -1) + 1;
+    if (nextIndex >= quiz.questions.length) return this.endGame("next_last", now);
+    if (!this.transition("next")) return;
+    await this.startQuestion(nextIndex, now, false);
+  }
+
+  /** Game selesai: soal terakhir, host mengakhiri, atau reveal ditinggal. Soal yang belum di-reveal tidak dinilai. */
+  private async endGame(event: Extract<PhaseEvent, "next_last" | "end" | "idle_timeout">, now: number): Promise<void> {
+    const { state } = this.requireRoom();
+    if (!this.transition(event)) return;
+    this.state = { ...state, phase: "ended", deadlineAt: null, endedAt: now };
+    this.pendingAnswers.clear();
+    await this.ctx.storage.put(StorageKey.state, this.state);
+    await this.ctx.storage.setAlarm(now + ENDED_RETENTION_MS);
+
+    const ranked = rankPlayers(this.roster, this.scoreboard);
+    for (const [socket, player] of this.players()) {
+      const entry = ranked.find((candidate) => candidate.playerId === player.playerId);
+      const score = this.scoreboard[player.playerId] ?? emptyScore();
+      this.send(socket, {
+        t: "final",
+        gameId: state.gameId,
+        score: score.score,
+        rank: entry?.rank ?? ranked.length,
+        playerCount: this.roster.length,
+        highlights: {
+          bestStreak: score.bestStreak,
+          confidentCorrect: score.confidentCorrect,
+          biggestRankClimb: score.biggestRankClimb,
+          fastestCorrectMs: score.fastestCorrectMs,
+        },
+      });
+    }
+    this.broadcast("host", this.podiumMessage());
+    log.info("game_ended", { pin: state.pin, reason: event, players: this.roster.length });
+  }
+
+  private hostHello(ws: WebSocket, hostId: string, now: number): void {
+    const { state, quiz } = this.requireRoom();
     this.attach(ws, { role: "host", hostId });
+    const q = state.questionIndex;
+    const question = q === null ? undefined : quiz.questions[q];
+    const live = state.phase === "question" || state.phase === "grace";
     this.send(ws, {
       t: "host_welcome",
       v: PROTOCOL_VERSION,
       room: this.roomInfo(),
       phase: state.phase,
-      players: this.players().map(([, player]) => toRosterEntry(player)),
-      question: null,
-      remainingMs: null,
-      answered: 0,
+      players: this.hostRoster(),
+      question: live && question && q !== null ? toPublicQuestion(question, q, quiz.questions.length) : null,
+      remainingMs: state.phase === "question" && state.deadlineAt !== null ? Math.max(0, state.deadlineAt - now) : null,
+      answered: live && q !== null ? this.answeredCount(q) : 0,
     });
+    // Layar guru bisa di-refresh kapan saja: tahap reveal dan ended dikirim ulang dari storage.
+    if (state.phase === "reveal" && q !== null) this.send(ws, this.revealMessage(q));
+    if (state.phase === "ended") this.send(ws, this.podiumMessage());
   }
 
-  /** Room dibatalkan host atau lobby ditinggal: semua socket ditutup dan PIN bebas dipakai lagi. */
+  /** Room dibatalkan di lobby atau selesai dibersihkan: semua socket ditutup dan PIN bebas dipakai lagi. */
   private async closeRoom(reason: string): Promise<void> {
+    if (this.state?.phase !== "lobby" && !this.transition("retention_over")) return;
     const pin = this.state?.pin;
     const sockets = [...this.sockets.keys()];
     this.sockets.clear();
     this.state = null;
     this.quiz = null;
+    this.roster = [];
+    this.scoreboard = {};
+    this.qstats = [];
+    this.pendingAnswers.clear();
     await this.ctx.storage.deleteAlarm();
     await this.ctx.storage.deleteAll();
     for (const ws of sockets) ws.close(CloseCode.ROOM_CLOSED, "Room ditutup");
@@ -347,43 +574,123 @@ export class GameRoom extends DurableObject<Env> {
   }
 
   override async webSocketClose(ws: WebSocket): Promise<void> {
-    this.leave(ws);
+    await this.leave(ws);
   }
 
   override async webSocketError(ws: WebSocket): Promise<void> {
-    this.leave(ws);
+    await this.leave(ws);
   }
 
   override async alarm(): Promise<void> {
     if (!this.state) return;
-    if (this.state.phase !== "lobby") {
-      // Alarm tahap soal dibuat di Hari 3; hari ini alarm hanya dipasang untuk lobby.
-      log.error("alarm_unexpected_phase", { pin: this.state.pin, phase: this.state.phase });
-      return;
+    const now = Date.now();
+    switch (this.state.phase) {
+      case "lobby":
+        return this.lobbyAlarm(now);
+      case "question":
+        return this.toGrace("deadline", now);
+      case "grace":
+        return this.reveal(now);
+      case "reveal":
+        return this.endGame("idle_timeout", now);
+      case "ended":
+        return this.closeRoom("retention_over");
+      default:
+        return this.state.phase satisfies never;
     }
+  }
+
+  private async lobbyAlarm(now: number): Promise<void> {
     const hostConnected = [...this.sockets.values()].some(
       (attachment) => attachment.role === "host" || attachment.role === "pending_host",
     );
     if (hostConnected) {
-      await this.ctx.storage.setAlarm(Date.now() + LOBBY_IDLE_TIMEOUT_MS);
+      await this.ctx.storage.setAlarm(now + LOBBY_IDLE_TIMEOUT_MS);
       return;
     }
     await this.closeRoom("lobby_idle");
   }
 
   /** Server menutup socket: keluarkan dari roster dulu, karena HP yang hilang sinyal tidak pernah membalas close. */
-  private close(ws: WebSocket, code: number, reason: string): void {
-    this.leave(ws);
+  private async close(ws: WebSocket, code: number, reason: string): Promise<void> {
     ws.close(code, reason);
+    await this.leave(ws);
   }
 
-  private leave(ws: WebSocket): void {
+  private async leave(ws: WebSocket): Promise<void> {
     const attachment = this.sockets.get(ws);
     this.sockets.delete(ws);
-    if (attachment?.role !== "player") return;
-    const playerCount = this.players().length;
+    if (attachment?.role !== "player" || !this.state) return;
+
+    const { phase, questionIndex } = this.state;
+    const answer = attachment.answer;
+    // Jawaban soal aktif dari pemain yang putus disimpan sebelum attachment hilang, supaya tetap dinilai di reveal.
+    // Satu-satunya tulis storage per pemain, dan hanya untuk yang putus.
+    if ((phase === "question" || phase === "grace") && answer && answer.q === questionIndex) {
+      const pending: PendingAnswer = { ...answer, playerId: attachment.playerId };
+      this.pendingAnswers.set(attachment.playerId, pending);
+      await this.ctx.storage.put(pendingAnswerKey(attachment.playerId, answer.q), pending);
+    }
+
+    const playerCount = phase === "lobby" ? this.players().length : this.roster.length;
     this.broadcast("host", { t: "player_left", playerId: attachment.playerId, kicked: false, playerCount });
-    this.broadcast("player", { t: "lobby", playerCount });
+    if (phase === "lobby") this.broadcast("player", { t: "lobby", playerCount });
+  }
+
+  /** Mengubah tahap lewat tabel transisi; transisi yang tidak sah dicatat dan tidak mengubah apa pun. */
+  private transition(event: PhaseEvent): PhaseTarget | null {
+    const phase = this.state?.phase;
+    if (!phase) return null;
+    const target = nextPhase(phase, event);
+    if (!target) log.error("phase_transition_invalid", { pin: this.state?.pin, phase, event });
+    return target;
+  }
+
+  private openAnswers(q: number): PendingAnswer[] {
+    return this.players().flatMap(([, player]) =>
+      player.answer?.q === q ? [{ ...player.answer, playerId: player.playerId }] : [],
+    );
+  }
+
+  private answeredCount(q: number): number {
+    const answered = new Set(this.openAnswers(q).map((answer) => answer.playerId));
+    for (const answer of this.pendingAnswers.values()) if (answer.q === q) answered.add(answer.playerId);
+    return answered.size;
+  }
+
+  /** Lobby: pemain yang tersambung. Selama game: seluruh roster, ditandai tersambung atau tidak. */
+  private hostRoster(): RosterEntry[] {
+    const players = this.players();
+    if (this.state?.phase === "lobby") return players.map(([, player]) => toRosterEntry(player, true));
+    const connected = new Set(players.map(([, player]) => player.playerId));
+    return this.roster.map((player) => toRosterEntry(player, connected.has(player.playerId)));
+  }
+
+  private revealMessage(q: number): ServerMessage {
+    const { quiz } = this.requireRoom();
+    const question = quiz.questions[q];
+    const stats = this.qstats[q];
+    if (!question || !stats) throw new Error(`statistik soal ${q} belum ada`);
+    return {
+      t: "reveal",
+      q,
+      correctIndex: question.correctIndex,
+      counts: stats.answerCounts,
+      answered: stats.answered,
+      total: this.roster.length,
+      leaderboard: rankPlayers(this.roster, this.scoreboard).slice(0, LEADERBOARD_SIZE),
+      isLastQuestion: q === quiz.questions.length - 1,
+    };
+  }
+
+  private podiumMessage(): ServerMessage {
+    const { state } = this.requireRoom();
+    return {
+      t: "podium",
+      gameId: state.gameId,
+      top: rankPlayers(this.roster, this.scoreboard).slice(0, PODIUM_SIZE),
+      playerCount: this.roster.length,
+    };
   }
 
   private isStaleSocket(ws: WebSocket, player: PlayerAttachment, now: number): boolean {
@@ -446,6 +753,19 @@ export class GameRoom extends DurableObject<Env> {
       if (attachment.role === role) sendText(ws, text);
     }
   }
+
+  private broadcastAll(message: ServerMessage): void {
+    const text = encodeServerMessage(message);
+    for (const [ws, attachment] of this.sockets) {
+      if (attachment.role === "player" || attachment.role === "host") sendText(ws, text);
+    }
+  }
+}
+
+/** init menolak Taruhan Yakin sampai Hari 7, jadi mode lain di sini berarti state rusak. */
+function scoredMode(mode: ScoringMode): ScoredMode {
+  if (mode === "confidence") throw new Error("Taruhan Yakin belum didukung GameRoom");
+  return mode;
 }
 
 function sendText(ws: WebSocket, text: string): void {
@@ -458,6 +778,10 @@ function sendText(ws: WebSocket, text: string): void {
   }
 }
 
-function toRosterEntry(player: PlayerAttachment): RosterEntry {
-  return { playerId: player.playerId, nickname: player.nickname, teamSize: player.teamSize, connected: true };
+function toRosterEntry(player: StoredRosterEntry, connected: boolean): RosterEntry {
+  return { playerId: player.playerId, nickname: player.nickname, teamSize: player.teamSize, connected };
+}
+
+function toStoredRosterEntry(player: PlayerAttachment): StoredRosterEntry {
+  return { playerId: player.playerId, nickname: player.nickname, tokenHash: player.tokenHash, teamSize: player.teamSize };
 }
