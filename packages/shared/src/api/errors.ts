@@ -4,6 +4,7 @@ import { z } from "zod";
 export const ApiErrorCode = z.enum([
   "VALIDATION_FAILED",
   "UNAUTHENTICATED",
+  "FORBIDDEN",
   "NOT_FOUND",
   "CONFLICT",
   "PAYLOAD_TOO_LARGE",

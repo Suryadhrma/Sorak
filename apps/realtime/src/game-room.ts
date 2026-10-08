@@ -139,16 +139,20 @@ export class GameRoom extends DurableObject<Env> {
     }
 
     const { 0: client, 1: server } = new WebSocketPair();
-    this.ctx.acceptWebSocket(server);
     const isHost = route.data === "host";
     // Host yang bukan pemilik mendapat jawaban yang sama dengan room tidak ada, supaya PIN tidak bisa ditebak.
     if (!this.state || (isHost && request.headers.get(RoomHeader.hostId) !== this.state.hostId)) {
       // Browser tidak bisa membaca alasan penolakan HTTP saat upgrade, tapi bisa membaca close code.
+      // accept() biasa, bukan acceptWebSocket: socket ini langsung ditutup dan tidak perlu hibernasi.
+      // Dengan acceptWebSocket, close sebelum 101 terkirim baru sampai ke klien sekitar 11 detik kemudian
+      // (diukur di wrangler dev); dengan accept() sekitar 200 ms.
+      server.accept();
       server.close(CloseCode.ROOM_NOT_FOUND, "Room tidak ditemukan");
       return new Response(null, { status: 101, webSocket: client });
     }
 
     const connectedAt = Date.now();
+    this.ctx.acceptWebSocket(server);
     this.attach(
       server,
       isHost

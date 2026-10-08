@@ -2,11 +2,11 @@ import { Hono } from "hono";
 import { csrf } from "hono/csrf";
 import { HTTPException } from "hono/http-exception";
 import { z } from "zod";
-import { ErrorCode, Pin } from "@sorak/shared";
 import { apiError } from "./api-error.ts";
 import { authRoutes } from "./auth.ts";
 import { log } from "./log.ts";
 import { quizRoutes } from "./quiz-routes.ts";
+import { roomRoutes, wsRoutes } from "./room-routes.ts";
 import { requireHost } from "./session.ts";
 
 // Pesan Zod sampai ke guru lewat `fields` di editor, jadi pakai Bahasa Indonesia.
@@ -31,12 +31,6 @@ app.get("/api/me", requireHost, (c) => c.json(c.var.host));
 
 app.route("/api/quizzes", quizRoutes);
 
-app.get("/ws/:role{play|host}/:pin", async (c) => {
-  const pin = Pin.safeParse(c.req.param("pin"));
-  if (!pin.success) {
-    const message = pin.error.issues.map((issue) => issue.message).join("; ");
-    return c.json({ error: { code: ErrorCode.enum.BAD_MESSAGE, message } }, 400);
-  }
-  // Satu PIN = satu GameRoom, jadi host dan semua pemain dengan PIN sama bertemu di objek yang sama.
-  return c.env.GAME_ROOM.getByName(pin.data).fetch(c.req.raw);
-});
+app.route("/api/rooms", roomRoutes);
+
+app.route("/ws", wsRoutes);

@@ -127,7 +127,7 @@ describe("REST room", () => {
     expect(RoomLookup.safeParse({ pin: "004213", playerCount: MAX_PLAYERS_PER_ROOM + 1 }).success).toBe(false);
   });
 
-  it.each(["RATE_LIMITED", "ROOM_FULL", "GAME_ALREADY_STARTED"])("ApiError mengenal kode %s", (code) => {
+  it.each(["FORBIDDEN", "RATE_LIMITED", "ROOM_FULL", "GAME_ALREADY_STARTED"])("ApiError mengenal kode %s", (code) => {
     expect(ApiError.safeParse({ error: { code, message: "x" } }).success).toBe(true);
   });
 });

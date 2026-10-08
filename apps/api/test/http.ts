@@ -32,8 +32,11 @@ export async function signedInHost() {
   const id = crypto.randomUUID();
   await insertHost({ id, email: `${id}@example.com` });
   const token = await sign({ sub: id, sv: 0, exp: Math.floor(Date.now() / 1000) + 3600 }, env.JWT_SECRET, "HS256");
-  const send = (path: string, init: { method?: string; json?: unknown; body?: string } = {}) => {
-    const headers: Record<string, string> = { Cookie: `sorak_session=${token}`, Origin: ORIGIN };
+  const send = (
+    path: string,
+    init: { method?: string; json?: unknown; body?: string; headers?: Record<string, string> } = {},
+  ) => {
+    const headers: Record<string, string> = { Cookie: `sorak_session=${token}`, Origin: ORIGIN, ...init.headers };
     if (init.json !== undefined || init.body !== undefined) headers["Content-Type"] = "application/json";
     const body = init.body ?? (init.json === undefined ? undefined : JSON.stringify(init.json));
     return request(path, { method: init.method ?? "GET", headers, body });
