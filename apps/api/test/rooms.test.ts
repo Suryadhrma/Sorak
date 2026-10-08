@@ -41,10 +41,10 @@ async function hostWithQuiz(questions: unknown[] = [question]) {
 }
 
 describe("POST /api/rooms", () => {
-  it("membuat room dan mengirim snapshot kuis ke GameRoom", async () => {
+  it("membuat room dan mengirim mode skor serta snapshot kuis ke GameRoom", async () => {
     const { host, quiz } = await hostWithQuiz();
     nextPins("314159");
-    const res = await host.send("/api/rooms", { method: "POST", json: { quizId: quiz.id } });
+    const res = await host.send("/api/rooms", { method: "POST", json: { quizId: quiz.id, scoringMode: "accurate" } });
     expect(res.status).toBe(201);
     expect(await res.json()).toEqual({ pin: "314159" });
 
@@ -52,7 +52,7 @@ describe("POST /api/rooms", () => {
       gameId: expect.stringMatching(/^[0-9a-f-]{36}$/),
       hostId: host.id,
       pin: "314159",
-      scoringMode: "classic",
+      scoringMode: "accurate",
       teamMode: false,
       quiz: {
         quizId: quiz.id,
@@ -74,30 +74,37 @@ describe("POST /api/rooms", () => {
   it("kuis milik host lain -> 404", async () => {
     const { quiz } = await hostWithQuiz();
     const other = await signedInHost();
-    const res = await other.send("/api/rooms", { method: "POST", json: { quizId: quiz.id } });
+    const res = await other.send("/api/rooms", { method: "POST", json: { quizId: quiz.id, scoringMode: "classic" } });
     expect(res.status).toBe(404);
     expect(await res.json()).toMatchObject({ error: { code: "NOT_FOUND" } });
   });
 
   it("kuis tanpa soal -> 409", async () => {
     const { host, quiz } = await hostWithQuiz([]);
-    const res = await host.send("/api/rooms", { method: "POST", json: { quizId: quiz.id } });
+    const res = await host.send("/api/rooms", { method: "POST", json: { quizId: quiz.id, scoringMode: "classic" } });
     expect(res.status).toBe(409);
     expect(await res.json()).toMatchObject({ error: { code: "CONFLICT", message: "Tambahkan minimal satu soal" } });
   });
 
   it("quizId bukan UUID -> 400", async () => {
     const host = await signedInHost();
-    const res = await host.send("/api/rooms", { method: "POST", json: { quizId: "kuis-1" } });
+    const res = await host.send("/api/rooms", { method: "POST", json: { quizId: "kuis-1", scoringMode: "classic" } });
     expect(res.status).toBe(400);
     expect(await res.json()).toMatchObject({ error: { code: "VALIDATION_FAILED", fields: { quizId: expect.any(String) } } });
+  });
+
+  it("mode confidence belum tersedia -> 400", async () => {
+    const { host, quiz } = await hostWithQuiz();
+    const res = await host.send("/api/rooms", { method: "POST", json: { quizId: quiz.id, scoringMode: "confidence" } });
+    expect(res.status).toBe(400);
+    expect(await res.json()).toMatchObject({ error: { code: "VALIDATION_FAILED", fields: { scoringMode: expect.any(String) } } });
   });
 
   it("tanpa login -> 401", async () => {
     const res = await request("/api/rooms", {
       method: "POST",
       headers: { "Content-Type": "application/json", Origin: ORIGIN },
-      body: JSON.stringify({ quizId: crypto.randomUUID() }),
+      body: JSON.stringify({ quizId: crypto.randomUUID(), scoringMode: "classic" }),
     });
     expect(res.status).toBe(401);
   });
@@ -106,7 +113,7 @@ describe("POST /api/rooms", () => {
     const { host, quiz } = await hostWithQuiz();
     await occupy("271828");
     nextPins("271828", "271829");
-    const res = await host.send("/api/rooms", { method: "POST", json: { quizId: quiz.id } });
+    const res = await host.send("/api/rooms", { method: "POST", json: { quizId: quiz.id, scoringMode: "classic" } });
     expect(res.status).toBe(201);
     expect(await res.json()).toEqual({ pin: "271829" });
   });
@@ -116,7 +123,7 @@ describe("POST /api/rooms", () => {
     const pins = Array.from({ length: PIN_CREATE_ATTEMPTS }, (_, i) => String(161_800 + i));
     for (const pin of pins) await occupy(pin);
     nextPins(...pins);
-    const res = await host.send("/api/rooms", { method: "POST", json: { quizId: quiz.id } });
+    const res = await host.send("/api/rooms", { method: "POST", json: { quizId: quiz.id, scoringMode: "classic" } });
     expect(res.status).toBe(500);
     expect(await res.json()).toMatchObject({ error: { code: "INTERNAL" } });
   });

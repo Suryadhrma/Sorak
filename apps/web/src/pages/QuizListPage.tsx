@@ -46,7 +46,7 @@ export function QuizListPage() {
     setActionError(null);
     setStartingQuizId(quiz.id);
     try {
-      const { pin } = await createRoom(quiz.id);
+      const { pin } = await createRoom({ quizId: quiz.id, scoringMode: "classic" });
       navigate(`/host/${pin}`);
     } catch (error) {
       setActionError(describeError(error));

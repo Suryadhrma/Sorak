@@ -68,7 +68,7 @@ export const createQuiz = (input: QuizInput) => sendJson("/api/quizzes", QuizDet
 export const updateQuiz = (id: string, input: QuizInput) =>
   sendJson(`/api/quizzes/${encodeURIComponent(id)}`, QuizDetail, jsonBody("PUT", input));
 
-export const createRoom = (quizId: string) => sendJson("/api/rooms", CreateRoomResult, jsonBody("POST", { quizId }));
+export const createRoom = (input: CreateRoomInput) => sendJson("/api/rooms", CreateRoomResult, jsonBody("POST", input));
 
 /** Cek PIN sebelum membuka WebSocket, supaya PIN salah atau room penuh dijelaskan dengan pesan yang jelas. */
 export const lookupRoom = (pin: string) => sendJson(`/api/rooms/${encodeURIComponent(pin)}`, RoomLookup);

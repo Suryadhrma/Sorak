@@ -1,14 +1,17 @@
 import { z } from "zod";
 import { MAX_PLAYERS_PER_ROOM } from "../constants.ts";
-import { Pin } from "../primitives.ts";
+import { Pin, ScoringMode } from "../primitives.ts";
 import { QuizId } from "./quiz.ts";
 
 /**
- * Skema REST room. Mode skor dan mode tim belum bisa dipilih: Worker memakai classic tanpa tim,
- * dan pilihannya ditambahkan di hari fitur itu dibuat supaya tidak ada opsi yang belum berfungsi.
+ * Skema REST room. Hanya mode yang sudah berfungsi yang bisa dipilih: Taruhan Yakin (confidence)
+ * dan mode tim ditambahkan di hari fitur itu dibuat.
  */
 
-export const CreateRoomInput = z.object({ quizId: QuizId });
+export const CreateRoomInput = z.object({
+  quizId: QuizId,
+  scoringMode: ScoringMode.extract(["classic", "accurate"]),
+});
 export type CreateRoomInput = z.infer<typeof CreateRoomInput>;
 
 export const CreateRoomResult = z.object({ pin: Pin });

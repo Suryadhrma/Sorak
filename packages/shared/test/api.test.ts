@@ -116,9 +116,17 @@ describe("fieldErrors", () => {
 });
 
 describe("REST room", () => {
+  const quizId = "7c9e6679-7425-40de-944b-e07fc1f90ae7";
+
   it("membuat room butuh quizId berbentuk UUID", () => {
-    expect(CreateRoomInput.safeParse({ quizId: "7c9e6679-7425-40de-944b-e07fc1f90ae7" }).success).toBe(true);
-    expect(CreateRoomInput.safeParse({ quizId: "kuis-1" }).success).toBe(false);
+    expect(CreateRoomInput.safeParse({ quizId, scoringMode: "classic" }).success).toBe(true);
+    expect(CreateRoomInput.safeParse({ quizId: "kuis-1", scoringMode: "classic" }).success).toBe(false);
+  });
+
+  it("mode skor hanya yang sudah berfungsi: classic dan accurate", () => {
+    expect(CreateRoomInput.safeParse({ quizId, scoringMode: "accurate" }).success).toBe(true);
+    expect(CreateRoomInput.safeParse({ quizId, scoringMode: "confidence" }).success).toBe(false);
+    expect(CreateRoomInput.safeParse({ quizId }).success).toBe(false);
   });
 
   it("hasil cek PIN: PIN 6 digit dan jumlah pemain dalam batas room", () => {

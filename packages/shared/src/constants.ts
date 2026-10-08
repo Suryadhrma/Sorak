@@ -35,6 +35,21 @@ export const LATENCY_EPSILON_MS = 150;
 /** Bobot sampel baru pada EWMA latency: d = (1 - a) * d_lama + a * sampel. */
 export const LATENCY_EWMA_ALPHA = 0.3;
 
+/** Poin jawaban benar tercepat di mode Klasik. */
+export const CLASSIC_MAX_POINTS = 1000;
+/** Jawaban benar tepat di batas waktu mendapat setengah poin Klasik. */
+export const CLASSIC_MIN_FACTOR = 0.5;
+/** Poin setiap jawaban benar di mode Akurat, berapa pun kecepatannya. */
+export const ACCURATE_POINTS = 1000;
+/** Bonus per jawaban benar beruntun (benar kedua +50, ketiga +100, ...), dibatasi COMBO_MAX_POINTS. */
+export const COMBO_STEP_POINTS = 50;
+export const COMBO_MAX_POINTS = 250;
+
+/** Room di tahap reveal yang ditinggal host (tidak menekan Lanjut) diakhiri. */
+export const REVEAL_IDLE_TIMEOUT_MS = 1_800_000;
+/** Room yang sudah selesai bertahan sebentar supaya layar akhir masih bisa dibuka ulang, lalu dibersihkan. */
+export const ENDED_RETENTION_MS = 600_000;
+
 export const LEADERBOARD_SIZE = 10;
 export const PODIUM_SIZE = 3;
 

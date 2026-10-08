@@ -70,8 +70,8 @@ roomRoutes.post("/", requireHost, async (c) => {
   const room = {
     gameId: crypto.randomUUID(),
     hostId: c.var.host.id,
-    // Mode skor dan mode tim belum bisa dipilih; pilihannya ditambahkan di hari fitur itu dibuat.
-    scoringMode: "classic" as const,
+    scoringMode: input.data.scoringMode,
+    // Mode tim belum bisa dipilih; pilihannya ditambahkan di hari fitur itu dibuat.
     teamMode: false,
     quiz: toQuizSnapshot(quiz),
   };

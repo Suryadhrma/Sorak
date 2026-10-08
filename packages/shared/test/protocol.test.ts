@@ -15,6 +15,7 @@ import {
   PROMPT_MAX_LENGTH,
   PROTOCOL_VERSION,
   PlayerAttachment,
+  PlayerScore,
   PlayerServerMessage,
   QUEUE_MESSAGE_MAX_BYTES,
   QuizSnapshot,
@@ -368,6 +369,26 @@ describe("kontrol room (Worker ke GameRoom)", () => {
     expect(JoinInfo.safeParse({ status: "open", playerCount: 3, newField: 1 }).success).toBe(true);
     expect(JoinInfo.safeParse({ status: "closed", playerCount: 3 }).success).toBe(false);
     expect(JoinInfo.safeParse({ status: "full", playerCount: MAX_PLAYERS_PER_ROOM + 1 }).success).toBe(false);
+  });
+});
+
+describe("skor pemain di storage", () => {
+  const score = {
+    score: 0,
+    streak: 0,
+    bestStreak: 0,
+    correct: 0,
+    answered: 1,
+    confidentCorrect: 0,
+    fastestCorrectMs: null,
+    worstRank: 1,
+    biggestRankClimb: 0,
+    lastPoints: 0,
+  };
+
+  it("poin per soal boleh negatif (Taruhan Yakin), skor total tidak", () => {
+    expect(PlayerScore.safeParse({ ...score, lastPoints: -1800 }).success).toBe(true);
+    expect(PlayerScore.safeParse({ ...score, score: -1 }).success).toBe(false);
   });
 });
 

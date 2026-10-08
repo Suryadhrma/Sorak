@@ -91,6 +91,11 @@ export const PlayerScore = z.object({
   /** Peringkat terburuk yang pernah dicapai, untuk menghitung "comeback terbesar". */
   worstRank: z.number().int().min(1).nullable(),
   biggestRankClimb: z.number().int().min(0),
+  /**
+   * Poin dari soal yang terakhir di-reveal; 0 kalau tidak menjawab. Boleh negatif (Taruhan Yakin),
+   * sedangkan skor total tidak. Dipakai untuk mengirim ulang reveal/podium dan result setelah refresh atau resume.
+   */
+  lastPoints: z.number().int(),
 });
 export type PlayerScore = z.infer<typeof PlayerScore>;
 
