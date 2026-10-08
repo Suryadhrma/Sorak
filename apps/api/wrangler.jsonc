@@ -26,5 +26,7 @@
   ],
   "queues": {
     "consumers": [{ "queue": "sorak-game-events" }]
-  }
+  },
+  // Workers Logs: CPU time per request tercatat di invocation log. Free plan: 200.000 log event per hari.
+  "observability": { "enabled": true }
 }
