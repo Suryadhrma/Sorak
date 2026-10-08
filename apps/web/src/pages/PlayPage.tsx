@@ -2,7 +2,9 @@ import { useEffect, useRef, useState, type FormEvent } from "react";
 import { Link, useParams } from "react-router";
 import { NICKNAME_MAX_LENGTH, Nickname, Pin } from "@sorak/shared";
 import { ApiRequestError, describeError, lookupRoom } from "../api.ts";
+import { AnswerButton } from "../AnswerOption.tsx";
 import { createPlayerSession, type PlayerSession, type PlayerView } from "../player-session.ts";
+import { useRemainingMs } from "../useRemainingMs.ts";
 
 type CheckState = { kind: "checking" } | { kind: "ready" } | { kind: "error"; message: string };
 
@@ -62,12 +64,37 @@ export function PlayPage() {
     case "lobby":
       return (
         <main className="page page-narrow lobby">
-          <p className="lobby-nickname">{view.nickname}</p>
+          <p className="lobby-nickname">{view.me.nickname}</p>
           <h1>Kamu sudah masuk</h1>
           <p>Tunggu guru memulai.</p>
           <p className="muted" role="status" aria-live="polite">
             {view.playerCount} pemain di room
           </p>
+        </main>
+      );
+    case "question":
+      return <QuestionScreen view={view} onAnswer={(choice) => session.current?.answer(choice)} />;
+    case "grace":
+      return (
+        <main className="page page-narrow lobby">
+          <h1>Menghitung jawaban…</h1>
+          <p className="muted">{view.answered ? "Jawabanmu sudah masuk." : "Kamu tidak menjawab soal ini."}</p>
+        </main>
+      );
+    case "result":
+      return <ResultScreen result={view.result} />;
+    case "final":
+      return (
+        <main className="page page-narrow lobby">
+          <p className="lobby-nickname">{view.me.nickname}</p>
+          <h1>Permainan selesai</h1>
+          <p className="score-big">{view.final.score} poin</p>
+          <p>
+            Peringkat {view.final.rank} dari {view.final.playerCount}
+          </p>
+          <Link className="button" to="/">
+            Masukkan PIN lain
+          </Link>
         </main>
       );
     case "ended":
@@ -149,6 +176,67 @@ function NicknameForm({ error, busy, onSubmit }: { error: string | null; busy: b
           {busy ? "Masuk…" : "Masuk"}
         </button>
       </form>
+    </main>
+  );
+}
+
+type QuestionView = Extract<PlayerView, { kind: "question" }>;
+type ResultView = Extract<PlayerView, { kind: "result" }>;
+
+function QuestionScreen({ view, onAnswer }: { view: QuestionView; onAnswer: (choice: number) => void }) {
+  const { question, choice, confirmed } = view;
+  const remaining = useRemainingMs(view.startedAt, question.durationMs);
+  const timeUp = remaining === 0;
+
+  return (
+    <main className="page page-narrow">
+      <div className="question-meta">
+        <span className="muted">
+          Soal {question.q + 1}/{question.total}
+        </span>
+        <span className="countdown" role="timer" aria-label={`Sisa waktu ${Math.ceil(remaining / 1000)} detik`}>
+          {Math.ceil(remaining / 1000)}
+        </span>
+      </div>
+      <h1 className="question-prompt">{question.prompt}</h1>
+      <div className="answers">
+        {question.options.map((text, index) => (
+          <AnswerButton
+            key={index}
+            index={index}
+            text={text}
+            selected={choice === index}
+            disabled={choice !== null || timeUp}
+            onSelect={() => onAnswer(index)}
+          />
+        ))}
+      </div>
+      <p className="muted" role="status" aria-live="polite">
+        {answerStatus(choice, confirmed, timeUp)}
+      </p>
+    </main>
+  );
+}
+
+function answerStatus(choice: number | null, confirmed: boolean, timeUp: boolean): string {
+  if (confirmed) return "Jawaban terkirim.";
+  if (choice !== null) return "Mengirim…";
+  if (timeUp) return "Waktu habis.";
+  return "";
+}
+
+const OUTCOME_TITLES = { correct: "Benar!", wrong: "Salah", no_answer: "Tidak menjawab" } as const;
+
+function ResultScreen({ result }: { result: ResultView["result"] }) {
+  return (
+    <main className={`page page-narrow lobby result-${result.outcome}`}>
+      <h1 className="result-title">{OUTCOME_TITLES[result.outcome]}</h1>
+      <p className="score-big">+{result.points}</p>
+      {result.streak >= 2 && <p className="combo">Kombo {result.streak}×</p>}
+      <p>
+        Total {result.score} poin · Peringkat {result.rank}
+      </p>
+      <p className="muted">Tunggu guru melanjutkan.</p>
     </main>
   );
 }

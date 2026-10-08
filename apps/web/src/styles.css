@@ -11,6 +11,18 @@
   --color-success: #1a7f37;
   --color-focus: #1b1f24;
 
+  /* Pilihan jawaban: warna dan bentuk berpasangan (A segitiga merah, B belah ketupat biru, C lingkaran
+     cokelat, D persegi hijau). Semua kontras >= 4.5:1 dengan teks putih. */
+  --answer-0: #b42318;
+  --answer-1: #0b5cad;
+  --answer-2: #8a5300;
+  --answer-3: #1a7f37;
+  --answer-text: #ffffff;
+  --answer-shape-0: polygon(50% 0, 100% 100%, 0 100%);
+  --answer-shape-1: polygon(50% 0, 100% 50%, 50% 100%, 0 50%);
+  --answer-shape-2: circle(50%);
+  --answer-shape-3: inset(0);
+
   --space-1: 0.25rem;
   --space-2: 0.5rem;
   --space-3: 1rem;
@@ -25,6 +37,10 @@
   --font-size-host-pin: clamp(4rem, 18vw, 12rem);
   --font-size-host-text: clamp(1.25rem, 3vw, 2.25rem);
   --font-size-host-name: clamp(1.125rem, 2.2vw, 1.75rem);
+  --font-size-host-prompt: clamp(1.75rem, 4vw, 3.25rem);
+  --font-size-host-countdown: clamp(3rem, 8vw, 6rem);
+  --font-size-countdown: 2rem;
+  --font-size-score: 2.5rem;
 
   --radius: 6px;
   --page-max-width: 48rem;
@@ -348,6 +364,10 @@ input.pin-input {
 
 .host-actions {
   margin-top: var(--space-4);
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--space-2);
 }
 
 .quiz-actions {
@@ -355,4 +375,250 @@ input.pin-input {
   flex-wrap: wrap;
   justify-content: flex-end;
   gap: var(--space-2);
+}
+
+/* Soal dan pilihan jawaban (HP siswa dan proyektor). */
+
+.question-meta,
+.host-question-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--space-2);
+  width: 100%;
+}
+
+.countdown {
+  font-size: var(--font-size-countdown);
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+.question-prompt {
+  overflow-wrap: anywhere;
+}
+
+.answers {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: var(--space-2);
+}
+
+.answer {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-height: calc(var(--tap-target) * 1.5);
+  padding: var(--space-2) var(--space-3);
+  border: 3px solid transparent;
+  border-radius: var(--radius);
+  color: var(--answer-text);
+  font: inherit;
+  font-weight: 600;
+  text-align: left;
+}
+
+button.answer {
+  width: 100%;
+  cursor: pointer;
+}
+
+button.answer:disabled {
+  cursor: default;
+  opacity: 0.55;
+}
+
+/* Pilihan yang ditekan tetap jelas walaupun tombol lain meredup. */
+.answer-selected,
+button.answer-selected:disabled {
+  opacity: 1;
+  border-color: var(--color-text);
+  outline: 3px solid var(--color-background);
+  outline-offset: -6px;
+}
+
+.answer-0 { background: var(--answer-0); }
+.answer-1 { background: var(--answer-1); }
+.answer-2 { background: var(--answer-2); }
+.answer-3 { background: var(--answer-3); }
+
+.answer-mark {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  flex-shrink: 0;
+}
+
+.answer-shape {
+  display: inline-block;
+  width: 1.25em;
+  height: 1.25em;
+  background: var(--answer-text);
+}
+
+.answer-shape-0 { clip-path: var(--answer-shape-0); }
+.answer-shape-1 { clip-path: var(--answer-shape-1); }
+.answer-shape-2 { clip-path: var(--answer-shape-2); }
+.answer-shape-3 { clip-path: var(--answer-shape-3); }
+
+.answer-letter {
+  font-weight: 800;
+}
+
+.answer-text {
+  flex: 1;
+  overflow-wrap: anywhere;
+}
+
+.answers-host {
+  width: 100%;
+  max-width: 72rem;
+  grid-template-columns: repeat(auto-fit, minmax(20rem, 1fr));
+  font-size: var(--font-size-host-name);
+}
+
+.answer-dimmed {
+  opacity: 0.45;
+}
+
+.answer-correct {
+  border-color: var(--color-text);
+}
+
+.answer-count {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 8rem;
+}
+
+.answer-bar {
+  display: block;
+  height: 0.75em;
+  background: var(--answer-text);
+  border-radius: var(--radius);
+}
+
+/* Hasil dan skor di HP siswa. */
+
+.result-title {
+  font-size: var(--font-size-score);
+}
+
+.result-correct .result-title {
+  color: var(--color-success);
+}
+
+.result-wrong .result-title {
+  color: var(--color-danger);
+}
+
+.score-big {
+  font-size: var(--font-size-score);
+  font-weight: 800;
+  margin: 0;
+}
+
+.combo {
+  font-weight: 700;
+  margin: 0;
+}
+
+/* Proyektor: soal, papan skor, podium. */
+
+.host-progress {
+  font-size: var(--font-size-host-text);
+  margin: 0;
+}
+
+.host-countdown {
+  font-size: var(--font-size-host-countdown);
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+.host-prompt {
+  font-size: var(--font-size-host-prompt);
+  max-width: 72rem;
+  overflow-wrap: anywhere;
+  margin: 0;
+}
+
+.leaderboard,
+.podium {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  max-width: 48rem;
+  display: grid;
+  gap: var(--space-1);
+  font-size: var(--font-size-host-name);
+}
+
+.leaderboard li,
+.podium li {
+  display: grid;
+  grid-template-columns: 3ch 1fr auto auto;
+  gap: var(--space-3);
+  align-items: center;
+  padding: var(--space-1) var(--space-3);
+  border-bottom: 1px solid var(--color-border);
+  text-align: left;
+}
+
+.podium li {
+  grid-template-columns: 3ch 1fr auto;
+  font-size: var(--font-size-host-text);
+}
+
+.leaderboard-rank {
+  font-weight: 800;
+}
+
+.leaderboard-name {
+  overflow-wrap: anywhere;
+}
+
+.leaderboard-score,
+.leaderboard-delta {
+  font-variant-numeric: tabular-nums;
+}
+
+.leaderboard-delta {
+  color: var(--color-success);
+  font-weight: 600;
+}
+
+.button-large {
+  font-size: var(--font-size-host-text);
+  padding: var(--space-2) var(--space-4);
+}
+
+
+/* Pilihan mode di Kuis saya. */
+
+.quiz-item {
+  flex-wrap: wrap;
+}
+
+.mode-choice {
+  flex-basis: 100%;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+  gap: var(--space-2);
+}
+
+.mode-option {
+  flex-direction: column;
+  align-items: flex-start;
+  text-align: left;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .answer-bar {
+    transition: width 300ms ease-out;
+  }
 }

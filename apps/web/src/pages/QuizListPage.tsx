@@ -1,8 +1,12 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router";
-import type { QuizSummary } from "@sorak/shared";
+import { CreateRoomInput, type QuizSummary } from "@sorak/shared";
 import { createRoom, deleteQuiz, describeError, listQuizzes, logout } from "../api.ts";
 import { useHost } from "../RequireHost.tsx";
+import { SCORING_MODES } from "../scoring-modes.ts";
+
+/** Mode yang diterima server saat membuat room; satu sumber dengan skema REST. */
+const PLAYABLE_MODES = CreateRoomInput.shape.scoringMode.options;
 
 type ListState = { kind: "loading" } | { kind: "ready"; quizzes: QuizSummary[] } | { kind: "error"; message: string };
 
@@ -13,6 +17,7 @@ export function QuizListPage() {
   const navigate = useNavigate();
   const [state, setState] = useState<ListState>({ kind: "loading" });
   const [actionError, setActionError] = useState<string | null>(null);
+  const [choosingQuizId, setChoosingQuizId] = useState<string | null>(null);
   const [startingQuizId, setStartingQuizId] = useState<string | null>(null);
 
   useEffect(() => {
@@ -42,11 +47,11 @@ export function QuizListPage() {
     }
   }
 
-  async function handlePlay(quiz: QuizSummary) {
+  async function handlePlay(quiz: QuizSummary, scoringMode: CreateRoomInput["scoringMode"]) {
     setActionError(null);
     setStartingQuizId(quiz.id);
     try {
-      const { pin } = await createRoom({ quizId: quiz.id, scoringMode: "classic" });
+      const { pin } = await createRoom({ quizId: quiz.id, scoringMode });
       navigate(`/host/${pin}`);
     } catch (error) {
       setActionError(describeError(error));
@@ -113,7 +118,8 @@ export function QuizListPage() {
                   type="button"
                   className="button button-primary"
                   disabled={quiz.questionCount === 0 || startingQuizId !== null}
-                  onClick={() => handlePlay(quiz)}
+                  aria-expanded={choosingQuizId === quiz.id}
+                  onClick={() => setChoosingQuizId(choosingQuizId === quiz.id ? null : quiz.id)}
                 >
                   {startingQuizId === quiz.id ? "Membuka…" : "Mainkan"}
                 </button>
@@ -121,6 +127,22 @@ export function QuizListPage() {
                   Hapus
                 </button>
               </div>
+              {choosingQuizId === quiz.id && (
+                <div className="mode-choice" role="group" aria-label={`Pilih mode skor untuk ${quiz.title}`}>
+                  {PLAYABLE_MODES.map((mode) => (
+                    <button
+                      key={mode}
+                      type="button"
+                      className="button mode-option"
+                      disabled={startingQuizId !== null}
+                      onClick={() => handlePlay(quiz, mode)}
+                    >
+                      <strong>{SCORING_MODES[mode].name}</strong>
+                      <span className="muted">{SCORING_MODES[mode].hint}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
             </li>
           ))}
         </ul>

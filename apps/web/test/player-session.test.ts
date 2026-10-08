@@ -48,9 +48,9 @@ describe("player session", () => {
     expect(ws.sentMessages()).toEqual([{ t: "join", v: 1, nickname: "Dimas" }]);
     ws.serverSend(welcome({ sessionToken: TOKEN }));
     expect(fakes.storage.get(`sorak:session:${PIN}`)).toBe(TOKEN);
-    expect(last()).toEqual({ kind: "lobby", nickname: "Dimas", playerCount: 4 });
+    expect(last()).toEqual({ kind: "lobby", me: { playerId: "p1", nickname: "Dimas" }, playerCount: 4 });
     ws.serverSend({ t: "lobby", playerCount: 5 });
-    expect(last()).toEqual({ kind: "lobby", nickname: "Dimas", playerCount: 5 });
+    expect(last()).toEqual({ kind: "lobby", me: { playerId: "p1", nickname: "Dimas" }, playerCount: 5 });
   });
 
   it("NICKNAME_TAKEN tampil di form, nama berikutnya dikirim lewat socket yang sama", () => {
@@ -95,6 +95,22 @@ describe("player session", () => {
     expect(rejoined).not.toBe(resumed);
     rejoined.serverOpen();
     expect(rejoined.sentMessages()).toEqual([{ t: "join", v: 1, nickname: "Dimas" }]);
+  });
+
+  it("answer mengirim jawaban sekali dengan elapsedMs, lalu menunggu konfirmasi", () => {
+    const { player, last } = session();
+    player.join("Dimas");
+    const ws = fakes.latest();
+    ws.serverOpen();
+    ws.serverSend(welcome({ sessionToken: TOKEN }));
+    ws.serverSend({ t: "question", q: 0, total: 3, prompt: "1 + 1?", options: ["1", "2"], durationMs: 20_000, imageUrl: null });
+    player.answer(1);
+    player.answer(0);
+    const answers = ws.sentMessages().filter((message) => (message as { t: string }).t === "answer");
+    expect(answers).toEqual([{ t: "answer", q: 0, choice: 1, elapsedMs: expect.any(Number) }]);
+    expect(last()).toMatchObject({ kind: "question", choice: 1, confirmed: false });
+    ws.serverSend({ t: "answer_received", q: 0 });
+    expect(last()).toMatchObject({ kind: "question", choice: 1, confirmed: true });
   });
 
   it("room ditutup guru -> layar akhir tanpa Masuk lagi", () => {

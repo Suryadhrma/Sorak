@@ -275,7 +275,8 @@ describe("kasus game", () => {
 
     const client = await connect(game.pin, "host", "host-1");
     client.send({ t: "host_hello", v: 1 });
-    await expectNext(client, { t: "host_welcome", phase: "reveal", question: null, remainingMs: null });
+    const welcome = await expectNext(client, { t: "host_welcome", phase: "reveal", question: { q: 0 }, remainingMs: null });
+    expect(welcome).not.toHaveProperty("question.correctIndex");
     const resent = await expectNext(client, { t: "reveal" });
     expect(resent).toEqual(original);
   });

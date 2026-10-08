@@ -1,37 +1,31 @@
 import {
   CloseCode,
   PROTOCOL_VERSION,
+  TIME_LIMIT_MAX_SEC,
   decodePlayerServerMessage,
   type PlayerMessage,
   type PlayerServerMessage,
   type Pin,
 } from "@sorak/shared";
-import { closeMessage, openRoomSocket, type RoomSocket } from "./socket.ts";
+import { playerScreen, type PlayerEvent, type PlayerView } from "./player-screen.ts";
+import { openRoomSocket, type RoomSocket } from "./socket.ts";
 
 /**
- * Alur pemain di lobby: join dengan nickname, atau resume dengan token yang tersimpan.
- * Komponen hanya menampilkan `PlayerView` dan memanggil aksi; semua keputusan koneksi ada di sini.
+ * Koneksi pemain: join dengan nickname atau resume dengan token tersimpan, lalu meneruskan setiap kejadian
+ * ke reducer layar (player-screen.ts). Komponen hanya menampilkan `PlayerView` dan memanggil aksi.
  */
 
-export type PlayerView =
-  | { kind: "nickname"; error: string | null; busy: boolean }
-  | { kind: "connecting" }
-  | { kind: "lobby"; nickname: string; playerCount: number }
-  | { kind: "ended"; message: string; canRetry: boolean };
+export type { PlayerView } from "./player-screen.ts";
 
 export type PlayerSession = {
   /** Resume otomatis kalau HP ini pernah masuk ke PIN yang sama (misalnya halaman dimuat ulang). */
   start(): void;
   join(nickname: string): void;
+  answer(choice: number): void;
   /** "Masuk lagi": resume dulu supaya tidak ada nama ganda, join ulang kalau token ditolak. */
   retry(): void;
   stop(): void;
 };
-
-const NICKNAME_ERRORS = {
-  NICKNAME_TAKEN: "Nickname sudah dipakai pemain lain. Coba nama lain.",
-  NICKNAME_INVALID: "Nickname hanya boleh huruf, angka, spasi, titik, _ dan -.",
-} as const;
 
 const tokenKey = (pin: Pin) => `sorak:session:${pin}`;
 
@@ -62,14 +56,18 @@ function forgetToken(pin: Pin): void {
 }
 
 export function createPlayerSession(pin: Pin, onView: (view: PlayerView) => void): PlayerSession {
+  let view: PlayerView = { kind: "connecting" };
   let socket: RoomSocket | null = null;
   let nickname: string | null = null;
-  let welcomed = false;
 
+  const show = (next: PlayerView) => {
+    view = next;
+    onView(next);
+  };
+  const dispatch = (event: PlayerEvent) => show(playerScreen(view, event));
   const joinMessage = (name: string): PlayerMessage => ({ t: "join", v: PROTOCOL_VERSION, nickname: name });
 
   function connect(opening: PlayerMessage): void {
-    welcomed = false;
     socket = openRoomSocket({ path: `/ws/play/${pin}`, opening, decode: decodePlayerServerMessage, onMessage, onClose });
   }
 
@@ -77,36 +75,22 @@ export function createPlayerSession(pin: Pin, onView: (view: PlayerView) => void
   function reconnect(): void {
     const token = loadToken(pin);
     if (token) {
-      onView({ kind: "connecting" });
+      show({ kind: "connecting" });
       return connect({ t: "resume", v: PROTOCOL_VERSION, sessionToken: token });
     }
     if (nickname) {
-      onView({ kind: "connecting" });
+      show({ kind: "connecting" });
       return connect(joinMessage(nickname));
     }
-    onView({ kind: "nickname", error: null, busy: false });
+    show({ kind: "nickname", error: null, busy: false });
   }
 
   function onMessage(message: PlayerServerMessage): void {
-    switch (message.t) {
-      case "welcome":
-        welcomed = true;
-        nickname = message.nickname;
-        if (message.sessionToken) saveToken(pin, message.sessionToken);
-        return onView({ kind: "lobby", nickname: message.nickname, playerCount: message.snapshot.playerCount });
-      case "lobby":
-        if (welcomed && nickname) onView({ kind: "lobby", nickname, playerCount: message.playerCount });
-        return;
-      case "error":
-        // Error nickname tidak memutus koneksi; error lain selalu diikuti close, dan teksnya dari close code.
-        if (message.code === "NICKNAME_TAKEN" || message.code === "NICKNAME_INVALID") {
-          onView({ kind: "nickname", error: NICKNAME_ERRORS[message.code], busy: false });
-        }
-        return;
-      default:
-        // Soal, hasil, dan skor ditangani mulai Hari 3.
-        return;
+    if (message.t === "welcome") {
+      nickname = message.nickname;
+      if (message.sessionToken) saveToken(pin, message.sessionToken);
     }
+    dispatch({ type: "server", message, at: performance.now() });
   }
 
   function onClose(code: number): void {
@@ -115,17 +99,25 @@ export function createPlayerSession(pin: Pin, onView: (view: PlayerView) => void
       forgetToken(pin);
       return reconnect();
     }
-    onView({ kind: "ended", ...closeMessage(code) });
+    dispatch({ type: "closed", code });
   }
 
   return {
     start: reconnect,
     join(name) {
       nickname = name;
-      onView({ kind: "nickname", error: null, busy: true });
+      const reuse = socket !== null && view.kind === "nickname";
+      show({ kind: "nickname", error: null, busy: true });
       // Setelah NICKNAME_TAKEN socket masih terbuka dan belum join, jadi nama baru dikirim lewat socket yang sama.
-      if (socket && !welcomed) return socket.send(joinMessage(name));
+      if (reuse && socket) return socket.send(joinMessage(name));
       connect(joinMessage(name));
+    },
+    answer(choice) {
+      if (view.kind !== "question" || view.choice !== null || !socket) return;
+      // Lama berpikir menurut HP; server belum memakainya sampai kompensasi latency Hari 4.
+      const elapsedMs = Math.min(Math.max(Math.round(performance.now() - view.startedAt), 0), TIME_LIMIT_MAX_SEC * 1000);
+      socket.send({ t: "answer", q: view.question.q, choice, elapsedMs });
+      dispatch({ type: "answer_sent", choice });
     },
     retry: reconnect,
     stop() {

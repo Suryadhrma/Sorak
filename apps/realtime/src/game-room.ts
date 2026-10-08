@@ -540,13 +540,15 @@ export class GameRoom extends DurableObject<Env> {
     const q = state.questionIndex;
     const question = q === null ? undefined : quiz.questions[q];
     const live = state.phase === "question" || state.phase === "grace";
+    // Di reveal soal tetap dikirim (tanpa kunci jawaban) supaya layar guru yang di-refresh bisa menampilkan teks pilihan.
+    const showQuestion = live || state.phase === "reveal";
     this.send(ws, {
       t: "host_welcome",
       v: PROTOCOL_VERSION,
       room: this.roomInfo(),
       phase: state.phase,
       players: this.hostRoster(),
-      question: live && question && q !== null ? toPublicQuestion(question, q, quiz.questions.length) : null,
+      question: showQuestion && question && q !== null ? toPublicQuestion(question, q, quiz.questions.length) : null,
       remainingMs: state.phase === "question" && state.deadlineAt !== null ? Math.max(0, state.deadlineAt - now) : null,
       answered: live && q !== null ? this.answeredCount(q) : 0,
     });

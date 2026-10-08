@@ -1,26 +1,7 @@
-import { CloseCode, type RosterEntry } from "@sorak/shared";
+import { CloseCode } from "@sorak/shared";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { applyRosterMessage, createHostSession, type HostView } from "../src/host-session.ts";
+import { createHostSession, type HostView } from "../src/host-session.ts";
 import { installBrowserFakes } from "./fake-websocket.ts";
-
-const andi: RosterEntry = { playerId: "p1", nickname: "Andi", teamSize: null, connected: true };
-const budi: RosterEntry = { playerId: "p2", nickname: "Budi", teamSize: null, connected: true };
-
-describe("applyRosterMessage", () => {
-  it("player_joined menambah, dan pemain yang sama tidak pernah ganda", () => {
-    const once = applyRosterMessage([andi], { t: "player_joined", player: budi, playerCount: 2 });
-    expect(once).toEqual([andi, budi]);
-    expect(applyRosterMessage(once, { t: "player_joined", player: budi, playerCount: 2 })).toEqual([andi, budi]);
-  });
-
-  it("player_left membuang pemain itu", () => {
-    expect(applyRosterMessage([andi, budi], { t: "player_left", playerId: "p1", kicked: false, playerCount: 1 })).toEqual([budi]);
-  });
-
-  it("pesan lain tidak mengubah daftar", () => {
-    expect(applyRosterMessage([andi], { t: "reaction", reaction: "fire" })).toEqual([andi]);
-  });
-});
 
 describe("host session", () => {
   let fakes: ReturnType<typeof installBrowserFakes>;
@@ -39,9 +20,9 @@ describe("host session", () => {
     return { host, last: () => views.at(-1) };
   }
 
-  it("host_hello lalu daftar pemain dari host_welcome dan delta", () => {
+  it("connect mengirim host_hello dan menampilkan lobby dari host_welcome", () => {
     const { host, last } = session();
-    host.start();
+    host.connect();
     const ws = fakes.latest();
     expect(ws.url).toBe("wss://sorak.test/ws/host/123456");
     ws.serverOpen();
@@ -51,35 +32,36 @@ describe("host session", () => {
       v: 1,
       room: { pin: "123456", scoringMode: "classic", teamMode: false, questionCount: 3 },
       phase: "lobby",
-      players: [andi],
+      players: [],
       question: null,
       remainingMs: null,
       answered: 0,
     });
-    ws.serverSend({ t: "player_joined", player: budi, playerCount: 2 });
-    expect(last()).toEqual({ kind: "lobby", players: [andi, budi] });
+    expect(last()).toMatchObject({ kind: "lobby", base: { players: [] } });
   });
 
-  it("end mengirim pesan end", () => {
+  it("aksi guru dikirim sebagai pesan start, next, dan end", () => {
     const { host } = session();
-    host.start();
+    host.connect();
     fakes.latest().serverOpen();
+    host.startGame();
+    host.next();
     host.end();
-    expect(fakes.latest().sentMessages().at(-1)).toEqual({ t: "end" });
+    expect(fakes.latest().sentMessages().slice(1)).toEqual([{ t: "start" }, { t: "next" }, { t: "end" }]);
   });
 
   it("room bukan milik host -> layar akhir tanpa Sambung lagi", () => {
     const { host, last } = session();
-    host.start();
+    host.connect();
     fakes.latest().serverClose(CloseCode.ROOM_NOT_FOUND);
-    expect(last()).toMatchObject({ kind: "ended", canRetry: false });
+    expect(last()).toMatchObject({ kind: "closed", canRetry: false });
   });
 
   it("koneksi putus -> boleh sambung lagi", () => {
     const { host, last } = session();
-    host.start();
+    host.connect();
     fakes.latest().serverOpen();
     fakes.latest().serverClose(CloseCode.ABNORMAL);
-    expect(last()).toEqual({ kind: "ended", message: "Koneksi terputus.", canRetry: true });
+    expect(last()).toEqual({ kind: "closed", message: "Koneksi terputus.", canRetry: true });
   });
 });
