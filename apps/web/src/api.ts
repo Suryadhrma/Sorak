@@ -1,5 +1,15 @@
 import type { z } from "zod";
-import { ApiError, Host, QuizDetail, QuizSummary, type ApiErrorCode, type QuizInput } from "@sorak/shared";
+import {
+  ApiError,
+  CreateRoomResult,
+  Host,
+  QuizDetail,
+  QuizSummary,
+  RoomLookup,
+  type ApiErrorCode,
+  type CreateRoomInput,
+  type QuizInput,
+} from "@sorak/shared";
 
 /**
  * Semua panggilan REST lewat modul ini. Respons divalidasi dengan skema shared,
@@ -41,7 +51,7 @@ async function sendJson<T>(path: string, schema: z.ZodType<T>, init: RequestInit
   return schema.parse(await res.json());
 }
 
-const jsonBody = (method: "POST" | "PUT", input: QuizInput): RequestInit => ({
+const jsonBody = (method: "POST" | "PUT", input: QuizInput | CreateRoomInput): RequestInit => ({
   method,
   headers: { "Content-Type": "application/json" },
   body: JSON.stringify(input),
@@ -57,6 +67,11 @@ export const createQuiz = (input: QuizInput) => sendJson("/api/quizzes", QuizDet
 
 export const updateQuiz = (id: string, input: QuizInput) =>
   sendJson(`/api/quizzes/${encodeURIComponent(id)}`, QuizDetail, jsonBody("PUT", input));
+
+export const createRoom = (quizId: string) => sendJson("/api/rooms", CreateRoomResult, jsonBody("POST", { quizId }));
+
+/** Cek PIN sebelum membuka WebSocket, supaya PIN salah atau room penuh dijelaskan dengan pesan yang jelas. */
+export const lookupRoom = (pin: string) => sendJson(`/api/rooms/${encodeURIComponent(pin)}`, RoomLookup);
 
 export async function deleteQuiz(id: string): Promise<void> {
   await send(`/api/quizzes/${encodeURIComponent(id)}`, { method: "DELETE" });

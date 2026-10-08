@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router";
 import type { QuizSummary } from "@sorak/shared";
-import { deleteQuiz, describeError, listQuizzes, logout } from "../api.ts";
+import { createRoom, deleteQuiz, describeError, listQuizzes, logout } from "../api.ts";
 import { useHost } from "../RequireHost.tsx";
 
 type ListState = { kind: "loading" } | { kind: "ready"; quizzes: QuizSummary[] } | { kind: "error"; message: string };
@@ -13,6 +13,7 @@ export function QuizListPage() {
   const navigate = useNavigate();
   const [state, setState] = useState<ListState>({ kind: "loading" });
   const [actionError, setActionError] = useState<string | null>(null);
+  const [startingQuizId, setStartingQuizId] = useState<string | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -38,6 +39,18 @@ export function QuizListPage() {
       );
     } catch (error) {
       setActionError(describeError(error));
+    }
+  }
+
+  async function handlePlay(quiz: QuizSummary) {
+    setActionError(null);
+    setStartingQuizId(quiz.id);
+    try {
+      const { pin } = await createRoom(quiz.id);
+      navigate(`/host/${pin}`);
+    } catch (error) {
+      setActionError(describeError(error));
+      setStartingQuizId(null);
     }
   }
 
@@ -94,9 +107,20 @@ export function QuizListPage() {
                   {quiz.questionCount} soal · diubah {updatedAtFormat.format(quiz.updatedAt)}
                 </p>
               </div>
-              <button type="button" className="button button-danger" onClick={() => handleDelete(quiz)}>
-                Hapus
-              </button>
+              <div className="quiz-actions">
+                {/* Room butuh minimal satu soal; server juga menolaknya dengan 409. */}
+                <button
+                  type="button"
+                  className="button button-primary"
+                  disabled={quiz.questionCount === 0 || startingQuizId !== null}
+                  onClick={() => handlePlay(quiz)}
+                >
+                  {startingQuizId === quiz.id ? "Membuka…" : "Mainkan"}
+                </button>
+                <button type="button" className="button button-danger" onClick={() => handleDelete(quiz)}>
+                  Hapus
+                </button>
+              </div>
             </li>
           ))}
         </ul>

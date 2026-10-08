@@ -20,6 +20,11 @@
   --font-size-body: 1rem;
   --font-size-small: 0.875rem;
   --font-size-title: 1.5rem;
+  --font-size-pin-input: 2rem;
+  /* Proyektor: tumbuh mengikuti lebar layar, dengan batas supaya tetap muat di laptop kecil. */
+  --font-size-host-pin: clamp(4rem, 18vw, 12rem);
+  --font-size-host-text: clamp(1.25rem, 3vw, 2.25rem);
+  --font-size-host-name: clamp(1.125rem, 2.2vw, 1.75rem);
 
   --radius: 6px;
   --page-max-width: 48rem;
@@ -252,4 +257,102 @@ textarea {
     grid-column: 2;
     justify-self: start;
   }
+}
+
+/* Siswa: halaman PIN, nickname, dan lobby. */
+
+.join-form {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.button-block {
+  justify-self: stretch;
+  width: 100%;
+}
+
+/* Selektor input.* supaya mengalahkan font: inherit di aturan input umum. */
+input.pin-input {
+  font-size: var(--font-size-pin-input);
+  letter-spacing: 0.3em;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+.lobby {
+  text-align: center;
+}
+
+.lobby-nickname {
+  font-size: var(--font-size-title);
+  font-weight: 700;
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+/* Layar proyektor: dibaca dari belakang kelas. */
+
+.host-screen {
+  min-height: 100vh;
+  padding: var(--space-4);
+  display: grid;
+  align-content: start;
+  justify-items: center;
+  gap: var(--space-3);
+  text-align: center;
+}
+
+.host-join-hint {
+  font-size: var(--font-size-host-text);
+  margin: 0;
+}
+
+.host-pin {
+  font-size: var(--font-size-host-pin);
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: 0.05em;
+  font-variant-numeric: tabular-nums;
+  margin: 0;
+}
+
+.host-screen .empty {
+  font-size: var(--font-size-host-text);
+}
+
+.host-count {
+  font-size: var(--font-size-host-text);
+  font-weight: 600;
+  margin: 0;
+}
+
+.roster {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--space-2);
+  max-width: 72rem;
+}
+
+.roster li {
+  font-size: var(--font-size-host-name);
+  font-weight: 600;
+  padding: var(--space-1) var(--space-3);
+  border: 2px solid var(--color-border);
+  border-radius: var(--radius);
+  overflow-wrap: anywhere;
+}
+
+.host-actions {
+  margin-top: var(--space-4);
+}
+
+.quiz-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: var(--space-2);
 }
