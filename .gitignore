@@ -5,3 +5,4 @@ CLAUDE.md
 dist
 .wrangler
 .dev.vars
+client_secret_*.json

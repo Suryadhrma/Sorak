@@ -5,7 +5,9 @@
   "compatibility_date": "2026-08-22",
   // Lokal ditimpa .dev.vars. GOOGLE_CLIENT_SECRET dan JWT_SECRET lewat wrangler secret put.
   "vars": {
-    "APP_ORIGIN": "https://sorak.helpu.workers.dev"
+    "APP_ORIGIN": "https://sorak.helpu.workers.dev",
+    // Client ID memang publik: ikut di URL login Google.
+    "GOOGLE_CLIENT_ID": "1094752542047-easm89psmopsfrbqe2fv515eogg1udno.apps.googleusercontent.com"
   },
   "assets": {
     "directory": "../web/dist",
