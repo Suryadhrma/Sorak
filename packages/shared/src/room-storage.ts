@@ -96,6 +96,8 @@ export const PlayerScore = z.object({
    * sedangkan skor total tidak. Dipakai untuk mengirim ulang reveal/podium dan result setelah refresh atau resume.
    */
   lastPoints: z.number().int(),
+  /** Hasil soal yang terakhir di-reveal: lastPoints 0 bisa berarti salah atau tidak menjawab. Null sebelum reveal pertama. */
+  lastOutcome: z.enum(["correct", "wrong", "no_answer"]).nullable(),
 });
 export type PlayerScore = z.infer<typeof PlayerScore>;
 
@@ -173,17 +175,32 @@ export const PlayerAttachment = z.object({
   joinedAt: Timestamp,
   /** Estimasi jeda satu arah (EWMA), null sebelum ack pertama. */
   latencyMs: z.number().int().min(0).nullable(),
+  /**
+   * Soal yang ack-nya sudah dipakai sebagai sampel latency. Satu soal hanya boleh menyumbang satu sampel:
+   * tanpa ini, HP curang bisa mengirim ack berulang dengan jeda panjang supaya estimasi jedanya membesar.
+   */
+  ackedQ: QuestionIndex.nullable(),
   score: z.number().int().min(0),
   streak: z.number().int().min(0),
   answer: ActiveAnswer.nullable(),
 });
 export type PlayerAttachment = z.infer<typeof PlayerAttachment>;
 
+/**
+ * Socket yang sedang ditutup server karena digantikan socket lain (resume dari tab/HP lain) atau di-kick.
+ * Ditandai di attachment (bukan hanya di memori) supaya webSocketClose-nya tidak menulis pending atau mengirim
+ * player_left, walaupun objek sempat hibernasi di antaranya.
+ */
+export const ReplacedAttachment = z.object({
+  role: z.literal("replaced"),
+});
+
 export const SocketAttachment = z.discriminatedUnion("role", [
   PendingPlayerAttachment,
   PendingHostAttachment,
   HostAttachment,
   PlayerAttachment,
+  ReplacedAttachment,
 ]);
 export type SocketAttachment = z.infer<typeof SocketAttachment>;
 

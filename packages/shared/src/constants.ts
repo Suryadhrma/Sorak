@@ -77,6 +77,12 @@ export const STALE_SOCKET_MS = HEARTBEAT.intervalMs * 2 + HEARTBEAT.timeoutMs;
 /** Jeda reconnect bertahap (exponential backoff); jitter ditambahkan oleh klien. */
 export const RECONNECT_BACKOFF_MS = [500, 1000, 2000, 5000] as const;
 
+/**
+ * Jeda reconnect = jeda dasar + acak antara 0 dan (rasio x jeda dasar). Tanpa jitter, ratusan HP yang WiFi-nya
+ * pulih bersamaan mencoba tersambung di milidetik yang sama (thundering herd).
+ */
+export const RECONNECT_JITTER_RATIO = 0.5;
+
 /** Batas pesan per detik per socket (token bucket). */
 export const RATE_LIMIT = {
   capacity: 10,

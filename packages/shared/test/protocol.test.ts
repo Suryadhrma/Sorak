@@ -262,6 +262,7 @@ describe("anggaran ukuran (kasus terburuk)", () => {
       teamSize: 10,
       joinedAt: Date.now(),
       latencyMs: 1500,
+      ackedQ: 49,
       score: 999_999,
       streak: 49,
       answer: { q: 49, choice: 3, tMs: 120_000, confidence: 3 },
@@ -331,6 +332,10 @@ describe("attachment socket pending", () => {
     expect(SocketAttachment.safeParse({ role: "pending_host", hostId: "h1", connectedAt: 1 }).success).toBe(true);
   });
 
+  it("socket yang digantikan atau di-kick ditandai replaced", () => {
+    expect(SocketAttachment.safeParse({ role: "replaced" }).success).toBe(true);
+  });
+
   it("pending host tanpa hostId dan bentuk lama 'pending' ditolak", () => {
     expect(SocketAttachment.safeParse({ role: "pending_host", connectedAt: 1 }).success).toBe(false);
     expect(SocketAttachment.safeParse({ role: "pending", connectedAt: 1 }).success).toBe(false);
@@ -384,7 +389,14 @@ describe("skor pemain di storage", () => {
     worstRank: 1,
     biggestRankClimb: 0,
     lastPoints: 0,
+    lastOutcome: "no_answer" as const,
   };
+
+  it("hasil soal terakhir: tiga kemungkinan, atau null sebelum reveal pertama", () => {
+    expect(PlayerScore.safeParse({ ...score, lastOutcome: null }).success).toBe(true);
+    expect(PlayerScore.safeParse({ ...score, lastOutcome: "correct" }).success).toBe(true);
+    expect(PlayerScore.safeParse({ ...score, lastOutcome: "late" }).success).toBe(false);
+  });
 
   it("poin per soal boleh negatif (Taruhan Yakin), skor total tidak", () => {
     expect(PlayerScore.safeParse({ ...score, lastPoints: -1800 }).success).toBe(true);
