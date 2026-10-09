@@ -51,6 +51,7 @@ export function emptyScore(): PlayerScore {
     worstRank: null,
     biggestRankClimb: 0,
     lastPoints: 0,
+    lastOutcome: null,
   };
 }
 
@@ -94,7 +95,6 @@ export function revealQuestion(input: RevealInput): RevealOutput {
   };
 
   const scored: Scoreboard = {};
-  const outcomes = new Map<string, Outcome>();
   for (const player of roster) {
     const previous = input.scoreboard[player.playerId] ?? emptyScore();
     const answer = answerOf.get(player.playerId);
@@ -109,7 +109,6 @@ export function revealQuestion(input: RevealInput): RevealOutput {
       stats.correct += 1;
       stats.totalCorrectMs += answer.tMs;
     }
-    outcomes.set(player.playerId, outcomeOf(answer, correct));
 
     const fastest = correct && answer ? minOrNull(previous.fastestCorrectMs, answer.tMs) : previous.fastestCorrectMs;
     scored[player.playerId] = {
@@ -123,6 +122,7 @@ export function revealQuestion(input: RevealInput): RevealOutput {
       fastestCorrectMs: fastest,
       // Tidak menjawab = 0, bukan poin soal sebelumnya.
       lastPoints: points,
+      lastOutcome: outcomeOf(answer, correct),
     };
   }
 
@@ -139,7 +139,7 @@ export function revealQuestion(input: RevealInput): RevealOutput {
     scoreboard[player.playerId] = score;
     results.push({
       playerId: player.playerId,
-      outcome: outcomes.get(player.playerId) ?? "no_answer",
+      outcome: score.lastOutcome ?? "no_answer",
       points: score.lastPoints,
       score: score.score,
       rank,

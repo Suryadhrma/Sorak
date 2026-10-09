@@ -351,6 +351,7 @@ export class GameRoom extends DurableObject<Env> {
       teamSize: null,
       joinedAt: now,
       latencyMs: null,
+      ackedQ: null,
       score: 0,
       streak: 0,
       answer: null,

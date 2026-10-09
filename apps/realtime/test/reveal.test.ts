@@ -28,8 +28,9 @@ describe("revealQuestion", () => {
       { playerId: "c", outcome: "no_answer", points: 0, score: 0, rank: 2, streak: 0 },
     ]);
     expect(stats).toEqual({ answerCounts: [0, 1, 1, 0], answered: 2, correct: 1, totalCorrectMs: 0, confidentWrong: 0 });
-    expect(scoreboard.a).toMatchObject({ correct: 1, answered: 1, bestStreak: 1, fastestCorrectMs: 0, lastPoints: 1000 });
-    expect(scoreboard.c).toMatchObject({ answered: 0, fastestCorrectMs: null });
+    expect(scoreboard.a).toMatchObject({ correct: 1, answered: 1, bestStreak: 1, fastestCorrectMs: 0, lastPoints: 1000, lastOutcome: "correct" });
+    expect(scoreboard.b).toMatchObject({ lastPoints: 0, lastOutcome: "wrong" });
+    expect(scoreboard.c).toMatchObject({ answered: 0, fastestCorrectMs: null, lastPoints: 0, lastOutcome: "no_answer" });
     expect(Scoreboard.safeParse(scoreboard).success).toBe(true);
   });
 
