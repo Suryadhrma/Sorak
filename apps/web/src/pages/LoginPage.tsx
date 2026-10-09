@@ -1,4 +1,5 @@
 import { useSearchParams } from "react-router";
+import { Logo } from "../Logo.tsx";
 import { useTheme } from "../theme.ts";
 
 const LOGIN_ERRORS: Record<string, string> = {
@@ -14,7 +15,9 @@ export function LoginPage() {
 
   return (
     <main className="page page-narrow">
-      <h1>Sorak</h1>
+      <h1>
+        <Logo />
+      </h1>
       <p>Masuk untuk membuat dan mengelola kuis.</p>
       {error && (
         <p className="alert" role="alert">

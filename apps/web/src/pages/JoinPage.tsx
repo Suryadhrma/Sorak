@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from "react";
 import { Link, useNavigate } from "react-router";
 import { Pin } from "@sorak/shared";
+import { Logo } from "../Logo.tsx";
 import { useTheme } from "../theme.ts";
 
 /** Halaman pertama siswa: cukup PIN. Nickname ditanya setelah PIN terbukti ada. */
@@ -22,7 +23,9 @@ export function JoinPage() {
 
   return (
     <main className="page page-narrow">
-      <h1>Sorak</h1>
+      <h1>
+        <Logo />
+      </h1>
       <form className="join-form" onSubmit={handleSubmit} noValidate>
         <div className="field">
           <label htmlFor="pin">PIN dari guru</label>

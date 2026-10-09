@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, type FormEvent } from "react";
 import { Link, useParams } from "react-router";
 import { NICKNAME_MAX_LENGTH, Nickname, Pin } from "@sorak/shared";
 import { ApiRequestError, describeError, lookupRoom } from "../api.ts";
-import { AnswerButton } from "../AnswerOption.tsx";
+import { AnswerButton, answersClass } from "../AnswerOption.tsx";
 import { createPlayerSession, type PlayerSession, type PlayerView } from "../player-session.ts";
 import { useRemainingMs } from "../useRemainingMs.ts";
 import { useTheme } from "../theme.ts";
@@ -201,7 +201,7 @@ function QuestionScreen({ view, onAnswer }: { view: QuestionView; onAnswer: (cho
         </span>
       </div>
       <h1 className="question-prompt">{question.prompt}</h1>
-      <div className="answers">
+      <div className={answersClass(question.options.length)}>
         {question.options.map((text, index) => (
           <AnswerButton
             key={index}

@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router";
 import { Pin } from "@sorak/shared";
-import { AnswerRow } from "../AnswerOption.tsx";
+import { AnswerRow, AnswerTile, answerLetter } from "../AnswerOption.tsx";
 import type { HostBase } from "../host-screen.ts";
 import { createHostSession, type HostSession, type HostView } from "../host-session.ts";
 import { SCORING_MODES } from "../scoring-modes.ts";
@@ -93,7 +93,7 @@ function Notice({ base }: { base: HostBase }) {
 function EndGameButton({ onEndGame }: { onEndGame: () => void }) {
   return (
     <div className="host-actions">
-      <button type="button" className="button button-danger" onClick={onEndGame}>
+      <button type="button" className="button button-danger button-large" onClick={onEndGame}>
         Akhiri game
       </button>
     </div>
@@ -127,7 +127,7 @@ function Lobby({ pin, base, onStart, onCancel }: { pin: Pin; base: HostBase; onS
         <button type="button" className="button button-primary button-large" disabled={players.length === 0} onClick={onStart}>
           Mulai
         </button>
-        <button type="button" className="button button-danger" onClick={onCancel}>
+        <button type="button" className="button button-danger button-large" onClick={onCancel}>
           Batalkan
         </button>
       </div>
@@ -174,19 +174,25 @@ function RevealScreen({ view, onNext, onEndGame }: { view: RevealView; onNext: (
       </p>
       {question && <h1 className="host-prompt">{question.prompt}</h1>}
       <ul className="answers answers-host">
-        {reveal.counts.map((count, index) => (
+        {(question?.options ?? reveal.counts.map(() => "")).map((text, index) => (
           <AnswerRow
             key={index}
             index={index}
-            text={question?.options[index] ?? ""}
+            text={text}
             correct={index === reveal.correctIndex}
             dimmed={index !== reveal.correctIndex}
-          >
-            <span className="answer-count">
-              <span className="answer-bar" style={{ width: `${(count / most) * 100}%` }} />
-              <span>{count}</span>
+          />
+        ))}
+      </ul>
+      <ul className="distribution" aria-label="Sebaran jawaban">
+        {reveal.counts.map((count, index) => (
+          <li key={index} aria-label={`Pilihan ${answerLetter(index)}: ${count} jawaban`}>
+            <AnswerTile index={index} />
+            <span className="distribution-track">
+              <span className={`distribution-bar answer-${index}`} style={{ width: `${(count / most) * 100}%` }} />
             </span>
-          </AnswerRow>
+            <span className="distribution-count">{count}</span>
+          </li>
         ))}
       </ul>
       <ol className="leaderboard">
@@ -206,7 +212,7 @@ function RevealScreen({ view, onNext, onEndGame }: { view: RevealView; onNext: (
         <button type="button" className="button button-primary button-large" onClick={onNext}>
           {reveal.isLastQuestion ? "Lihat podium" : "Lanjut"}
         </button>
-        <button type="button" className="button button-danger" onClick={onEndGame}>
+        <button type="button" className="button button-danger button-large" onClick={onEndGame}>
           Akhiri game
         </button>
       </div>

@@ -4,6 +4,7 @@ import { CreateRoomInput, type QuizSummary } from "@sorak/shared";
 import { createRoom, deleteQuiz, describeError, listQuizzes, logout } from "../api.ts";
 import { useHost } from "../RequireHost.tsx";
 import { SCORING_MODES } from "../scoring-modes.ts";
+import { Logo } from "../Logo.tsx";
 import { useTheme } from "../theme.ts";
 
 /** Mode yang diterima server saat membuat room; satu sumber dengan skema REST. */
@@ -75,6 +76,7 @@ export function QuizListPage() {
     <main className="page">
       <header className="page-header">
         <div>
+          <Logo />
           <h1>Kuis saya</h1>
           <p className="muted">Masuk sebagai {host.displayName}</p>
         </div>

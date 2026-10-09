@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120">
+  <!-- Versi tebal untuk ukuran kecil: latar kapur, tangan dan manset tinta, supaya terlihat di bilah tab terang maupun gelap. -->
+  <rect width="120" height="120" rx="24" fill="#f2b705"/>
+  <g transform="rotate(-8 64 64)" fill="#15211b">
+    <rect x="31" y="24" width="16" height="50" rx="8"/>
+    <rect x="48" y="12" width="15" height="62" rx="7.5"/>
+    <rect x="64" y="18" width="15" height="56" rx="7.5"/>
+    <rect x="80" y="32" width="14" height="42" rx="7"/>
+    <path d="M31 56 H94 V80 C94 92 86 99 75 99 H52 C41 99 31 92 31 81 Z"/>
+    <line x1="38" y1="80" x2="19" y2="58" stroke="#15211b" stroke-width="16" stroke-linecap="round"/>
+    <rect x="44" y="103" width="40" height="15" rx="4"/>
+  </g>
+</svg>

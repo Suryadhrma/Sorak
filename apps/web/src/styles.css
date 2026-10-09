@@ -83,6 +83,7 @@
   --font-size-countdown: 2.5rem;
   --font-size-score: 3rem;
   --font-size-kartu-huruf: 2rem;
+  --font-size-host-kartu-huruf: clamp(2.5rem, 4vw, 4rem);
 
   --page-max-width: 48rem;
   --tap-target: 2.75rem;
@@ -105,8 +106,10 @@
   --color-focus: var(--tinta);
   --color-urgent: var(--bahaya);
   --shadow-alas: 0 4px 0 var(--tinta);
+  --logo-tangan: var(--tinta);
+  --logo-manset: var(--tinta);
   /* Di atas kertas tepi kartu B sudah kontras, jadi cincin tidak perlu. */
-  --kartu-b-cincin: none;
+  --kartu-b-cincin: 0 0 0 0 transparent;
 }
 
 /* Tema papan: HP siswa. */
@@ -127,6 +130,8 @@
   --color-focus: var(--kapur);
   --color-urgent: var(--waktu-kritis);
   --shadow-alas: 0 4px 0 #08120e;
+  --logo-tangan: var(--kapur);
+  --logo-manset: var(--kapur-putih);
   /* Kartu B (biru tua) hampir menyatu dengan papan; cincin 2px #6678b3 kontrasnya 3,70 (3,15 di papan-2). */
   --kartu-b-cincin: 0 0 0 2px #6678b3;
 }
@@ -219,8 +224,11 @@ a {
   justify-self: start;
 }
 
+/* Aksi berbahaya dibedakan lewat garis tepi dan warna teks, bukan lewat ukuran yang lebih kecil. */
 .button-danger {
   color: var(--color-danger);
+  border: 2px solid currentColor;
+  background: transparent;
 }
 
 .alert {
@@ -491,21 +499,38 @@ input.pin-input {
   margin: 0;
   padding: 0;
   display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: var(--space-2);
 }
 
+/* Soal benar/salah (2 pilihan): satu kolom, kartu selebar layar. */
+.answers-2 {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+/*
+ * Kartu regu: warna seragam per huruf, huruf besar di kiri atas, teks pilihan di kiri bawah.
+ * Lipatan di tepi atas = bayangan inset; cincin (kartu B di papan, atau penanda jawaban benar)
+ * = bayangan kedua, diatur lewat --kartu-cincin.
+ */
 .answer {
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
-  min-height: calc(var(--tap-target) * 1.5);
-  padding: var(--space-2) var(--space-3);
-  border: 3px solid transparent;
-  border-radius: var(--radius-kecil);
+  display: grid;
+  grid-template-rows: auto 1fr;
+  gap: var(--space-2);
+  min-height: 7rem;
+  padding: calc(var(--lipatan) + var(--space-2)) var(--space-3) var(--space-3);
+  border: 0;
+  border-radius: var(--radius-kartu);
+  box-shadow: inset 0 var(--lipatan) 0 var(--kartu-lipatan), var(--kartu-cincin, 0 0 0 0 transparent);
   font: inherit;
-  font-weight: 600;
+  font-weight: 700;
   text-align: left;
 }
+
+.answer-0 { --kartu-lipatan: var(--kartu-a-lipatan); background: var(--kartu-a); color: var(--kartu-a-teks); }
+.answer-1 { --kartu-lipatan: var(--kartu-b-lipatan); --kartu-cincin: var(--kartu-b-cincin); background: var(--kartu-b); color: var(--kartu-b-teks); }
+.answer-2 { --kartu-lipatan: var(--kartu-c-lipatan); background: var(--kartu-c); color: var(--kartu-c-teks); }
+.answer-3 { --kartu-lipatan: var(--kartu-d-lipatan); background: var(--kartu-d); color: var(--kartu-d-teks); }
 
 button.answer {
   width: 100%;
@@ -517,75 +542,95 @@ button.answer:disabled {
   opacity: 0.55;
 }
 
-/* Pilihan yang ditekan tetap jelas walaupun tombol lain meredup. */
-.answer-selected,
+/* Pilihan yang ditekan tetap jelas walaupun kartu lain meredup. */
+button.answer-selected,
 button.answer-selected:disabled {
   opacity: 1;
-  border-color: var(--color-text);
-  outline: 3px solid var(--color-background);
-  outline-offset: -6px;
+  outline: 4px solid var(--color-focus);
+  outline-offset: 3px;
 }
-
-.answer-0 { background: var(--kartu-a); color: var(--kartu-a-teks); }
-.answer-1 { background: var(--kartu-b); color: var(--kartu-b-teks); }
-.answer-2 { background: var(--kartu-c); color: var(--kartu-c-teks); }
-.answer-3 { background: var(--kartu-d); color: var(--kartu-d-teks); }
-
-.answer-mark {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-1);
-  flex-shrink: 0;
-}
-
-.answer-shape {
-  display: inline-block;
-  width: 1.25em;
-  height: 1.25em;
-  background: currentColor;
-}
-
-.answer-shape-0 { clip-path: var(--answer-shape-0); }
-.answer-shape-1 { clip-path: var(--answer-shape-1); }
-.answer-shape-2 { clip-path: var(--answer-shape-2); }
-.answer-shape-3 { clip-path: var(--answer-shape-3); }
 
 .answer-letter {
-  font-weight: 800;
+  font-size: var(--font-size-kartu-huruf);
+  line-height: 1;
 }
 
 .answer-text {
-  flex: 1;
-  overflow-wrap: anywhere;
+  align-self: end;
+  /* Patah hanya kalau satu kata memang tidak muat, bukan di tengah kata biasa. */
+  overflow-wrap: break-word;
 }
 
+/* Proyektor: semua pilihan dalam satu baris. */
 .answers-host {
   width: 100%;
   max-width: 72rem;
-  grid-template-columns: repeat(auto-fit, minmax(20rem, 1fr));
+  grid-template-columns: none;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(0, 1fr);
   font-size: var(--font-size-host-name);
 }
 
+.answers-host .answer {
+  min-height: 9rem;
+}
+
+/* Huruf kartu di proyektor dibaca dari belakang kelas. */
+.answers-host .answer-letter {
+  font-size: var(--font-size-host-kartu-huruf);
+}
+
 .answer-dimmed {
-  opacity: 0.45;
+  opacity: 0.4;
 }
 
 .answer-correct {
-  border-color: var(--color-text);
+  --kartu-cincin: 0 0 0 5px var(--benar);
 }
 
-.answer-count {
-  display: flex;
-  align-items: center;
+/* Sebaran jawaban di reveal: ubin huruf berwarna kartu, batang, dan jumlah. */
+.distribution {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  max-width: 48rem;
+  display: grid;
   gap: var(--space-2);
-  min-width: 8rem;
+  font-size: var(--font-size-host-name);
 }
 
-.answer-bar {
-  display: block;
-  height: 0.75em;
-  background: currentColor;
+.distribution li {
+  display: grid;
+  grid-template-columns: 2.5rem 1fr 3ch;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.distribution .answer-tile {
+  display: grid;
+  place-items: center;
+  width: 2.5rem;
+  height: 2.5rem;
   border-radius: var(--radius-kecil);
+}
+
+.distribution-track {
+  height: 1rem;
+  border-radius: var(--radius-kecil);
+  background: var(--color-border);
+}
+
+.distribution-bar {
+  display: block;
+  height: 100%;
+  border-radius: var(--radius-kecil);
+}
+
+.distribution-count {
+  font-family: var(--font-angka);
+  font-weight: 800;
+  text-align: right;
 }
 
 /* Hasil dan skor di HP siswa. */
@@ -705,8 +750,8 @@ button.answer-selected:disabled {
 }
 
 @media (prefers-reduced-motion: no-preference) {
-  .answer-bar {
-    transition: width 300ms ease-out;
+  .distribution-bar {
+    transition: width var(--gerak-turus);
   }
 }
 
@@ -720,4 +765,33 @@ input.pin-input,
 .answer-letter {
   font-family: var(--font-angka);
   font-weight: 800;
+}
+
+.distribution .answer-letter {
+  font-size: 1.5rem;
+}
+
+/* Logo: tangan bersorak + wordmark. */
+.logo {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  color: var(--logo-tangan);
+}
+
+.logo-mark {
+  width: 2.75rem;
+  height: 2.75rem;
+}
+
+.logo-manset {
+  fill: var(--logo-manset);
+}
+
+.logo-wordmark {
+  font-family: var(--font-angka);
+  font-weight: 800;
+  font-size: 2rem;
+  line-height: 1;
+  color: var(--color-text);
 }
