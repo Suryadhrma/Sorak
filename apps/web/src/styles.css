@@ -449,13 +449,19 @@ input.pin-input {
   max-width: 72rem;
 }
 
-.roster li {
+/* Nama di lobby adalah tombol: ditekan untuk membuka konfirmasi kick. */
+.roster-name {
+  font: inherit;
   font-size: var(--font-size-host-name);
   font-weight: 600;
+  min-height: var(--tap-target);
   padding: var(--space-1) var(--space-3);
   border: 2px solid var(--color-border);
   border-radius: var(--radius-kecil);
+  background: transparent;
+  color: var(--color-text);
   overflow-wrap: anywhere;
+  cursor: pointer;
 }
 
 .host-actions {
@@ -690,7 +696,7 @@ button.answer-selected:disabled {
   font-size: var(--font-size-host-name);
 }
 
-.leaderboard li,
+.leaderboard-row,
 .podium li {
   display: grid;
   grid-template-columns: 3ch 1fr auto auto;
@@ -699,6 +705,22 @@ button.answer-selected:disabled {
   padding: var(--space-1) var(--space-3);
   border-bottom: 1px solid var(--color-border);
   text-align: left;
+}
+
+/* Baris papan skor adalah tombol (kick di reveal); tampilannya tetap baris tabel. */
+.leaderboard-row {
+  width: 100%;
+  font: inherit;
+  color: inherit;
+  background: transparent;
+  border: 0;
+  border-bottom: 1px solid var(--color-border);
+  cursor: pointer;
+}
+
+/* Pemain terputus diredupkan, sama seperti pilihan salah di reveal. */
+.leaderboard-row.is-offline {
+  opacity: 0.4;
 }
 
 .podium li {
@@ -727,6 +749,57 @@ button.answer-selected:disabled {
 .button-large {
   font-size: var(--font-size-host-text);
   padding: var(--space-2) var(--space-4);
+}
+
+/* Koneksi: strip kecil di proyektor (tidak menutupi soal) dan banner di HP saat soal masih tampil. */
+.reconnect-strip {
+  margin: 0;
+  padding: var(--space-1) var(--space-3);
+  background: var(--color-primary);
+  color: var(--color-primary-text);
+  font-weight: 600;
+  text-align: center;
+}
+
+.host-offline {
+  color: var(--color-muted);
+}
+
+.offline-banner {
+  display: grid;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  border: 2px solid var(--color-primary);
+  border-radius: var(--radius-panel);
+}
+
+.offline-banner p {
+  margin: 0;
+}
+
+.offline-banner .button {
+  justify-self: start;
+}
+
+.kick-dialog {
+  max-width: 32rem;
+  padding: var(--space-4);
+  border: 2px solid var(--color-border);
+  border-radius: var(--radius-panel);
+  background: var(--color-surface);
+  color: var(--color-text);
+}
+
+.kick-dialog::backdrop {
+  background: var(--tinta);
+  opacity: 0.6;
+}
+
+.kick-title {
+  font-size: var(--font-size-host-text);
+  font-weight: 600;
+  margin: 0;
+  overflow-wrap: anywhere;
 }
 
 

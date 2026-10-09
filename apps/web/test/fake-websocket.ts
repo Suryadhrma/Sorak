@@ -53,11 +53,25 @@ export class FakeWebSocket {
   }
 }
 
-/** Memasang WebSocket palsu, location, dan localStorage di memori sebagai global browser. */
-export function installBrowserFakes(): { latest(): FakeWebSocket; storage: Map<string, string> } {
+/** Pengganti `document`: cukup untuk event visibilitychange; test mengubah visibilityState sendiri. */
+export class FakeDocument extends EventTarget {
+  visibilityState: "visible" | "hidden" = "visible";
+}
+
+/** Memasang WebSocket palsu, location, localStorage di memori, serta window/document untuk event browser. */
+export function installBrowserFakes(): {
+  latest(): FakeWebSocket;
+  storage: Map<string, string>;
+  window: EventTarget;
+  document: FakeDocument;
+} {
   FakeWebSocket.instances = [];
   const storage = new Map<string, string>();
+  const window = new EventTarget();
+  const document = new FakeDocument();
   vi.stubGlobal("WebSocket", FakeWebSocket);
+  vi.stubGlobal("window", window);
+  vi.stubGlobal("document", document);
   vi.stubGlobal("location", { protocol: "https:", host: "sorak.test" });
   vi.stubGlobal("localStorage", {
     getItem: (key: string) => storage.get(key) ?? null,
@@ -71,5 +85,7 @@ export function installBrowserFakes(): { latest(): FakeWebSocket; storage: Map<s
       return socket;
     },
     storage,
+    window,
+    document,
   };
 }

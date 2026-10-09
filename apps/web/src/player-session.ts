@@ -7,12 +7,13 @@ import {
   type PlayerServerMessage,
   type Pin,
 } from "@sorak/shared";
-import { playerScreen, type PlayerEvent, type PlayerView } from "./player-screen.ts";
-import { openRoomSocket, type RoomSocket } from "./socket.ts";
+import { clearQueuedAnswer, decideQueuedAnswer, loadQueuedAnswer, saveQueuedAnswer, type QueuedAnswer } from "./outbox.ts";
+import { initialPlayerScreen, playerScreen, type PlayerEvent, type PlayerScreen } from "./player-screen.ts";
+import { connectRoom, type ConnectionStatus, type RoomConnection } from "./socket.ts";
 
 /**
- * Koneksi pemain: join dengan nickname atau resume dengan token tersimpan, lalu meneruskan setiap kejadian
- * ke reducer layar (player-screen.ts). Komponen hanya menampilkan `PlayerView` dan memanggil aksi.
+ * Koneksi pemain: join atau resume, ack setiap soal, dan antrean jawaban yang tahan sinyal putus.
+ * Setiap kejadian diteruskan ke reducer layar (player-screen.ts); komponen hanya menampilkan dan memanggil aksi.
  */
 
 export type { PlayerView } from "./player-screen.ts";
@@ -22,8 +23,10 @@ export type PlayerSession = {
   start(): void;
   join(nickname: string): void;
   answer(choice: number): void;
-  /** "Masuk lagi": resume dulu supaya tidak ada nama ganda, join ulang kalau token ditolak. */
-  retry(): void;
+  /** "Pakai di sini": ambil alih dari tab atau HP lain (resume dengan token yang sama). */
+  takeOver(): void;
+  /** "Sambung sekarang": tidak menunggu sisa jeda reconnect. */
+  retryNow(): void;
   stop(): void;
 };
 
@@ -55,74 +58,129 @@ function forgetToken(pin: Pin): void {
   }
 }
 
-export function createPlayerSession(pin: Pin, onView: (view: PlayerView) => void): PlayerSession {
-  let view: PlayerView = { kind: "connecting" };
-  let socket: RoomSocket | null = null;
+export function createPlayerSession(
+  pin: Pin,
+  onScreen: (screen: PlayerScreen) => void,
+  onStatus: (status: ConnectionStatus) => void,
+): PlayerSession {
+  let screen: PlayerScreen = initialPlayerScreen;
+  let connection: RoomConnection | null = null;
   let nickname: string | null = null;
+  let queued: QueuedAnswer | null = loadQueuedAnswer(pin);
 
-  const show = (next: PlayerView) => {
-    view = next;
-    onView(next);
+  const show = (next: PlayerScreen) => {
+    screen = next;
+    onScreen(next);
   };
-  const dispatch = (event: PlayerEvent) => show(playerScreen(view, event));
+  const dispatch = (event: PlayerEvent) => show(playerScreen(screen, event));
   const joinMessage = (name: string): PlayerMessage => ({ t: "join", v: PROTOCOL_VERSION, nickname: name });
 
-  function connect(opening: PlayerMessage): void {
-    socket = openRoomSocket({ path: `/ws/play/${pin}`, opening, decode: decodePlayerServerMessage, onMessage, onClose });
+  function forgetQueue(): void {
+    queued = null;
+    clearQueuedAnswer(pin);
   }
 
-  /** Resume kalau ada token, join kalau nickname sudah diketahui, selain itu tanya nickname. */
-  function reconnect(): void {
+  function sendAnswer(answer: QueuedAnswer): void {
+    connection?.send({ t: "answer", q: answer.q, choice: answer.choice, elapsedMs: answer.elapsedMs });
+  }
+
+  /** Setiap kali tersambung (termasuk setelah reconnect): resume kalau ada token, join kalau belum. */
+  function opening(): PlayerMessage {
     const token = loadToken(pin);
-    if (token) {
-      show({ kind: "connecting" });
-      return connect({ t: "resume", v: PROTOCOL_VERSION, sessionToken: token });
-    }
-    if (nickname) {
-      show({ kind: "connecting" });
-      return connect(joinMessage(nickname));
-    }
-    show({ kind: "nickname", error: null, busy: false });
+    if (token) return { t: "resume", v: PROTOCOL_VERSION, sessionToken: token };
+    return joinMessage(nickname ?? "");
+  }
+
+  function connect(): void {
+    connection = connectRoom({
+      path: `/ws/play/${pin}`,
+      opening,
+      decode: decodePlayerServerMessage,
+      onMessage,
+      onStatus,
+      onEnd,
+    });
   }
 
   function onMessage(message: PlayerServerMessage): void {
-    if (message.t === "welcome") {
-      nickname = message.nickname;
-      if (message.sessionToken) saveToken(pin, message.sessionToken);
+    const at = performance.now();
+    switch (message.t) {
+      case "welcome":
+        nickname = message.nickname;
+        if (message.sessionToken) saveToken(pin, message.sessionToken);
+        connection?.markHealthy();
+        dispatch({ type: "server", message, at });
+        resolveQueue(message.snapshot);
+        return;
+      case "question":
+        // ack sebelum render: server memakainya untuk mengukur jeda sinyal HP ini.
+        connection?.send({ t: "ack", q: message.q });
+        if (queued && queued.q !== message.q) forgetQueue();
+        dispatch({ type: "server", message, at });
+        return;
+      case "answer_received":
+        if (queued?.q === message.q) forgetQueue();
+        dispatch({ type: "server", message, at });
+        return;
+      default:
+        dispatch({ type: "server", message, at });
     }
-    dispatch({ type: "server", message, at: performance.now() });
   }
 
-  function onClose(code: number): void {
-    socket = null;
-    if (code === CloseCode.SESSION_INVALID) {
+  /** Setelah welcome: kirim ulang jawaban yang tertahan kalau soalnya masih aktif dan server belum punya. */
+  function resolveQueue(snapshot: Extract<PlayerServerMessage, { t: "welcome" }>["snapshot"]): void {
+    if (!queued) return;
+    if (decideQueuedAnswer(snapshot, queued) === "drop") return forgetQueue();
+    sendAnswer(queued);
+    dispatch({ type: "answer_sent", choice: queued.choice });
+  }
+
+  function onEnd(code: number): void {
+    connection = null;
+    if (code === CloseCode.SESSION_INVALID || code === CloseCode.KICKED) {
       forgetToken(pin);
-      return reconnect();
+      forgetQueue();
     }
-    dispatch({ type: "closed", code });
+    dispatch({ type: "ended", code });
   }
 
   return {
-    start: reconnect,
+    start() {
+      if (loadToken(pin)) {
+        show({ ...screen, view: { kind: "connecting" } });
+        return connect();
+      }
+      show({ ...screen, view: { kind: "nickname", error: null, busy: false } });
+    },
     join(name) {
       nickname = name;
-      const reuse = socket !== null && view.kind === "nickname";
-      show({ kind: "nickname", error: null, busy: true });
-      // Setelah NICKNAME_TAKEN socket masih terbuka dan belum join, jadi nama baru dikirim lewat socket yang sama.
-      if (reuse && socket) return socket.send(joinMessage(name));
-      connect(joinMessage(name));
+      show({ ...screen, view: { kind: "nickname", error: null, busy: true } });
+      // Setelah NICKNAME_TAKEN socket masih terbuka dan belum join: nama baru dikirim lewat socket yang sama.
+      // Kalau sedang menunggu reconnect, pesan pembukanya nanti memakai nama baru ini.
+      if (connection) return void connection.send(joinMessage(name));
+      connect();
     },
     answer(choice) {
-      if (view.kind !== "question" || view.choice !== null || !socket) return;
-      // Lama berpikir menurut HP; server belum memakainya sampai kompensasi latency Hari 4.
-      const elapsedMs = Math.min(Math.max(Math.round(performance.now() - view.startedAt), 0), TIME_LIMIT_MAX_SEC * 1000);
-      socket.send({ t: "answer", q: view.question.q, choice, elapsedMs });
+      const { view } = screen;
+      if (view.kind !== "question" || view.choice !== null || view.confirmed) return;
+      // Lama berpikir sejak soal pertama kali tampil di HP ini, dihitung saat ditekan (bukan saat terkirim).
+      const remainingAtPress = view.durationMs - (performance.now() - view.startedAt);
+      const elapsedMs = Math.round(view.question.durationMs - remainingAtPress);
+      queued = { q: view.question.q, choice, elapsedMs: Math.min(Math.max(elapsedMs, 0), TIME_LIMIT_MAX_SEC * 1000) };
+      saveQueuedAnswer(pin, queued);
+      sendAnswer(queued);
       dispatch({ type: "answer_sent", choice });
     },
-    retry: reconnect,
+    takeOver() {
+      show({ ...screen, view: { kind: "connecting" } });
+      connect();
+    },
+    retryNow() {
+      connection?.retryNow();
+    },
     stop() {
-      socket?.close();
-      socket = null;
+      connection?.close();
+      connection = null;
     },
   };
 }

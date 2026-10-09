@@ -3,7 +3,9 @@ import { Link, useParams } from "react-router";
 import { NICKNAME_MAX_LENGTH, Nickname, Pin } from "@sorak/shared";
 import { ApiRequestError, describeError, lookupRoom } from "../api.ts";
 import { AnswerButton, answersClass } from "../AnswerOption.tsx";
-import { createPlayerSession, type PlayerSession, type PlayerView } from "../player-session.ts";
+import { initialPlayerScreen, type PlayerScreen, type PlayerView } from "../player-screen.ts";
+import { createPlayerSession, type PlayerSession } from "../player-session.ts";
+import type { ConnectionStatus } from "../socket.ts";
 import { useRemainingMs } from "../useRemainingMs.ts";
 import { useTheme } from "../theme.ts";
 
@@ -26,7 +28,8 @@ export function PlayPage() {
   const [check, setCheck] = useState<CheckState>(
     pin ? { kind: "checking" } : { kind: "error", message: "PIN terdiri dari 6 angka." },
   );
-  const [view, setView] = useState<PlayerView>({ kind: "connecting" });
+  const [screen, setScreen] = useState<PlayerScreen>(initialPlayerScreen);
+  const [status, setStatus] = useState<ConnectionStatus>({ kind: "connecting", attempt: 0 });
   const session = useRef<PlayerSession | null>(null);
 
   useEffect(() => {
@@ -46,7 +49,7 @@ export function PlayPage() {
 
   useEffect(() => {
     if (!pin || check.kind !== "ready") return;
-    const current = createPlayerSession(pin, setView);
+    const current = createPlayerSession(pin, setScreen, setStatus);
     session.current = current;
     current.start();
     return () => {
@@ -58,12 +61,20 @@ export function PlayPage() {
   if (check.kind === "checking") return <Status text="Mengecek PIN…" />;
   if (check.kind === "error") return <Ended message={check.message} />;
 
+  const { view } = screen;
+  // Terputus = sudah pernah tersambung lalu putus (bukan sambungan pertama).
+  const offline = status.kind === "waiting" || (status.kind === "connecting" && status.attempt > 0);
+  const retryNow = () => session.current?.retryNow();
+
   switch (view.kind) {
     case "connecting":
+    case "syncing":
+      if (offline) return <Disconnected status={status} duringQuestion={screen.lastPhase === "question"} onRetry={retryNow} />;
       return <Status text="Menyambung ke room…" />;
     case "nickname":
       return <NicknameForm error={view.error} busy={view.busy} onSubmit={(name) => session.current?.join(name)} />;
     case "lobby":
+      if (offline) return <Disconnected status={status} duringQuestion={false} onRetry={retryNow} />;
       return (
         <main className="page page-narrow lobby">
           <p className="lobby-nickname">{view.me.nickname}</p>
@@ -75,8 +86,17 @@ export function PlayPage() {
         </main>
       );
     case "question":
-      return <QuestionScreen view={view} onAnswer={(choice) => session.current?.answer(choice)} />;
+      // Soal tetap tampil saat sinyal putus: jawaban yang ditekan masuk antrean dan dikirim begitu tersambung.
+      return (
+        <QuestionScreen
+          view={view}
+          offline={offline ? status : null}
+          onAnswer={(choice) => session.current?.answer(choice)}
+          onRetry={retryNow}
+        />
+      );
     case "grace":
+      if (offline) return <Disconnected status={status} duringQuestion={false} onRetry={retryNow} />;
       return (
         <main className="page page-narrow lobby">
           <h1>Menghitung jawaban…</h1>
@@ -84,6 +104,7 @@ export function PlayPage() {
         </main>
       );
     case "result":
+      if (offline) return <Disconnected status={status} duringQuestion={false} onRetry={retryNow} />;
       return <ResultScreen result={view.result} />;
     case "final":
       return (
@@ -100,13 +121,44 @@ export function PlayPage() {
         </main>
       );
     case "ended":
-      return (
-        <Ended
-          message={view.message}
-          onRetry={view.canRetry ? () => session.current?.retry() : undefined}
-        />
-      );
+      return <Ended message={view.message} onTakeOver={view.takeOver ? () => session.current?.takeOver() : undefined} />;
   }
+}
+
+/** Layar "HP: Koneksi terputus": Sorak menyambung lagi sendiri; pemain bisa mempercepatnya. */
+function Disconnected({ status, duringQuestion, onRetry }: { status: ConnectionStatus; duringQuestion: boolean; onRetry: () => void }) {
+  return (
+    <main className="page page-narrow lobby">
+      <h1>Sinyal putus sebentar</h1>
+      <p>Jawaban yang sudah terkirim tetap aman. Sorak menyambung lagi sendiri.</p>
+      {duringQuestion && <p>Kalau tersambung sebelum waktunya habis, kamu masih bisa menjawab.</p>}
+      <ReconnectProgress status={status} />
+      <button type="button" className="button button-primary button-block" onClick={onRetry}>
+        Sambung sekarang
+      </button>
+    </main>
+  );
+}
+
+function ReconnectProgress({ status }: { status: ConnectionStatus }) {
+  if (status.kind === "waiting") return <RetryCountdown attempt={status.attempt} since={status.since} delayMs={status.delayMs} />;
+  if (status.kind === "connecting") {
+    return (
+      <p className="muted" role="status">
+        Percobaan ke-{status.attempt + 1}: menyambung…
+      </p>
+    );
+  }
+  return null;
+}
+
+function RetryCountdown({ attempt, since, delayMs }: { attempt: number; since: number; delayMs: number }) {
+  const remaining = useRemainingMs(since, delayMs);
+  return (
+    <p className="muted" role="status">
+      Percobaan ke-{attempt + 1} dalam {Math.ceil(remaining / 1000)} detik
+    </p>
+  );
 }
 
 function Status({ text }: { text: string }) {
@@ -117,15 +169,15 @@ function Status({ text }: { text: string }) {
   );
 }
 
-function Ended({ message, onRetry }: { message: string; onRetry?: (() => void) | undefined }) {
+function Ended({ message, onTakeOver }: { message: string; onTakeOver?: (() => void) | undefined }) {
   return (
     <main className="page page-narrow">
       <p className="alert" role="alert">
         {message}
       </p>
-      {onRetry && (
-        <button type="button" className="button button-primary button-block" onClick={onRetry}>
-          Masuk lagi
+      {onTakeOver && (
+        <button type="button" className="button button-primary button-block" onClick={onTakeOver}>
+          Pakai di sini
         </button>
       )}
       <Link className="button" to="/">
@@ -185,13 +237,34 @@ function NicknameForm({ error, busy, onSubmit }: { error: string | null; busy: b
 type QuestionView = Extract<PlayerView, { kind: "question" }>;
 type ResultView = Extract<PlayerView, { kind: "result" }>;
 
-function QuestionScreen({ view, onAnswer }: { view: QuestionView; onAnswer: (choice: number) => void }) {
+function QuestionScreen({
+  view,
+  offline,
+  onAnswer,
+  onRetry,
+}: {
+  view: QuestionView;
+  offline: ConnectionStatus | null;
+  onAnswer: (choice: number) => void;
+  onRetry: () => void;
+}) {
   const { question, choice, confirmed } = view;
-  const remaining = useRemainingMs(view.startedAt, question.durationMs);
+  const remaining = useRemainingMs(view.startedAt, view.durationMs);
   const timeUp = remaining === 0;
 
   return (
     <main className="page page-narrow">
+      {offline && (
+        <div className="offline-banner" role="status">
+          <p>
+            <strong>Sinyal putus sebentar.</strong> Kalau tersambung sebelum waktunya habis, kamu masih bisa menjawab.
+          </p>
+          <ReconnectProgress status={offline} />
+          <button type="button" className="button" onClick={onRetry}>
+            Sambung sekarang
+          </button>
+        </div>
+      )}
       <div className="question-meta">
         <span className="muted">
           Soal {question.q + 1}/{question.total}
@@ -208,20 +281,21 @@ function QuestionScreen({ view, onAnswer }: { view: QuestionView; onAnswer: (cho
             index={index}
             text={text}
             selected={choice === index}
-            disabled={choice !== null || timeUp}
+            disabled={choice !== null || confirmed || timeUp}
             onSelect={() => onAnswer(index)}
           />
         ))}
       </div>
       <p className="muted" role="status" aria-live="polite">
-        {answerStatus(choice, confirmed, timeUp)}
+        {answerStatus(choice, confirmed, timeUp, offline !== null)}
       </p>
     </main>
   );
 }
 
-function answerStatus(choice: number | null, confirmed: boolean, timeUp: boolean): string {
+function answerStatus(choice: number | null, confirmed: boolean, timeUp: boolean, offline: boolean): string {
   if (confirmed) return "Jawaban terkirim.";
+  if (choice !== null && offline) return "Tersimpan. Dikirim begitu tersambung.";
   if (choice !== null) return "Mengirim…";
   if (timeUp) return "Waktu habis.";
   return "";

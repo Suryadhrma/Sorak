@@ -22,7 +22,8 @@ export type HostView =
   | { kind: "grace"; base: HostBase; question: PublicQuestion; answered: number; total: number }
   | { kind: "reveal"; base: HostBase; question: PublicQuestion | null; reveal: RevealMessage }
   | { kind: "ended"; base: HostBase; podium: PodiumMessage }
-  | { kind: "closed"; message: string; canRetry: boolean };
+  /** Ditutup server dengan kode yang tidak di-reconnect. */
+  | { kind: "closed"; message: string };
 
 export type HostEvent = { type: "server"; message: HostServerMessage; at: number } | { type: "closed"; code: number };
 
@@ -32,7 +33,8 @@ export function applyRosterMessage(players: RosterEntry[], message: HostServerMe
       // Pemain yang sama bisa muncul lagi (misalnya setelah resume); jangan sampai namanya ganda.
       return [...players.filter((player) => player.playerId !== message.player.playerId), message.player];
     case "player_left":
-      // Selama game pemain yang putus tetap peserta, hanya tidak tersambung. Di lobby ia dibuang (lihat hostScreen).
+      // Selama game pemain yang putus tetap peserta, hanya tidak tersambung (bisa kembali lewat resume).
+      // Yang di-kick dan yang keluar dari lobby dibuang di hostScreen.
       return players.map((player) => (player.playerId === message.playerId ? { ...player, connected: false } : player));
     default:
       return players;
@@ -52,7 +54,8 @@ export function hostScreen(view: HostView, event: HostEvent): HostView {
     case "player_joined":
       return withBase(view, next);
     case "player_left": {
-      const players = view.kind === "lobby" ? next.players.filter((player) => player.playerId !== message.playerId) : next.players;
+      const gone = message.kicked || view.kind === "lobby";
+      const players = gone ? next.players.filter((player) => player.playerId !== message.playerId) : next.players;
       return withBase(view, { ...next, players });
     }
     case "question": {
@@ -114,11 +117,14 @@ function fromWelcome(message: HostWelcomeMessage, at: number): HostView {
 function closedView(view: HostView, code: number): HostView {
   // Room dibersihkan beberapa menit setelah podium; podium tetap di layar.
   if (view.kind === "ended" && code === CloseCode.ROOM_CLOSED) return view;
-  if (code === CloseCode.ROOM_NOT_FOUND) {
-    return { kind: "closed", message: "Room tidak ditemukan, atau bukan milik akun ini.", canRetry: false };
-  }
-  if (code === CloseCode.ROOM_CLOSED) return { kind: "closed", message: "Room sudah ditutup.", canRetry: false };
-  return { kind: "closed", ...closeMessage(code) };
+  if (code === CloseCode.ROOM_NOT_FOUND) return { kind: "closed", message: "Room tidak ditemukan, atau bukan milik akun ini." };
+  if (code === CloseCode.ROOM_CLOSED) return { kind: "closed", message: "Room sudah ditutup." };
+  return { kind: "closed", message: closeMessage(code) };
+}
+
+/** Peserta yang sedang terputus (tampil sebagai "N terputus" di layar guru). */
+export function disconnectedCount(players: readonly RosterEntry[]): number {
+  return players.filter((player) => !player.connected).length;
 }
 
 function baseOf(view: HostView): HostBase | null {
