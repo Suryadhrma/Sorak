@@ -1,5 +1,7 @@
+import { runDurableObjectAlarm, runInDurableObject } from "cloudflare:test";
 import { env } from "cloudflare:workers";
 import {
+  GRACE_MS,
   ROOM_CONTROL_ORIGIN,
   RoomControlPath,
   RoomHeader,
@@ -7,7 +9,7 @@ import {
   type RoomRoute,
   type StoredQuestion,
 } from "@sorak/shared";
-import { expect } from "vitest";
+import { expect, vi } from "vitest";
 
 export const HOST_ID = "host-1";
 
@@ -124,4 +126,70 @@ export async function expectNext(client: Client, expected: Record<string, unknow
   const message = (await client.next()) as Record<string, unknown>;
   expect(message).toMatchObject(expected);
   return message;
+}
+
+export type Player = { client: Client; playerId: string; sessionToken: string };
+
+/** Room di lobby: host tersambung dan pemain sudah join, semua pesan lobby sudah dibaca. */
+export async function lobbyWith(nicknames: string[], options: { questions?: number; mode?: "classic" | "accurate" } = {}) {
+  const pin = uniquePin();
+  await initRoom(pin, initInput(pin, { questions: 3, ...options }));
+  const host = (await connectedHost(pin)).client;
+  const players: Player[] = [];
+  for (const nickname of nicknames) {
+    const { client, welcome } = await joinedPlayer(pin, nickname);
+    const { playerId, sessionToken } = welcome as { playerId: string; sessionToken: string };
+    players.push({ client, playerId, sessionToken });
+  }
+  for (const _ of nicknames) await expectNext(host, { t: "player_joined" });
+  for (const [i, player] of players.entries()) {
+    for (let k = i; k < nicknames.length; k++) await expectNext(player.client, { t: "lobby" });
+  }
+  return { pin, host, players };
+}
+
+export async function startedGame(nicknames: string[], options: { questions?: number; mode?: "classic" | "accurate" } = {}) {
+  const game = await lobbyWith(nicknames, options);
+  game.host.send({ t: "start" });
+  await expectQuestionEverywhere(game, 0);
+  return game;
+}
+
+export async function expectQuestionEverywhere(game: { host: Client; players: Player[] }, q: number) {
+  await expectNext(game.host, { t: "question", q, durationMs: 20_000 });
+  for (const player of game.players) await expectNext(player.client, { t: "question", q });
+}
+
+export async function expectGraceEverywhere(game: { host: Client; players: Player[] }, q: number) {
+  await expectNext(game.host, { t: "grace", q, ms: GRACE_MS });
+  for (const player of game.players) await expectNext(player.client, { t: "grace", q });
+}
+
+export const answer = (player: Player, q: number, choice: number) => player.client.send({ t: "answer", q, choice, elapsedMs: 1000 });
+export const alarm = (pin: string) => runDurableObjectAlarm(roomStub(pin));
+
+export type StorageCounts = { put: number; setAlarm: number; delete: number };
+
+/** Mengintip pemanggilan storage GameRoom: satu key = satu baris tulis. */
+export async function countStorageWrites(pin: string): Promise<() => Promise<StorageCounts>> {
+  await runInDurableObject(roomStub(pin), (_instance, state) => {
+    vi.spyOn(state.storage, "put");
+    vi.spyOn(state.storage, "setAlarm");
+    vi.spyOn(state.storage, "delete");
+  });
+  return () =>
+    runInDurableObject(roomStub(pin), (_instance, state) => {
+      const keys = (args: unknown[]) => {
+        const [first] = args;
+        if (typeof first === "string") return 1;
+        if (Array.isArray(first)) return first.length;
+        return Object.keys(first as object).length;
+      };
+      const sum = (mock: { mock: { calls: unknown[][] } }) => mock.mock.calls.reduce((total, args) => total + keys(args), 0);
+      return {
+        put: sum(vi.mocked(state.storage.put)),
+        setAlarm: vi.mocked(state.storage.setAlarm).mock.calls.length,
+        delete: sum(vi.mocked(state.storage.delete)),
+      };
+    });
 }

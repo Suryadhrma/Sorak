@@ -44,7 +44,9 @@ import {
   type ServerMessage,
 
 } from "@sorak/shared";
+import { compensateAnswerTime, updateLatency } from "./latency.ts";
 import { log } from "./log.ts";
+import { isNicknameAllowed } from "./moderation.ts";
 import { nextPhase, type PhaseEvent, type PhaseTarget } from "./phase.ts";
 import { takeToken, type TokenBucket } from "./rate-limit.ts";
 import { emptyScore, rankPlayers, revealQuestion } from "./reveal.ts";
@@ -211,8 +213,8 @@ export class GameRoom extends DurableObject<Env> {
   override async webSocketMessage(ws: WebSocket, message: string | ArrayBuffer): Promise<void> {
     const now = Date.now();
     const attachment = this.sockets.get(ws);
-    // Socket yang sudah dikeluarkan (diganti, basi, room ditutup) bisa masih mengirim sisa pesan.
-    if (!attachment || !this.state) return;
+    // Socket yang sudah dikeluarkan (diganti, basi, di-kick, room ditutup) bisa masih mengirim sisa pesan.
+    if (!attachment || attachment.role === "replaced" || !this.state) return;
 
     const taken = takeToken(this.buckets.get(ws), now);
     this.buckets.set(ws, taken.bucket);
@@ -262,7 +264,7 @@ export class GameRoom extends DurableObject<Env> {
     if (pending && !opening) return this.sendError(ws, "NOT_JOINED", "Masuk dulu dengan nickname");
     if (!pending && opening) return this.sendError(ws, "NOT_ALLOWED_NOW", "Kamu sudah masuk");
     const phase = this.state?.phase ?? "lobby";
-    if (opening && phase !== "lobby") return this.refuseLateArrival(ws, message.t);
+    if (message.t === "join" && phase !== "lobby") return this.refuseLateJoin(ws);
     if (!isAllowedInPhase(message.t, phase)) return log.info("player_message_ignored", { t: message.t, phase });
 
     switch (message.t) {
@@ -274,19 +276,19 @@ export class GameRoom extends DurableObject<Env> {
         if (attachment.role !== "player") return;
         return this.answer(ws, attachment, message, now);
       case "ack":
+        if (attachment.role !== "player") return;
+        return this.ack(ws, attachment, message.q, now);
       case "react":
-        // ack dipakai untuk mengukur latency mulai Hari 4; reaksi menyusul.
+        // Tombol Sorak dikerjakan Hari 5.
         return log.info("player_message_ignored", { t: message.t, phase });
       default:
         return message satisfies never;
     }
   }
 
-  /** Join dan resume hanya di lobby; resume di tengah game dikerjakan Hari 4. */
-  private async refuseLateArrival(ws: WebSocket, type: "join" | "resume"): Promise<void> {
-    const message =
-      type === "join" ? "Permainan sudah dimulai." : "Masuk ulang di tengah game tersedia di versi berikutnya.";
-    this.sendError(ws, "GAME_ALREADY_STARTED", message);
+  /** Pemain baru hanya bisa join di lobby; pemain lama kembali lewat resume. */
+  private async refuseLateJoin(ws: WebSocket): Promise<void> {
+    this.sendError(ws, "GAME_ALREADY_STARTED", "Permainan sudah dimulai.");
     return this.close(ws, CloseCode.GAME_ALREADY_STARTED, "Permainan sudah dimulai");
   }
 
@@ -305,8 +307,7 @@ export class GameRoom extends DurableObject<Env> {
       case "next":
         return this.next(now);
       case "kick":
-        // Moderasi dikerjakan bersama kick di Hari 4.
-        return log.info("host_message_ignored", { t: message.t, phase });
+        return this.kick(ws, message.playerId);
       case "end":
         if (phase === "lobby") return this.closeRoom("cancelled_by_host");
         return this.endGame("end", now);
@@ -316,6 +317,10 @@ export class GameRoom extends DurableObject<Env> {
   }
 
   private async join(ws: WebSocket, nickname: string, now: number): Promise<void> {
+    // Kata mana yang kena tidak disebut, supaya pesan error tidak jadi alat mencari celah filter.
+    if (!isNicknameAllowed(nickname)) {
+      return this.sendError(ws, "NICKNAME_REJECTED", "Nama ini tidak bisa dipakai. Coba nama lain.");
+    }
     // Hash dihitung sebelum pengecekan: await di tengah pengecekan membuka celah
     // dua join bersamaan dengan nickname yang sama sama-sama lolos.
     const sessionToken = newSessionToken();
@@ -358,7 +363,7 @@ export class GameRoom extends DurableObject<Env> {
     };
     this.attach(ws, player);
     const playerCount = this.players().length;
-    this.send(ws, this.welcome(player, sessionToken));
+    this.send(ws, this.welcome(player, sessionToken, now));
     this.broadcast("host", { t: "player_joined", player: toRosterEntry(player, true), playerCount });
     this.broadcast("player", { t: "lobby", playerCount });
   }
@@ -366,6 +371,7 @@ export class GameRoom extends DurableObject<Env> {
   private async resume(ws: WebSocket, sessionToken: string, now: number): Promise<void> {
     const tokenHash = await hashSessionToken(sessionToken);
     if (!this.sockets.has(ws)) return;
+    if (this.state?.phase !== "lobby") return this.resumeInGame(ws, tokenHash, now);
 
     // Di lobby roster hanya ada di attachment socket yang masih terbuka.
     const previous = this.players().find(([other, player]) => other !== ws && player.tokenHash === tokenHash);
@@ -376,12 +382,113 @@ export class GameRoom extends DurableObject<Env> {
 
     const [previousWs, player] = previous;
     // Pemain yang sama pindah socket, jadi host tidak dikirimi player_left.
-    this.sockets.delete(previousWs);
-    previousWs.close(CloseCode.REPLACED, "Tersambung dari tempat lain");
+    this.replaceSocket(previousWs, CloseCode.REPLACED, "Tersambung dari tempat lain");
     // joinedAt diperbarui: socket baru belum pernah ping, dan tanda hidup socket lama tidak berlaku untuknya.
     const resumed: PlayerAttachment = { ...player, joinedAt: now };
     this.attach(ws, resumed);
-    this.send(ws, this.welcome(resumed, null));
+    this.send(ws, this.welcome(resumed, null, now));
+  }
+
+  /**
+   * Sampel jeda sinyal: soal dikirim di questionSentAt, ack tiba sekarang. Satu soal hanya menyumbang satu
+   * sampel (ackedQ), supaya ack berulang dengan jeda panjang tidak bisa membesarkan estimasi jeda.
+   * Tanpa tulis storage: latency hidup di attachment.
+   */
+  private ack(ws: WebSocket, player: PlayerAttachment, q: number, now: number): void {
+    const { state } = this.requireRoom();
+    if (q !== state.questionIndex || state.questionSentAt === null || player.ackedQ === q) return;
+    const latencyMs = updateLatency(player.latencyMs, now - state.questionSentAt);
+    this.attach(ws, { ...player, latencyMs, ackedQ: q });
+  }
+
+  /**
+   * Pemain kembali di tengah game, tanpa tulis storage: identitas dari roster, skor dari scoreboard, dan jawaban
+   * aktif dari socket lama (kalau masih terbuka) atau dari key pending. Snapshot di welcome langsung membawa HP
+   * ke layar yang benar; pesan terakhir yang mungkin terlewat (result, final) dikirim ulang.
+   */
+  private async resumeInGame(ws: WebSocket, tokenHash: string, now: number): Promise<void> {
+    const { state } = this.requireRoom();
+    // Pemain yang di-kick sudah dihapus dari roster, jadi token-nya juga ditolak di sini.
+    const entry = this.roster.find((player) => player.tokenHash === tokenHash);
+    if (!entry) {
+      this.sendError(ws, "SESSION_INVALID", "Sesi tidak dikenal.");
+      return this.close(ws, CloseCode.SESSION_INVALID, "Sesi tidak dikenal");
+    }
+
+    const q = state.questionIndex;
+    const live = state.phase === "question" || state.phase === "grace";
+    const previous = this.players().find(([other, player]) => other !== ws && player.playerId === entry.playerId);
+    let carried: Pick<PlayerAttachment, "answer" | "latencyMs" | "ackedQ"> = { answer: null, latencyMs: null, ackedQ: null };
+    if (previous) {
+      const [previousWs, player] = previous;
+      carried = { answer: player.answer, latencyMs: player.latencyMs, ackedQ: player.ackedQ };
+      this.replaceSocket(previousWs, CloseCode.REPLACED, "Tersambung dari tempat lain");
+    } else if (live) {
+      // Key pending tidak dihapus: reveal sudah membuang duplikat, dan menghapusnya hanya menambah satu tulis.
+      const pending = this.pendingAnswers.get(entry.playerId);
+      if (pending) carried = { ...carried, answer: { q: pending.q, choice: pending.choice, tMs: pending.tMs, confidence: pending.confidence } };
+    }
+
+    const score = this.scoreboard[entry.playerId];
+    const player: PlayerAttachment = {
+      role: "player",
+      playerId: entry.playerId,
+      nickname: entry.nickname,
+      tokenHash: entry.tokenHash,
+      teamSize: entry.teamSize,
+      joinedAt: now,
+      latencyMs: carried.latencyMs,
+      ackedQ: carried.ackedQ,
+      score: score?.score ?? 0,
+      streak: score?.streak ?? 0,
+      answer: live && carried.answer?.q === q ? carried.answer : null,
+    };
+    this.attach(ws, player);
+    this.send(ws, this.welcome(player, null, now));
+    if (state.phase === "reveal" && q !== null) this.send(ws, this.resultMessage(q, player.playerId, this.ranks()));
+    if (state.phase === "ended") this.send(ws, this.finalMessage(player.playerId, this.ranks()));
+    this.broadcast("host", { t: "player_joined", player: toRosterEntry(entry, true), playerCount: this.roster.length });
+  }
+
+  /**
+   * Guru mengeluarkan pemain. Di lobby cukup menutup socket (tanpa daftar hitam: anak yang sama bisa join lagi
+   * dengan nama lain, dan guru cukup kick sekali lagi). Di tengah game pemain dihapus dari roster dan scoreboard
+   * dalam satu put, sehingga token-nya tidak bisa dipakai resume lagi.
+   */
+  private async kick(ws: WebSocket, playerId: string): Promise<void> {
+    const { state } = this.requireRoom();
+    const socket = this.players().find(([, player]) => player.playerId === playerId);
+
+    if (state.phase === "lobby") {
+      if (!socket) return this.sendError(ws, "NOT_ALLOWED_NOW", "Pemain tidak ditemukan");
+      this.replaceSocket(socket[0], CloseCode.KICKED, "Dikeluarkan oleh guru");
+      const playerCount = this.players().length;
+      this.broadcast("host", { t: "player_left", playerId, kicked: true, playerCount });
+      this.broadcast("player", { t: "lobby", playerCount });
+      return;
+    }
+
+    if (!this.roster.some((player) => player.playerId === playerId)) {
+      return this.sendError(ws, "NOT_ALLOWED_NOW", "Pemain tidak ditemukan");
+    }
+    this.roster = this.roster.filter((player) => player.playerId !== playerId);
+    const { [playerId]: _kicked, ...scoreboard } = this.scoreboard;
+    this.scoreboard = scoreboard;
+    await this.ctx.storage.put({ [StorageKey.roster]: this.roster, [StorageKey.scoreboard]: this.scoreboard });
+    const pending = this.pendingAnswers.get(playerId);
+    if (pending) {
+      this.pendingAnswers.delete(playerId);
+      await this.ctx.storage.delete(pendingAnswerKey(playerId, pending.q));
+    }
+    if (socket) this.replaceSocket(socket[0], CloseCode.KICKED, "Dikeluarkan oleh guru");
+    this.broadcast("host", { t: "player_left", playerId, kicked: true, playerCount: this.roster.length });
+    log.info("player_kicked", { pin: state.pin, phase: state.phase });
+  }
+
+  /** Socket lama ditandai replaced dulu, baru ditutup, supaya webSocketClose-nya tidak menulis pending atau player_left. */
+  private replaceSocket(ws: WebSocket, code: number, reason: string): void {
+    this.attach(ws, { role: "replaced" });
+    ws.close(code, reason);
   }
 
   private async startGame(ws: WebSocket, now: number): Promise<void> {
@@ -434,9 +541,14 @@ export class GameRoom extends DurableObject<Env> {
     // Idempotent: tombol ditekan berkali-kali tetap satu jawaban, dan klien tetap mendapat konfirmasi.
     if (player.answer?.q === message.q) return this.send(ws, { t: "answer_received", q: message.q });
 
-    const timeLimitMs = question.timeLimitSec * 1000;
-    // Jam server saja sampai kompensasi latency Hari 4; jawaban di masa toleransi dinilai benar/salah dengan t = T.
-    const tMs = state.phase === "grace" ? timeLimitMs : Math.min(Math.max(now - (state.questionSentAt ?? now), 0), timeLimitMs);
+    // Klaim waktu dari HP dipakai hanya di dalam rentang yang bisa dibuktikan server (latency.ts). Jawaban di masa
+    // toleransi (grace) lewat rumus yang sama: tServer-nya sudah melewati T, jadi poin kecepatannya kecil.
+    const tMs = compensateAnswerTime({
+      elapsedMs: message.elapsedMs,
+      tServerMs: now - (state.questionSentAt ?? now),
+      latencyMs: player.latencyMs,
+      timeLimitMs: question.timeLimitSec * 1000,
+    });
     this.attach(ws, { ...player, answer: { q: message.q, choice: message.choice, tMs, confidence: null } });
     this.send(ws, { t: "answer_received", q: message.q });
     this.broadcast("host", { t: "answer_count", q: message.q, answered: this.answeredCount(message.q), total: this.roster.length });
@@ -486,12 +598,14 @@ export class GameRoom extends DurableObject<Env> {
     this.pendingAnswers.clear();
     await this.ctx.storage.setAlarm(now + REVEAL_IDLE_TIMEOUT_MS);
 
-    const results = new Map(revealed.results.map((result) => [result.playerId, result]));
+    // Pesan result dibangun dari scoreboard (fungsi yang sama dengan pengiriman ulang saat resume),
+    // jadi pemain yang tersambung lagi di reveal menerima result yang persis sama.
+    const ranks = this.ranks();
     for (const [socket, player] of this.players()) {
-      const result = results.get(player.playerId);
-      if (!result) continue;
-      this.attach(socket, { ...player, score: result.score, streak: result.streak });
-      this.send(socket, { t: "result", q, correctIndex: question.correctIndex, ...result });
+      const score = this.scoreboard[player.playerId];
+      if (!score) continue;
+      this.attach(socket, { ...player, score: score.score, streak: score.streak });
+      this.send(socket, this.resultMessage(q, player.playerId, ranks));
     }
     this.broadcast("host", this.revealMessage(q));
   }
@@ -513,24 +627,8 @@ export class GameRoom extends DurableObject<Env> {
     await this.ctx.storage.put(StorageKey.state, this.state);
     await this.ctx.storage.setAlarm(now + ENDED_RETENTION_MS);
 
-    const ranked = rankPlayers(this.roster, this.scoreboard);
-    for (const [socket, player] of this.players()) {
-      const entry = ranked.find((candidate) => candidate.playerId === player.playerId);
-      const score = this.scoreboard[player.playerId] ?? emptyScore();
-      this.send(socket, {
-        t: "final",
-        gameId: state.gameId,
-        score: score.score,
-        rank: entry?.rank ?? ranked.length,
-        playerCount: this.roster.length,
-        highlights: {
-          bestStreak: score.bestStreak,
-          confidentCorrect: score.confidentCorrect,
-          biggestRankClimb: score.biggestRankClimb,
-          fastestCorrectMs: score.fastestCorrectMs,
-        },
-      });
-    }
+    const ranks = this.ranks();
+    for (const [socket, player] of this.players()) this.send(socket, this.finalMessage(player.playerId, ranks));
     this.broadcast("host", this.podiumMessage());
     log.info("game_ended", { pin: state.pin, reason: event, players: this.roster.length });
   }
@@ -720,7 +818,14 @@ export class GameRoom extends DurableObject<Env> {
     return { pin: state.pin, scoringMode: state.scoringMode, teamMode: state.teamMode, questionCount: quiz.questions.length };
   }
 
-  private welcome(player: PlayerAttachment, sessionToken: string | null): ServerMessage {
+  /** Snapshot tahap saat ini dari sudut pandang pemain ini: HP langsung menampilkan layar yang benar. */
+  private welcome(player: PlayerAttachment, sessionToken: string | null, now: number): ServerMessage {
+    const { state, quiz } = this.requireRoom();
+    const q = state.questionIndex;
+    const question = q === null ? undefined : quiz.questions[q];
+    const live = state.phase === "question" || state.phase === "grace";
+    // Peringkat baru ada setelah reveal pertama (scoreboard terisi).
+    const rank = Object.keys(this.scoreboard).length === 0 ? null : (this.ranks().get(player.playerId) ?? null);
     return {
       t: "welcome",
       v: PROTOCOL_VERSION,
@@ -729,14 +834,56 @@ export class GameRoom extends DurableObject<Env> {
       ...(sessionToken === null ? {} : { sessionToken }),
       room: this.roomInfo(),
       snapshot: {
-        phase: "lobby",
-        question: null,
-        remainingMs: null,
-        answered: false,
+        phase: state.phase,
+        question: live && question && q !== null ? toPublicQuestion(question, q, quiz.questions.length) : null,
+        remainingMs: state.phase === "question" && state.deadlineAt !== null ? Math.max(0, state.deadlineAt - now) : null,
+        answered: live && q !== null && player.answer?.q === q,
         score: player.score,
         streak: player.streak,
-        rank: null,
-        playerCount: this.players().length,
+        rank,
+        playerCount: state.phase === "lobby" ? this.players().length : this.roster.length,
+      },
+    };
+  }
+
+  /** Peringkat semua pemain roster (competition ranking yang sama dengan reveal). */
+  private ranks(): Map<string, number> {
+    return new Map(rankPlayers(this.roster, this.scoreboard).map((entry) => [entry.playerId, entry.rank]));
+  }
+
+  /** Hasil soal q untuk satu pemain, dibangun dari scoreboard: dipakai saat reveal dan saat resume di tahap reveal. */
+  private resultMessage(q: number, playerId: string, ranks: Map<string, number>): ServerMessage {
+    const { quiz } = this.requireRoom();
+    const question = quiz.questions[q];
+    if (!question) throw new Error(`soal ${q} tidak ada di kuis`);
+    const score = this.scoreboard[playerId] ?? emptyScore();
+    return {
+      t: "result",
+      q,
+      outcome: score.lastOutcome ?? "no_answer",
+      correctIndex: question.correctIndex,
+      points: score.lastPoints,
+      score: score.score,
+      rank: ranks.get(playerId) ?? this.roster.length,
+      streak: score.streak,
+    };
+  }
+
+  /** Skor akhir satu pemain: dipakai saat game selesai dan saat resume di tahap ended. */
+  private finalMessage(playerId: string, ranks: Map<string, number>): ServerMessage {
+    const { state } = this.requireRoom();
+    const score = this.scoreboard[playerId] ?? emptyScore();
+    return {
+      t: "final",
+      gameId: state.gameId,
+      score: score.score,
+      rank: ranks.get(playerId) ?? this.roster.length,
+      playerCount: this.roster.length,
+      highlights: {
+        bestStreak: score.bestStreak,
+        confidentCorrect: score.confidentCorrect,
+        biggestRankClimb: score.biggestRankClimb,
+        fastestCorrectMs: score.fastestCorrectMs,
       },
     };
   }

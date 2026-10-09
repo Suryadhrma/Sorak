@@ -1,62 +1,27 @@
-import { evictDurableObject, runDurableObjectAlarm, runInDurableObject } from "cloudflare:test";
-import { CloseCode, GRACE_MS } from "@sorak/shared";
+import { evictDurableObject, runInDurableObject } from "cloudflare:test";
+import { CloseCode } from "@sorak/shared";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
+  alarm,
+  answer,
   connect,
   connectedHost,
+  countStorageWrites,
+  expectGraceEverywhere,
   expectNext,
-  initInput,
+  expectQuestionEverywhere,
   initRoom,
   joinInfo,
-  joinedPlayer,
   roomStub,
+  startedGame,
   uniquePin,
-  type Client,
+  type Player,
 } from "./room.ts";
 
 afterEach(() => {
   vi.restoreAllMocks();
+  vi.useRealTimers();
 });
-
-type Player = { client: Client; playerId: string; sessionToken: string };
-
-/** Room di lobby: host tersambung dan pemain sudah join, semua pesan lobby sudah dibaca. */
-async function lobbyWith(nicknames: string[], options: { questions?: number; mode?: "classic" | "accurate" } = {}) {
-  const pin = uniquePin();
-  await initRoom(pin, initInput(pin, { questions: 3, ...options }));
-  const host = (await connectedHost(pin)).client;
-  const players: Player[] = [];
-  for (const nickname of nicknames) {
-    const { client, welcome } = await joinedPlayer(pin, nickname);
-    const { playerId, sessionToken } = welcome as { playerId: string; sessionToken: string };
-    players.push({ client, playerId, sessionToken });
-  }
-  for (const _ of nicknames) await expectNext(host, { t: "player_joined" });
-  for (const [i, player] of players.entries()) {
-    for (let k = i; k < nicknames.length; k++) await expectNext(player.client, { t: "lobby" });
-  }
-  return { pin, host, players };
-}
-
-async function startedGame(nicknames: string[], options: { questions?: number; mode?: "classic" | "accurate" } = {}) {
-  const game = await lobbyWith(nicknames, options);
-  game.host.send({ t: "start" });
-  await expectQuestionEverywhere(game, 0);
-  return game;
-}
-
-async function expectQuestionEverywhere(game: { host: Client; players: Player[] }, q: number) {
-  await expectNext(game.host, { t: "question", q, durationMs: 20_000 });
-  for (const player of game.players) await expectNext(player.client, { t: "question", q });
-}
-
-async function expectGraceEverywhere(game: { host: Client; players: Player[] }, q: number) {
-  await expectNext(game.host, { t: "grace", q, ms: GRACE_MS });
-  for (const player of game.players) await expectNext(player.client, { t: "grace", q });
-}
-
-const answer = (player: Player, q: number, choice: number) => player.client.send({ t: "answer", q, choice, elapsedMs: 1000 });
-const alarm = (pin: string) => runDurableObjectAlarm(roomStub(pin));
 
 describe("satu game 3 soal, 2 pemain, 1 host", () => {
   it("Klasik: soal, jawaban, grace, reveal, lanjut, sampai podium", async () => {
@@ -185,11 +150,15 @@ describe("kasus game", () => {
     await expectNext(andi.client, { t: "error", code: "BAD_MESSAGE" });
   });
 
-  it("jawaban yang tiba di grace dihitung dengan t = T (Klasik 500 poin)", async () => {
+  it("jawaban yang tiba di grace (setelah batas waktu) tetap dinilai, dengan poin kecepatan paling kecil (Klasik 500)", async () => {
     const game = await startedGame(["Andi"]);
     const [andi] = game.players as [Player];
     await alarm(game.pin);
     await expectGraceEverywhere(game, 0);
+    // Di test alarm deadline berbunyi seketika; jam dimajukan supaya jawaban benar-benar tiba setelah T (20 detik).
+    // Belum pernah ack (d = 0): batas bawah clamp = tServer - 150 > T, jadi t = T.
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(Date.now() + 20_500);
     answer(andi, 0, 1);
     await expectNext(andi.client, { t: "answer_received", q: 0 });
     await expectNext(game.host, { t: "answer_count", answered: 1 });
@@ -294,14 +263,11 @@ describe("kasus game", () => {
     });
   });
 
-  it.each([
-    ["join", (_token: string) => ({ t: "join", v: 1, nickname: "Telat" }), "Permainan sudah dimulai."],
-    ["resume", (token: string) => ({ t: "resume", v: 1, sessionToken: token }), "Masuk ulang di tengah game tersedia di versi berikutnya."],
-  ])("%s di tengah game -> GAME_ALREADY_STARTED lalu 4011", async (_label, opening, text) => {
+  it("pemain baru join di tengah game -> GAME_ALREADY_STARTED lalu 4011 (pemain lama kembali lewat resume)", async () => {
     const game = await startedGame(["Andi"]);
     const late = await connect(game.pin, "play");
-    late.send(opening(game.players[0]?.sessionToken ?? ""));
-    await expectNext(late, { t: "error", code: "GAME_ALREADY_STARTED", message: text });
+    late.send({ t: "join", v: 1, nickname: "Telat" });
+    await expectNext(late, { t: "error", code: "GAME_ALREADY_STARTED", message: "Permainan sudah dimulai." });
     expect(await late.closed).toMatchObject({ code: CloseCode.GAME_ALREADY_STARTED });
     expect(await joinInfo(game.pin)).toEqual({ status: "started", playerCount: 1 });
   });
@@ -353,29 +319,3 @@ describe("biaya tulis storage", () => {
     expect(rows).toEqual({ put: 6, setAlarm: 3, delete: 1 });
   });
 });
-
-type StorageCounts = { put: number; setAlarm: number; delete: number };
-
-/** Mengintip pemanggilan storage GameRoom: satu key = satu baris tulis. */
-async function countStorageWrites(pin: string): Promise<() => Promise<StorageCounts>> {
-  await runInDurableObject(roomStub(pin), (_instance, state) => {
-    vi.spyOn(state.storage, "put");
-    vi.spyOn(state.storage, "setAlarm");
-    vi.spyOn(state.storage, "delete");
-  });
-  return () =>
-    runInDurableObject(roomStub(pin), (_instance, state) => {
-      const keys = (args: unknown[]) => {
-        const [first] = args;
-        if (typeof first === "string") return 1;
-        if (Array.isArray(first)) return first.length;
-        return Object.keys(first as object).length;
-      };
-      const sum = (mock: { mock: { calls: unknown[][] } }) => mock.mock.calls.reduce((total, args) => total + keys(args), 0);
-      return {
-        put: sum(vi.mocked(state.storage.put)),
-        setAlarm: vi.mocked(state.storage.setAlarm).mock.calls.length,
-        delete: sum(vi.mocked(state.storage.delete)),
-      };
-    });
-}
