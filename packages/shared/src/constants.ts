@@ -114,8 +114,15 @@ export const PIN_CREATE_ATTEMPTS = 5;
 export const LOBBY_IDLE_TIMEOUT_MS = 1_800_000;
 
 /**
- * Batas cek PIN + WebSocket pemain per IP (ADR 0005). Satu WiFi sekolah = satu IP (NAT),
- * jadi cukup untuk 60 siswa masuk dalam semenit. Nilai yang berlaku ditulis di binding
+ * Batas cek PIN (GET /api/rooms/:pin) per IP (ADR 0005). Satu WiFi sekolah = satu IP (NAT),
+ * jadi cukup untuk satu kelas masuk dalam semenit. Nilai yang berlaku ditulis di binding
  * `ratelimits` apps/api/wrangler.jsonc; test api memastikan keduanya sama.
  */
 export const PIN_LOOKUP_LIMIT = { limit: 120, periodSec: 60 } as const;
+
+/**
+ * Batas upgrade WebSocket pemain (GET /ws/play/:pin) per IP (ADR 0005, lanjutan). Lebih longgar dari
+ * cek PIN karena HP tersambung ulang sendiri: WiFi aula yang pulih membuat ratusan HP dari satu IP
+ * menyambung hampir bersamaan. Nilai yang berlaku ditulis di wrangler.jsonc; test api memastikan sama.
+ */
+export const WS_CONNECT_LIMIT = { limit: 600, periodSec: 60 } as const;

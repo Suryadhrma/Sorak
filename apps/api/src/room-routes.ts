@@ -24,12 +24,13 @@ export const wsRoutes = new Hono<RoomEnv>();
 const roomNotFound = (c: Context) => apiError(c, 404, "NOT_FOUND", "Room tidak ditemukan");
 
 /**
- * Batas tebakan PIN per IP (ADR 0005). Satu WiFi sekolah terlihat sebagai satu IP, karena itu batasnya longgar.
+ * Batas per IP (ADR 0005): PIN_LOOKUP untuk cek PIN, WS_CONNECT (lebih longgar) untuk WebSocket pemain.
+ * Satu WiFi sekolah terlihat sebagai satu IP, karena itu batasnya longgar.
  * Tanpa CF-Connecting-IP (hanya terjadi di luar jaringan Cloudflare) semua request berbagi satu kunci.
  */
-async function allowPinLookup(c: Context<RoomEnv>): Promise<boolean> {
+async function allowedPerIp(c: Context<RoomEnv>, limiter: RateLimit): Promise<boolean> {
   const ip = c.req.header("CF-Connecting-IP") ?? "unknown";
-  const { success } = await c.env.PIN_LOOKUP.limit({ key: ip });
+  const { success } = await limiter.limit({ key: ip });
   return success;
 }
 
@@ -86,7 +87,7 @@ roomRoutes.post("/", requireHost, async (c) => {
 });
 
 roomRoutes.get("/:pin", async (c) => {
-  if (!(await allowPinLookup(c))) return rateLimited(c);
+  if (!(await allowedPerIp(c, c.env.PIN_LOOKUP))) return rateLimited(c);
   const pin = Pin.safeParse(c.req.param("pin"));
   if (!pin.success) return roomNotFound(c);
 
@@ -107,7 +108,7 @@ roomRoutes.get("/:pin", async (c) => {
 
 // Jalur pemain tanpa cek Origin: tidak memakai cookie, dan load tester Go tidak mengirim Origin.
 wsRoutes.get("/play/:pin", async (c) => {
-  if (!(await allowPinLookup(c))) return rateLimited(c);
+  if (!(await allowedPerIp(c, c.env.WS_CONNECT))) return rateLimited(c);
   const pin = Pin.safeParse(c.req.param("pin"));
   if (!pin.success) return roomNotFound(c);
   if (c.req.header("Upgrade") !== "websocket") return c.body(null, 426);

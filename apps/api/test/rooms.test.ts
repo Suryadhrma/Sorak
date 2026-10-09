@@ -1,5 +1,5 @@
 import { env } from "cloudflare:workers";
-import { PIN_CREATE_ATTEMPTS, PIN_LOOKUP_LIMIT } from "@sorak/shared";
+import { PIN_CREATE_ATTEMPTS, PIN_LOOKUP_LIMIT, WS_CONNECT_LIMIT } from "@sorak/shared";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ORIGIN, request, signedInHost } from "./http.ts";
 
@@ -168,15 +168,38 @@ describe("GET /api/rooms/:pin", () => {
     expect(limit).toHaveBeenCalledWith({ key: "203.0.113.121" });
   });
 
-  it("WebSocket pemain memakai batas yang sama", async () => {
-    vi.spyOn(env.PIN_LOOKUP, "limit").mockResolvedValue({ success: false });
-    const res = await request("/ws/play/100201", { headers: { Upgrade: "websocket", "CF-Connecting-IP": "203.0.113.121" } });
-    expect(res.status).toBe(429);
-  });
-
   it("PIN_LOOKUP_LIMIT sama dengan binding ratelimits di wrangler.jsonc", () => {
     expect(env.TEST_PIN_LOOKUP_RATELIMIT).toMatchObject({
       simple: { limit: PIN_LOOKUP_LIMIT.limit, period: PIN_LOOKUP_LIMIT.periodSec },
+    });
+  });
+});
+
+describe("batas WebSocket pemain (WS_CONNECT)", () => {
+  const upgrade = (pin: string, ip: string) =>
+    request(`/ws/play/${pin}`, { headers: { Upgrade: "websocket", "CF-Connecting-IP": ip } });
+
+  it("memakai WS_CONNECT, bukan PIN_LOOKUP; batas habis -> 429 dengan IP sebagai kunci", async () => {
+    const pinLookup = vi.spyOn(env.PIN_LOOKUP, "limit");
+    const wsConnect = vi.spyOn(env.WS_CONNECT, "limit").mockResolvedValue({ success: false });
+    const res = await upgrade("100201", "203.0.113.130");
+    expect(res.status).toBe(429);
+    expect(wsConnect).toHaveBeenCalledWith({ key: "203.0.113.130" });
+    expect(pinLookup).not.toHaveBeenCalled();
+  });
+
+  it("200 upgrade dari satu IP dalam beberapa detik (reconnect massal satu aula) tidak ada yang kena 429", async () => {
+    const ip = "203.0.113.200";
+    const statuses = await Promise.all(Array.from({ length: 200 }, async (_, i) => (await upgrade(String(100_400 + i), ip)).status));
+    expect(statuses.filter((status) => status === 429)).toHaveLength(0);
+    // Batas cek PIN untuk IP yang sama tidak ikut terpakai oleh reconnect.
+    const lookup = await request("/api/rooms/100400", { headers: { "CF-Connecting-IP": ip } });
+    expect(lookup.status).not.toBe(429);
+  });
+
+  it("WS_CONNECT_LIMIT sama dengan binding ratelimits di wrangler.jsonc", () => {
+    expect(env.TEST_WS_CONNECT_RATELIMIT).toMatchObject({
+      simple: { limit: WS_CONNECT_LIMIT.limit, period: WS_CONNECT_LIMIT.periodSec },
     });
   });
 });

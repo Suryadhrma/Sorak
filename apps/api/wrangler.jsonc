@@ -18,8 +18,12 @@
   "durable_objects": {
     "bindings": [{ "name": "GAME_ROOM", "class_name": "GameRoom", "script_name": "sorak-realtime" }]
   },
-  // Cek PIN + WebSocket pemain per IP (ADR 0005). Harus sama dengan PIN_LOOKUP_LIMIT di @sorak/shared (dicek test).
-  "ratelimits": [{ "name": "PIN_LOOKUP", "namespace_id": "2604", "simple": { "limit": 120, "period": 60 } }],
+  // Per IP (ADR 0005). Harus sama dengan PIN_LOOKUP_LIMIT dan WS_CONNECT_LIMIT di @sorak/shared (dicek test).
+  // PIN_LOOKUP untuk cek PIN; WS_CONNECT untuk WebSocket pemain, lebih longgar karena reconnect massal.
+  "ratelimits": [
+    { "name": "PIN_LOOKUP", "namespace_id": "2604", "simple": { "limit": 120, "period": 60 } },
+    { "name": "WS_CONNECT", "namespace_id": "2605", "simple": { "limit": 600, "period": 60 } }
+  ],
   "d1_databases": [
     {
       "binding": "DB",

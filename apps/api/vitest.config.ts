@@ -44,8 +44,10 @@ export default defineConfig(async () => {
   const migrations = await readD1Migrations("migrations");
   // Pemecah query yang sama dengan migrasi, supaya test menjalankan seed persis per pernyataan.
   const seed = await readD1Migrations("seed");
-  // Test membandingkan binding yang benar-benar dipakai dengan PIN_LOOKUP_LIMIT di @sorak/shared.
-  const pinLookup = unstable_readConfig({ config: "./wrangler.jsonc" }).ratelimits.find((limit) => limit.name === "PIN_LOOKUP");
+  // Test membandingkan binding yang benar-benar dipakai dengan PIN_LOOKUP_LIMIT / WS_CONNECT_LIMIT di @sorak/shared.
+  const ratelimits = unstable_readConfig({ config: "./wrangler.jsonc" }).ratelimits;
+  const pinLookup = ratelimits.find((limit) => limit.name === "PIN_LOOKUP");
+  const wsConnect = ratelimits.find((limit) => limit.name === "WS_CONNECT");
   return {
     plugins: [
       cloudflareTest({
@@ -55,6 +57,7 @@ export default defineConfig(async () => {
             TEST_MIGRATIONS: migrations,
             TEST_SEED: seed,
             TEST_PIN_LOOKUP_RATELIMIT: pinLookup ?? null,
+            TEST_WS_CONNECT_RATELIMIT: wsConnect ?? null,
             // Nilai khusus test; Google di-mock lewat globalThis.fetch.
             APP_ORIGIN: "https://sorak.test",
             GOOGLE_CLIENT_ID: "test-client.apps.googleusercontent.com",
