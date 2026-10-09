@@ -212,6 +212,10 @@ describe("pesan pertama dan batas", () => {
     const pin = uniquePin();
     await initRoom(pin);
     const player = await connect(pin, "play");
+    // Jam dibekukan: ember token terisi menurut Date.now() server, jadi saat CPU sibuk (semua paket dites
+    // paralel) pesan bisa tersebar lebih dari 100 ms dan ember sempat terisi ulang. Dengan jam beku,
+    // ke-11 pesan benar-benar terjadi dalam satu detik, apa pun beban mesinnya.
+    vi.useFakeTimers({ toFake: ["Date"] });
     for (let i = 0; i < 11; i++) player.send({ t: "react", reaction: "clap" });
     expect(await player.closed).toMatchObject({ code: CloseCode.RATE_LIMITED });
   });
