@@ -12,6 +12,7 @@ import {
   type QuestionDraft,
   type QuizDraft,
 } from "../quiz-draft.ts";
+import { useTheme } from "../theme.ts";
 
 type LoadState = { kind: "loading" } | { kind: "ready" } | { kind: "not_found" } | { kind: "error"; message: string };
 
@@ -30,6 +31,7 @@ function invalidProps(errorId: string, message: string | undefined) {
 }
 
 export function QuizEditorPage() {
+  useTheme("kertas");
   const { id } = useParams();
   const navigate = useNavigate();
   const [load, setLoad] = useState<LoadState>(id ? { kind: "loading" } : { kind: "ready" });

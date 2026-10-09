@@ -1,9 +1,11 @@
 import { useState, type FormEvent } from "react";
 import { Link, useNavigate } from "react-router";
 import { Pin } from "@sorak/shared";
+import { useTheme } from "../theme.ts";
 
 /** Halaman pertama siswa: cukup PIN. Nickname ditanya setelah PIN terbukti ada. */
 export function JoinPage() {
+  useTheme("papan");
   const navigate = useNavigate();
   const [pin, setPin] = useState("");
   const [error, setError] = useState<string | null>(null);

@@ -1,4 +1,5 @@
 import { useSearchParams } from "react-router";
+import { useTheme } from "../theme.ts";
 
 const LOGIN_ERRORS: Record<string, string> = {
   google_failed: "Masuk dengan Google gagal. Silakan coba lagi.",
@@ -6,6 +7,7 @@ const LOGIN_ERRORS: Record<string, string> = {
 };
 
 export function LoginPage() {
+  useTheme("kertas");
   const [params] = useSearchParams();
   const errorKey = params.get("error");
   const error = errorKey ? (LOGIN_ERRORS[errorKey] ?? LOGIN_ERRORS.google_failed) : null;

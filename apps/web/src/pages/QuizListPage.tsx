@@ -4,6 +4,7 @@ import { CreateRoomInput, type QuizSummary } from "@sorak/shared";
 import { createRoom, deleteQuiz, describeError, listQuizzes, logout } from "../api.ts";
 import { useHost } from "../RequireHost.tsx";
 import { SCORING_MODES } from "../scoring-modes.ts";
+import { useTheme } from "../theme.ts";
 
 /** Mode yang diterima server saat membuat room; satu sumber dengan skema REST. */
 const PLAYABLE_MODES = CreateRoomInput.shape.scoringMode.options;
@@ -13,6 +14,7 @@ type ListState = { kind: "loading" } | { kind: "ready"; quizzes: QuizSummary[] }
 const updatedAtFormat = new Intl.DateTimeFormat("id-ID", { dateStyle: "medium", timeStyle: "short" });
 
 export function QuizListPage() {
+  useTheme("kertas");
   const host = useHost();
   const navigate = useNavigate();
   const [state, setState] = useState<ListState>({ kind: "loading" });

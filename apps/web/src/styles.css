@@ -1,50 +1,134 @@
-/* Token desain: satu-satunya tempat nilai warna, jarak, dan huruf. Polesan desain di Hari 5. */
-:root {
-  --color-text: #1b1f24;
-  --color-muted: #57606a;
-  --color-background: #ffffff;
-  --color-surface: #f6f8fa;
-  --color-border: #d0d7de;
-  --color-primary: #0b5cad;
-  --color-primary-text: #ffffff;
-  --color-danger: #b42318;
-  --color-success: #1a7f37;
-  --color-focus: #1b1f24;
+/* Font di-bundle bersama aplikasi (bukan Google Fonts): request ke domain lain memperlambat HP bersinyal jelek.
+   Hanya subset latin dan bobot yang dipakai. */
+@import "@fontsource/big-shoulders-display/latin-800";
+@import "@fontsource/plus-jakarta-sans/latin-500";
+@import "@fontsource/plus-jakarta-sans/latin-700";
+@import "@fontsource/plus-jakarta-sans/latin-800";
 
-  /* Pilihan jawaban: warna dan bentuk berpasangan (A segitiga merah, B belah ketupat biru, C lingkaran
-     cokelat, D persegi hijau). Semua kontras >= 4.5:1 dengan teks putih. */
-  --answer-0: #b42318;
-  --answer-1: #0b5cad;
-  --answer-2: #8a5300;
-  --answer-3: #1a7f37;
-  --answer-text: #ffffff;
-  --answer-shape-0: polygon(50% 0, 100% 100%, 0 100%);
-  --answer-shape-1: polygon(50% 0, 100% 50%, 50% 100%, 0 50%);
-  --answer-shape-2: circle(50%);
-  --answer-shape-3: inset(0);
+/*
+ * Token desain "Papan skor kelas": satu-satunya tempat nilai warna, jarak, huruf, dan gerak.
+ * Lapis 1 = palet mentah (papan tulis, kapur, kertas, tinta). Lapis 2 = peran (--color-*) yang dipetakan
+ * per tema lewat data-theme di <html>: "papan" (gelap, HP siswa) dan "kertas" (terang, guru dan proyektor).
+ * Komponen hanya memakai lapis 2, jadi komponen yang sama tampil benar di kedua tema.
+ */
+:root {
+  --papan: #14261f;
+  --papan-2: #1c3329;
+  --papan-garis: #2c4337;
+  --kapur: #f2b705;
+  --kapur-tekan: #b88a00;
+  --kapur-putih: #eef3ee;
+  --kapur-redup: #a9bab0;
+  --kertas: #f5f7f4;
+  --kertas-putih: #ffffff;
+  --garis: #d5ddd7;
+  --tinta: #15211b;
+  --tinta-redup: #4c5b53;
+  --benar: #0f6d8c;
+  --benar-gelap: #0a4f66;
+  --bahaya: #a3262c;
+  --waktu-kritis: #ff8b7e;
+  --buku-garis: #dde6ee;
+  --buku-margin: #e7a9ac;
+
+  /* Kartu jawaban: warna seragam sekolah per huruf. Hurufnya yang membedakan pilihan, bukan warnanya. */
+  --kartu-a: #c0262d;
+  --kartu-a-teks: #ffffff;
+  --kartu-a-lipatan: #9c1d23;
+  --kartu-b: #1f2d5c;
+  --kartu-b-teks: #ffffff;
+  --kartu-b-lipatan: #141e40;
+  --kartu-c: #8e979c;
+  --kartu-c-teks: #15211b;
+  --kartu-c-lipatan: #737c81;
+  --kartu-d: #d9c48c;
+  --kartu-d-teks: #15211b;
+  --kartu-d-lipatan: #bfa86c;
+
+  --radius-kecil: 8px;
+  --radius-kartu: 14px;
+  --radius-panel: 16px;
+  --radius-tombol: 24px;
+  --radius-sorak: 32px;
+  /* Tinggi "lipatan" di tepi atas kartu jawaban (bayangan inset). */
+  --lipatan: 10px;
+
+  /* Gerak, dipakai mulai Hari 5. */
+  --gerak-balik: 500ms cubic-bezier(0.3, 1.5, 0.6, 1);
+  --gerak-balik-jeda: 60ms;
+  --gerak-turus: 300ms ease-out;
+  --gerak-angkat: 450ms cubic-bezier(0.3, 1.35, 0.6, 1);
+  --gerak-angkat-jeda: 70ms;
+  --gerak-geser: 600ms cubic-bezier(0.5, 0, 0.2, 1);
+  --gerak-naik: 700ms cubic-bezier(0.2, 0.8, 0.2, 1);
 
   --space-1: 0.25rem;
   --space-2: 0.5rem;
   --space-3: 1rem;
   --space-4: 1.5rem;
 
-  --font-body: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-body: "Plus Jakarta Sans", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  /* Angka besar (PIN, hitung mundur, skor, peringkat, huruf A-D) dan judul pendek. */
+  --font-angka: "Big Shoulders Display", "Plus Jakarta Sans", system-ui, sans-serif;
   --font-size-body: 1rem;
   --font-size-small: 0.875rem;
   --font-size-title: 1.5rem;
-  --font-size-pin-input: 2rem;
+  --font-size-pin-input: 2.25rem;
   /* Proyektor: tumbuh mengikuti lebar layar, dengan batas supaya tetap muat di laptop kecil. */
   --font-size-host-pin: clamp(4rem, 18vw, 12rem);
   --font-size-host-text: clamp(1.25rem, 3vw, 2.25rem);
   --font-size-host-name: clamp(1.125rem, 2.2vw, 1.75rem);
   --font-size-host-prompt: clamp(1.75rem, 4vw, 3.25rem);
   --font-size-host-countdown: clamp(3rem, 8vw, 6rem);
-  --font-size-countdown: 2rem;
-  --font-size-score: 2.5rem;
+  --font-size-countdown: 2.5rem;
+  --font-size-score: 3rem;
+  --font-size-kartu-huruf: 2rem;
 
-  --radius: 6px;
   --page-max-width: 48rem;
   --tap-target: 2.75rem;
+}
+
+/* Tema kertas (bawaan): layar proyektor, login, dan halaman guru. */
+:root,
+:root[data-theme="kertas"] {
+  --color-text: var(--tinta);
+  --color-muted: var(--tinta-redup);
+  --color-background: var(--kertas);
+  --color-surface: var(--kertas-putih);
+  --color-border: var(--garis);
+  --color-primary: var(--kapur);
+  --color-primary-text: var(--tinta);
+  --color-primary-pressed: var(--kapur-tekan);
+  --color-link: var(--tinta);
+  --color-danger: var(--bahaya);
+  --color-success: var(--benar);
+  --color-focus: var(--tinta);
+  --color-urgent: var(--bahaya);
+  --shadow-alas: 0 4px 0 var(--tinta);
+  /* Di atas kertas tepi kartu B sudah kontras, jadi cincin tidak perlu. */
+  --kartu-b-cincin: none;
+}
+
+/* Tema papan: HP siswa. */
+:root[data-theme="papan"] {
+  --color-text: var(--kapur-putih);
+  --color-muted: var(--kapur-redup);
+  --color-background: var(--papan);
+  --color-surface: var(--papan-2);
+  --color-border: var(--papan-garis);
+  --color-primary: var(--kapur);
+  --color-primary-text: var(--tinta);
+  --color-primary-pressed: var(--kapur-tekan);
+  --color-link: var(--kapur);
+  /* bahaya #a3262c terlalu gelap di atas papan; merah muda waktu-kritis kontrasnya 6,97. */
+  --color-danger: var(--waktu-kritis);
+  /* benar #0f6d8c di atas papan kontrasnya rendah; teks "Benar!" memakai kapur. */
+  --color-success: var(--kapur);
+  --color-focus: var(--kapur);
+  --color-urgent: var(--waktu-kritis);
+  --shadow-alas: 0 4px 0 #08120e;
+  /* Kartu B (biru tua) hampir menyatu dengan papan; cincin 2px #6678b3 kontrasnya 3,70 (3,15 di papan-2). */
+  --kartu-b-cincin: 0 0 0 2px #6678b3;
 }
 
 *,
@@ -56,6 +140,8 @@
 body {
   margin: 0;
   font-family: var(--font-body);
+  /* Bobot 400 tidak dimuat; 500 jadi bobot dasar. */
+  font-weight: 500;
   font-size: var(--font-size-body);
   line-height: 1.5;
   color: var(--color-text);
@@ -68,7 +154,7 @@ h1 {
 }
 
 a {
-  color: var(--color-primary);
+  color: var(--color-link);
 }
 
 :focus-visible {
@@ -113,7 +199,7 @@ a {
   min-height: var(--tap-target);
   padding: var(--space-2) var(--space-3);
   border: 1px solid var(--color-border);
-  border-radius: var(--radius);
+  border-radius: var(--radius-kecil);
   background: var(--color-surface);
   color: var(--color-text);
   font: inherit;
@@ -162,8 +248,10 @@ textarea {
   min-height: var(--tap-target);
   padding: var(--space-2);
   border: 1px solid var(--color-border);
-  border-radius: var(--radius);
+  border-radius: var(--radius-kecil);
   font: inherit;
+  color: var(--color-text);
+  background: var(--color-surface);
 }
 
 [aria-invalid="true"] {
@@ -192,7 +280,7 @@ textarea {
   gap: var(--space-2);
   padding: var(--space-3);
   border: 1px solid var(--color-border);
-  border-radius: var(--radius);
+  border-radius: var(--radius-kecil);
 }
 
 .quiz-title {
@@ -203,7 +291,7 @@ textarea {
 .question-card fieldset {
   margin: 0;
   border: 1px solid var(--color-border);
-  border-radius: var(--radius);
+  border-radius: var(--radius-kecil);
   padding: var(--space-3);
   display: grid;
   gap: var(--space-3);
@@ -358,7 +446,7 @@ input.pin-input {
   font-weight: 600;
   padding: var(--space-1) var(--space-3);
   border: 2px solid var(--color-border);
-  border-radius: var(--radius);
+  border-radius: var(--radius-kecil);
   overflow-wrap: anywhere;
 }
 
@@ -413,8 +501,7 @@ input.pin-input {
   min-height: calc(var(--tap-target) * 1.5);
   padding: var(--space-2) var(--space-3);
   border: 3px solid transparent;
-  border-radius: var(--radius);
-  color: var(--answer-text);
+  border-radius: var(--radius-kecil);
   font: inherit;
   font-weight: 600;
   text-align: left;
@@ -439,10 +526,10 @@ button.answer-selected:disabled {
   outline-offset: -6px;
 }
 
-.answer-0 { background: var(--answer-0); }
-.answer-1 { background: var(--answer-1); }
-.answer-2 { background: var(--answer-2); }
-.answer-3 { background: var(--answer-3); }
+.answer-0 { background: var(--kartu-a); color: var(--kartu-a-teks); }
+.answer-1 { background: var(--kartu-b); color: var(--kartu-b-teks); }
+.answer-2 { background: var(--kartu-c); color: var(--kartu-c-teks); }
+.answer-3 { background: var(--kartu-d); color: var(--kartu-d-teks); }
 
 .answer-mark {
   display: inline-flex;
@@ -455,7 +542,7 @@ button.answer-selected:disabled {
   display: inline-block;
   width: 1.25em;
   height: 1.25em;
-  background: var(--answer-text);
+  background: currentColor;
 }
 
 .answer-shape-0 { clip-path: var(--answer-shape-0); }
@@ -497,8 +584,8 @@ button.answer-selected:disabled {
 .answer-bar {
   display: block;
   height: 0.75em;
-  background: var(--answer-text);
-  border-radius: var(--radius);
+  background: currentColor;
+  border-radius: var(--radius-kecil);
 }
 
 /* Hasil dan skor di HP siswa. */
@@ -621,4 +708,16 @@ button.answer-selected:disabled {
   .answer-bar {
     transition: width 300ms ease-out;
   }
+}
+
+/* Angka besar dan huruf kartu memakai font angka (hanya bobot 800 yang dimuat). */
+.host-pin,
+input.pin-input,
+.countdown,
+.host-countdown,
+.score-big,
+.leaderboard-rank,
+.answer-letter {
+  font-family: var(--font-angka);
+  font-weight: 800;
 }

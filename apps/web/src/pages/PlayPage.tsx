@@ -5,6 +5,7 @@ import { ApiRequestError, describeError, lookupRoom } from "../api.ts";
 import { AnswerButton } from "../AnswerOption.tsx";
 import { createPlayerSession, type PlayerSession, type PlayerView } from "../player-session.ts";
 import { useRemainingMs } from "../useRemainingMs.ts";
+import { useTheme } from "../theme.ts";
 
 type CheckState = { kind: "checking" } | { kind: "ready" } | { kind: "error"; message: string };
 
@@ -18,6 +19,7 @@ function lookupMessage(error: unknown): string {
 }
 
 export function PlayPage() {
+  useTheme("papan");
   const params = useParams();
   const parsed = Pin.safeParse(params.pin);
   const pin = parsed.success ? parsed.data : null;

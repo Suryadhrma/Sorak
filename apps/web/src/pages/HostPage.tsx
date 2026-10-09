@@ -6,6 +6,7 @@ import type { HostBase } from "../host-screen.ts";
 import { createHostSession, type HostSession, type HostView } from "../host-session.ts";
 import { SCORING_MODES } from "../scoring-modes.ts";
 import { useRemainingMs } from "../useRemainingMs.ts";
+import { useTheme } from "../theme.ts";
 
 type QuestionView = Extract<HostView, { kind: "question" }>;
 type RevealView = Extract<HostView, { kind: "reveal" }>;
@@ -13,6 +14,7 @@ type EndedView = Extract<HostView, { kind: "ended" }>;
 
 /** Layar proyektor: dibaca dari belakang kelas, jadi PIN, soal, dan hitung mundur sebesar mungkin. */
 export function HostPage() {
+  useTheme("kertas");
   const params = useParams();
   const parsed = Pin.safeParse(params.pin);
   const pin = parsed.success ? parsed.data : null;
