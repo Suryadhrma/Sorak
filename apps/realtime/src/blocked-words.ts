@@ -14,14 +14,12 @@ export const BLOCKED_ROOTS = [
   "ngentot",
   "jancok",
   "jancuk",
-  "bego",
   "goblok",
   "tolol",
   "keparat",
   "kampret",
   "pelacur",
   "lonte",
-  "perek",
   "setan",
   "sialan",
   "fuck",
@@ -30,8 +28,8 @@ export const BLOCKED_ROOTS = [
 ] as const;
 
 /**
- * Kata pendek yang bisa muncul di dalam nama wajar ("asu" di Masuk, "tai" di Sutaini, "dick" di Dicky,
- * "shit" di Ashita): hanya dicocokkan sebagai kata utuh.
+ * Kata yang bisa muncul di dalam nama atau kata wajar ("asu" di Masuk, "tai" di Sutaini, "dick" di Dicky,
+ * "shit" di Ashita, "bego" di Begonia, "perek" di perekat dan perekonomian): hanya dicocokkan sebagai kata utuh.
  */
 export const BLOCKED_WORDS = [
   "asu",
@@ -46,4 +44,6 @@ export const BLOCKED_WORDS = [
   "porn",
   "shit",
   "dick",
+  "bego",
+  "perek",
 ] as const;

@@ -81,7 +81,7 @@ describe("keadilan latency (Klasik, T = 10 detik, 5 soal, reaksi identik 3 detik
     expect(difference).toBeGreaterThan(0.05);
   });
 
-  it(`curang (klaim 0 ms): keuntungannya paling banyak ${LATENCY_EPSILON_MS} ms dibanding pemain jujur dengan jeda sama`, () => {
+  it(`keuntungan klaim palsu paling banyak LATENCY_EPSILON_MS (${LATENCY_EPSILON_MS} ms)`, () => {
     // Pemain C bereaksi di 250 ms tapi mengklaim 0. Batas bawah clamp (tServer - 2d - epsilon) memotong
     // klaimnya; yang tersisa hanya margin epsilon. Jadi C tidak boleh lebih baik dari pemain jujur yang benar-benar
     // menjawab di 250 - epsilon ms. Tanpa jitter, supaya yang diuji sifat rumusnya, bukan urutan acak.
@@ -90,6 +90,6 @@ describe("keadilan latency (Klasik, T = 10 detik, 5 soal, reaksi identik 3 detik
     const honest = playGame({ oneWayMs: 50, reactionMs: 250 }, "compensated", seededRandom(3), 0);
     console.info(`curang: C ${cheater.total}, jujur 250 ms ${honest.total}, jujur ${250 - LATENCY_EPSILON_MS} ms ${honestAtBound.total}`);
     expect(cheater.total).toBeLessThanOrEqual(honestAtBound.total);
-    for (const tMs of cheater.times) expect(tMs).toBeGreaterThan(0);
+    cheater.times.forEach((tMs, q) => expect(tMs).toBeGreaterThanOrEqual((honest.times[q] ?? 0) - LATENCY_EPSILON_MS));
   });
 });

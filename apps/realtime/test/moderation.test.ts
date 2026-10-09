@@ -21,7 +21,7 @@ describe("isNicknameAllowed: kata pendek (kata utuh)", () => {
     }
   });
 
-  it.each(["asu", "Si Tai", "babi_01", "4nj1ng", "a n j i n g", "anjjjing"])("%s ditolak", (nickname) => {
+  it.each(["asu", "Si Tai", "babi_01", "4nj1ng", "a n j i n g", "anj.ing", "anjjjing", "dasarsialan", "s i a l a n"])("%s ditolak", (nickname) => {
     expect(isNicknameAllowed(nickname)).toBe(false);
   });
 });
@@ -39,6 +39,9 @@ describe("isNicknameAllowed: nama wajar (Scunthorpe problem)", () => {
     "Dicky",
     "Ashita",
     "Kampung Baru",
+    "Begonia",
+    "Perekat",
+    "Prasiala Nana",
     "Rina 2",
     "Budi_07",
   ])("%s diterima", (nickname) => {
