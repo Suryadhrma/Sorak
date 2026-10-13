@@ -66,6 +66,13 @@ export const RoomState = z.object({
   createdAt: Timestamp,
   startedAt: Timestamp.nullable(),
   endedAt: Timestamp.nullable(),
+  /**
+   * Kapan event game_ended berhasil masuk Queue; null kalau belum (atau tidak perlu dikirim).
+   * Default untuk state yang ditulis sebelum Hari 5: room yang sedang berjalan saat deploy tetap bisa dibaca.
+   */
+  gameEventSentAt: Timestamp.nullable().default(null),
+  /** Jumlah percobaan kirim yang gagal; memilih jeda di GAME_EVENT_RETRY_MS. */
+  gameEventAttempts: z.number().int().min(0).default(0),
 });
 export type RoomState = z.infer<typeof RoomState>;
 

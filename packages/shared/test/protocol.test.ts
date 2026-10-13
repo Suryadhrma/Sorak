@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   ATTACHMENT_MAX_BYTES,
   CloseCode,
+  GAME_EVENT_MAX_BYTES,
   GameEndedEvent,
   HostServerMessage,
   InitRoomInput,
@@ -17,8 +18,8 @@ import {
   PlayerAttachment,
   PlayerScore,
   PlayerServerMessage,
-  QUEUE_MESSAGE_MAX_BYTES,
   QuizSnapshot,
+  RoomState,
   STALE_SOCKET_MS,
   SocketAttachment,
   decodeHostMessage,
@@ -283,7 +284,7 @@ describe("anggaran ukuran (kasus terburuk)", () => {
     expect(size).toBeLessThan(2048);
   });
 
-  it(`event game_ended terbesar muat di batas Queue ${QUEUE_MESSAGE_MAX_BYTES / 1024} KB`, () => {
+  it(`event game_ended terbesar (huruf Latin) muat di batas event ${GAME_EVENT_MAX_BYTES} byte`, () => {
     const event: GameEndedEventType = {
       type: "game_ended",
       v: 1,
@@ -321,8 +322,8 @@ describe("anggaran ukuran (kasus terburuk)", () => {
     };
     expect(GameEndedEvent.safeParse(event).success).toBe(true);
     const size = bytes(event);
-    console.info(`event game_ended terbesar: ${(size / 1024).toFixed(1)} KB`);
-    expect(size).toBeLessThan(QUEUE_MESSAGE_MAX_BYTES);
+    console.info(`event game_ended terbesar (Latin): ${size} byte`);
+    expect(size).toBeLessThanOrEqual(GAME_EVENT_MAX_BYTES);
   });
 });
 
@@ -401,6 +402,31 @@ describe("skor pemain di storage", () => {
   it("poin per soal boleh negatif (Taruhan Yakin), skor total tidak", () => {
     expect(PlayerScore.safeParse({ ...score, lastPoints: -1800 }).success).toBe(true);
     expect(PlayerScore.safeParse({ ...score, score: -1 }).success).toBe(false);
+  });
+});
+
+describe("state room di storage", () => {
+  const beforeDay5 = {
+    gameId: "7c9e6679-7425-40de-944b-e07fc1f90ae7",
+    hostId: "host-1",
+    pin: "482913",
+    scoringMode: "classic",
+    teamMode: false,
+    phase: "question",
+    questionIndex: 2,
+    questionSentAt: 1_790_000_000_000,
+    deadlineAt: 1_790_000_020_000,
+    createdAt: 1_789_999_000_000,
+    startedAt: 1_789_999_500_000,
+    endedAt: null,
+  };
+
+  it("state yang ditulis sebelum Hari 5 (tanpa field event) tetap terbaca dengan nilai awal", () => {
+    expect(RoomState.parse(beforeDay5)).toMatchObject({ gameEventSentAt: null, gameEventAttempts: 0 });
+  });
+
+  it("jumlah percobaan kirim tidak boleh negatif", () => {
+    expect(RoomState.safeParse({ ...beforeDay5, gameEventAttempts: -1 }).success).toBe(false);
   });
 });
 

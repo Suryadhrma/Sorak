@@ -56,8 +56,27 @@ export const PODIUM_SIZE = 3;
 /** Batas ukuran attachment WebSocket di Durable Object. */
 export const ATTACHMENT_MAX_BYTES = 2048;
 
-/** Batas ukuran satu pesan Cloudflare Queues. */
-export const QUEUE_MESSAGE_MAX_BYTES = 128 * 1024;
+/** Batas ukuran satu pesan Cloudflare Queues: 128 KB = 128.000 byte menurut dokumentasi (1 KB = 1000 byte). */
+export const QUEUE_MESSAGE_MAX_BYTES = 128_000;
+/** Batas event game_ended (JSON UTF-8): 100 byte disisakan untuk metadata pesan Queue. */
+export const GAME_EVENT_MAX_BYTES = QUEUE_MESSAGE_MAX_BYTES - 100;
+/**
+ * Panjang teks soal dan pilihan (huruf Unicode, termasuk "…") kalau event utuh lewat GAME_EVENT_MAX_BYTES.
+ * Dipilih supaya kasus terburuk (200 pemain, 50 soal, semua teks 3 byte per huruf) sekitar 111,6 KB:
+ * sisa ruang di atas 10%.
+ */
+export const GAME_EVENT_TRUNCATED_PROMPT_LENGTH = 120;
+export const GAME_EVENT_TRUNCATED_OPTION_LENGTH = 30;
+
+/** Jeda GameRoom mencoba ulang kirim event kalau Queue gagal; setelah elemen terakhir, jeda tetap di situ. */
+export const GAME_EVENT_RETRY_MS = [30_000, 60_000, 120_000, 300_000, 900_000, 1_800_000] as const;
+/** GameRoom berhenti mencoba kirim event setelah selama ini sejak game selesai, lalu mencatat event hilang. */
+export const GAME_EVENT_GIVE_UP_MS = 86_400_000;
+
+/** Umur maksimal hasil game di D1; yang lebih tua dihapus cron. */
+export const GAME_RESULT_RETENTION_DAYS = 30;
+/** Jumlah game per halaman riwayat. */
+export const GAMES_PAGE_SIZE = 20;
 
 /** Heartbeat berupa teks biasa supaya bisa dijawab auto-response tanpa membangunkan GameRoom. */
 export const HEARTBEAT = {

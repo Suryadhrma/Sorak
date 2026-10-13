@@ -11,3 +11,4 @@ export * from "./api/quiz.ts";
 export * from "./api/host.ts";
 export * from "./api/errors.ts";
 export * from "./api/room.ts";
+export * from "./api/game.ts";
