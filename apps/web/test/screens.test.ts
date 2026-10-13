@@ -276,6 +276,9 @@ describe("layar guru", () => {
       { t: "player_left", playerId: "p2", kicked: true, playerCount: 1 },
     ]);
     expect(views.at(-1)).toMatchObject({ kind: "reveal", base: { players: [andi] } });
+    const last = views.at(-1);
+    if (last?.kind !== "reveal") throw new Error("bukan layar reveal");
+    expect(last.reveal.leaderboard.map((entry) => entry.playerId)).toEqual(["p1"]);
   });
 
   it("close dari server menjadi layar tertutup dengan teksnya", () => {

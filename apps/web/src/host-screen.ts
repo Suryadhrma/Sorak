@@ -56,6 +56,11 @@ export function hostScreen(view: HostView, event: HostEvent): HostView {
     case "player_left": {
       const gone = message.kicked || view.kind === "lobby";
       const players = gone ? next.players.filter((player) => player.playerId !== message.playerId) : next.players;
+      // Papan skor reveal berasal dari pesan reveal; baris pemain yang di-kick dibuang juga supaya tidak bisa di-kick lagi.
+      if (view.kind === "reveal" && message.kicked) {
+        const leaderboard = view.reveal.leaderboard.filter((entry) => entry.playerId !== message.playerId);
+        return { ...view, base: { ...next, players }, reveal: { ...view.reveal, leaderboard } };
+      }
       return withBase(view, { ...next, players });
     }
     case "question": {
