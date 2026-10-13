@@ -155,6 +155,8 @@ export class GameRoom extends DurableObject<Env> {
       createdAt,
       startedAt: null,
       endedAt: null,
+      gameEventSentAt: null,
+      gameEventAttempts: 0,
     };
     // Diisi sebelum await pertama, supaya init kedua untuk PIN yang sama langsung melihat room ini
     // (cek lalu tulis tanpa celah).
