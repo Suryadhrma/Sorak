@@ -32,9 +32,21 @@
       "migrations_dir": "migrations"
     }
   ],
+  // Satu event per pemanggilan: satu event terbesar sudah sekitar 27 query, dan D1 Free membatasi 50 per pemanggilan.
+  // retry_delay sama dengan GAME_EVENT_CONSUMER_RETRY_DELAY_SEC (dicek test). Setelah max_retries, pesan pindah ke DLQ.
   "queues": {
-    "consumers": [{ "queue": "sorak-game-events" }]
+    "consumers": [
+      {
+        "queue": "sorak-game-events",
+        "max_batch_size": 1,
+        "max_retries": 5,
+        "retry_delay": 60,
+        "dead_letter_queue": "sorak-game-events-dlq"
+      }
+    ]
   },
+  // Hapus hasil game lebih dari 30 hari, setiap hari 02.17 WIB (19.17 UTC), saat kelas tidak berjalan.
+  "triggers": { "crons": ["17 19 * * *"] },
   // Workers Logs: CPU time per request tercatat di invocation log. Free plan: 200.000 log event per hari.
   "observability": { "enabled": true }
 }

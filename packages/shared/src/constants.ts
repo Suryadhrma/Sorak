@@ -73,8 +73,18 @@ export const GAME_EVENT_RETRY_MS = [30_000, 60_000, 120_000, 300_000, 900_000, 1
 /** GameRoom berhenti mencoba kirim event setelah selama ini sejak game selesai, lalu mencatat event hilang. */
 export const GAME_EVENT_GIVE_UP_MS = 86_400_000;
 
+/** Batas D1 di plan Free (dokumentasi D1 limits): query per pemanggilan Worker dan parameter per query. */
+export const D1_MAX_QUERIES_PER_INVOCATION = 50;
+export const D1_MAX_BOUND_PARAMETERS = 100;
+
+/** Jeda dasar consumer mencoba ulang simpan event (detik), digandakan per percobaan; sama dengan retry_delay di apps/api/wrangler.jsonc. */
+export const GAME_EVENT_CONSUMER_RETRY_DELAY_SEC = 60;
+
 /** Umur maksimal hasil game di D1; yang lebih tua dihapus cron. */
 export const GAME_RESULT_RETENTION_DAYS = 30;
+/** Cron retensi: game yang dihapus per putaran, dan batas putaran per pemanggilan (di bawah batas query D1). */
+export const RETENTION_DELETE_BATCH = 25;
+export const RETENTION_MAX_ROUNDS = 40;
 /** Jumlah game per halaman riwayat. */
 export const GAMES_PAGE_SIZE = 20;
 

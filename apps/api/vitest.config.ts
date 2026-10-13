@@ -45,7 +45,8 @@ export default defineConfig(async () => {
   // Pemecah query yang sama dengan migrasi, supaya test menjalankan seed persis per pernyataan.
   const seed = await readD1Migrations("seed");
   // Test membandingkan binding yang benar-benar dipakai dengan PIN_LOOKUP_LIMIT / WS_CONNECT_LIMIT di @sorak/shared.
-  const ratelimits = unstable_readConfig({ config: "./wrangler.jsonc" }).ratelimits;
+  const config = unstable_readConfig({ config: "./wrangler.jsonc" });
+  const ratelimits = config.ratelimits;
   const pinLookup = ratelimits.find((limit) => limit.name === "PIN_LOOKUP");
   const wsConnect = ratelimits.find((limit) => limit.name === "WS_CONNECT");
   return {
@@ -58,6 +59,8 @@ export default defineConfig(async () => {
             TEST_SEED: seed,
             TEST_PIN_LOOKUP_RATELIMIT: pinLookup ?? null,
             TEST_WS_CONNECT_RATELIMIT: wsConnect ?? null,
+            // Test membandingkan konfigurasi consumer dengan konstanta di @sorak/shared.
+            TEST_GAME_EVENTS_CONSUMER: config.queues.consumers?.find((consumer) => consumer.queue === "sorak-game-events") ?? null,
             // Nilai khusus test; Google di-mock lewat globalThis.fetch.
             APP_ORIGIN: "https://sorak.test",
             GOOGLE_CLIENT_ID: "test-client.apps.googleusercontent.com",

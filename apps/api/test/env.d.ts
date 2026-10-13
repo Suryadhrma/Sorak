@@ -4,6 +4,7 @@ declare namespace Cloudflare {
     TEST_SEED: import("cloudflare:test").D1Migration[];
     TEST_PIN_LOOKUP_RATELIMIT: unknown;
     TEST_WS_CONNECT_RATELIMIT: unknown;
+    TEST_GAME_EVENTS_CONSUMER: unknown;
     GOOGLE_CLIENT_ID: string;
     JWT_SECRET: string;
   }
