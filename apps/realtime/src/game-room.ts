@@ -2,7 +2,9 @@ import { DurableObject } from "cloudflare:workers";
 import {
   CloseCode,
   ENDED_RETENTION_MS,
+  GAME_EVENT_GIVE_UP_MS,
   GRACE_MS,
+  GameEndedEvent,
   HEARTBEAT,
   InitRoomInput,
   LEADERBOARD_SIZE,
@@ -42,8 +44,8 @@ import {
   type RosterEntry,
   type ScoringMode,
   type ServerMessage,
-
 } from "@sorak/shared";
+import { buildGameEndedEvent, fitGameEvent, gameEventRetryDelay } from "./game-event.ts";
 import { compensateAnswerTime, updateLatency } from "./latency.ts";
 import { log } from "./log.ts";
 import { isNicknameAllowed } from "./moderation.ts";
@@ -58,6 +60,8 @@ type DecodeFailure = Extract<DecodeResult<unknown>, { ok: false }>;
 type PlayerSocket = [WebSocket, PlayerAttachment];
 type AnswerMessage = Extract<PlayerMessage, { t: "answer" }>;
 type StoredRosterEntry = Roster[number];
+/** sent: masuk Queue. failed: Queue melempar, coba lagi lewat alarm. skipped: tidak ada yang layak atau bisa dikirim. */
+type GameEventOutcome = "sent" | "failed" | "skipped";
 
 /**
  * Cangkang imperatif game: membaca state, memanggil fungsi murni (phase.ts, scoring.ts, reveal.ts),
@@ -635,13 +639,97 @@ export class GameRoom extends DurableObject<Env> {
     if (!this.transition(event)) return;
     this.state = { ...state, phase: "ended", deadlineAt: null, endedAt: now };
     this.pendingAnswers.clear();
+    const outcome = await this.sendGameEvent(now);
+    // Hasil kirim ikut di put state yang memang sudah ada: jalur normal tetap satu tulis seperti Hari 3.
+    this.state = {
+      ...this.state,
+      gameEventSentAt: outcome === "sent" ? now : null,
+      gameEventAttempts: outcome === "failed" ? 1 : 0,
+    };
     await this.ctx.storage.put(StorageKey.state, this.state);
-    await this.ctx.storage.setAlarm(now + ENDED_RETENTION_MS);
+    await this.ctx.storage.setAlarm(outcome === "failed" ? now + gameEventRetryDelay(1) : now + ENDED_RETENTION_MS);
 
     const ranks = this.ranks();
     for (const [socket, player] of this.players()) this.send(socket, this.finalMessage(player.playerId, ranks));
     this.broadcast("host", this.podiumMessage());
     log.info("game_ended", { pin: state.pin, reason: event, players: this.roster.length });
+  }
+
+  /** Event game_ended ke Queue. Siswa dan host tidak menunggu hasilnya: podium dan final tetap dikirim. */
+  private async sendGameEvent(now: number): Promise<GameEventOutcome> {
+    const { state, quiz } = this.requireRoom();
+    // Room yang belum pernah me-reveal satu soal pun (misalnya diakhiri di soal pertama) tidak punya hasil.
+    if (this.qstats.length === 0 || state.startedAt === null) return "skipped";
+    const endedAt = state.endedAt ?? now;
+    const built = buildGameEndedEvent({
+      state: { ...state, startedAt: state.startedAt, endedAt },
+      quiz,
+      roster: this.roster,
+      scoreboard: this.scoreboard,
+      qstats: this.qstats,
+    });
+    const parsed = GameEndedEvent.safeParse(built);
+    if (!parsed.success) {
+      // Bug di penyusun event: dicoba ulang pun hasilnya sama, jadi tidak dikirim.
+      log.error("game_ended_invalid", { gameId: state.gameId, issues: parsed.error.issues });
+      return "skipped";
+    }
+
+    const fitted = fitGameEvent(parsed.data);
+    if (fitted.kind === "too_large") {
+      log.error("game_event_too_large", { gameId: state.gameId, bytes: fitted.bytes, originalBytes: fitted.originalBytes });
+      return "skipped";
+    }
+    if (fitted.kind === "truncated") {
+      log.info("game_event_truncated", { gameId: state.gameId, bytes: fitted.bytes, originalBytes: fitted.originalBytes });
+    }
+
+    try {
+      await this.env.GAME_EVENTS.send(fitted.event);
+      return "sent";
+    } catch (error) {
+      // Ditangani lewat alarm retry (endGame/endedAlarm), bukan diabaikan.
+      log.error("game_event_send_failed", {
+        gameId: state.gameId,
+        attempt: state.gameEventAttempts + 1,
+        message: error instanceof Error ? error.message : String(error),
+      });
+      return "failed";
+    }
+  }
+
+  /**
+   * Alarm di tahap ended: kirim ulang event yang gagal masuk Queue (retry with backoff), menyerah setelah
+   * GAME_EVENT_GIVE_UP_MS, atau bersihkan room seperti Hari 3.
+   */
+  private async endedAlarm(now: number): Promise<void> {
+    const { state } = this.requireRoom();
+    // Hanya kegagalan Queue yang menaikkan attempts; event yang tidak layak (skipped) tidak dicoba ulang.
+    const retrying = state.gameEventSentAt === null && state.gameEventAttempts > 0;
+    if (!retrying) return this.closeRoom("retention_over");
+
+    const endedAt = state.endedAt ?? now;
+    if (now - endedAt >= GAME_EVENT_GIVE_UP_MS) {
+      log.error("game_event_lost", { gameId: state.gameId, hostId: state.hostId, players: this.roster.length });
+      return this.closeRoom("retention_over");
+    }
+
+    const outcome = await this.sendGameEvent(now);
+    if (outcome === "skipped") return this.closeRoom("retention_over");
+    if (outcome === "sent") {
+      const closeAt = endedAt + ENDED_RETENTION_MS;
+      // Masa tampil podium sudah lewat selama mencoba ulang: tidak perlu menulis state yang langsung dihapus.
+      if (closeAt <= now) return this.closeRoom("retention_over");
+      this.state = { ...state, gameEventSentAt: now };
+      await this.ctx.storage.put(StorageKey.state, this.state);
+      await this.ctx.storage.setAlarm(closeAt);
+      return;
+    }
+
+    const attempts = state.gameEventAttempts + 1;
+    this.state = { ...state, gameEventAttempts: attempts };
+    await this.ctx.storage.put(StorageKey.state, this.state);
+    await this.ctx.storage.setAlarm(now + gameEventRetryDelay(attempts));
   }
 
   private hostHello(ws: WebSocket, hostId: string, now: number): void {
@@ -706,7 +794,7 @@ export class GameRoom extends DurableObject<Env> {
       case "reveal":
         return this.endGame("idle_timeout", now);
       case "ended":
-        return this.closeRoom("retention_over");
+        return this.endedAlarm(now);
       default:
         return this.state.phase satisfies never;
     }

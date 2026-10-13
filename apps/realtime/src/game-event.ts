@@ -1,5 +1,6 @@
 import {
   GAME_EVENT_MAX_BYTES,
+  GAME_EVENT_RETRY_MS,
   GAME_EVENT_TRUNCATED_OPTION_LENGTH,
   GAME_EVENT_TRUNCATED_PROMPT_LENGTH,
   type GameEndedEvent,
@@ -120,4 +121,12 @@ export function truncateText(text: string, maxChars: number): string {
   const chars = Array.from(text);
   if (chars.length <= maxChars) return text;
   return `${chars.slice(0, maxChars - 1).join("")}…`;
+}
+
+/** Jeda sebelum percobaan berikutnya setelah `failedAttempts` kali gagal (minimal 1); berhenti di elemen terakhir. */
+export function gameEventRetryDelay(failedAttempts: number): number {
+  const steps = GAME_EVENT_RETRY_MS;
+  const delay = steps[Math.min(Math.max(failedAttempts, 1), steps.length) - 1];
+  if (delay === undefined) throw new Error("GAME_EVENT_RETRY_MS kosong");
+  return delay;
 }

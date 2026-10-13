@@ -1,5 +1,6 @@
 import {
   GAME_EVENT_MAX_BYTES,
+  GAME_EVENT_RETRY_MS,
   GAME_EVENT_TRUNCATED_OPTION_LENGTH,
   GAME_EVENT_TRUNCATED_PROMPT_LENGTH,
   GameEndedEvent,
@@ -15,7 +16,7 @@ import {
   type StoredQuestion,
 } from "@sorak/shared";
 import { describe, expect, it } from "vitest";
-import { buildGameEndedEvent, fitGameEvent, truncateText, type GameEventInput } from "../src/game-event.ts";
+import { buildGameEndedEvent, fitGameEvent, gameEventRetryDelay, truncateText, type GameEventInput } from "../src/game-event.ts";
 import { emptyScore } from "../src/reveal.ts";
 
 const bytes = (value: unknown) => new TextEncoder().encode(JSON.stringify(value)).byteLength;
@@ -227,5 +228,12 @@ describe("fitGameEvent (batas Queue)", () => {
     expect(fitted).not.toHaveProperty("event");
     expect(fitted.bytes).toBeGreaterThan(GAME_EVENT_MAX_BYTES);
     expect(fitted.originalBytes).toBe(bytes(oversized));
+  });
+});
+
+describe("gameEventRetryDelay", () => {
+  it("jeda makin panjang per percobaan gagal, lalu berhenti di elemen terakhir", () => {
+    const last = GAME_EVENT_RETRY_MS[GAME_EVENT_RETRY_MS.length - 1];
+    expect([1, 2, 3, 4, 5, 6, 7, 40].map((failed) => gameEventRetryDelay(failed))).toEqual([...GAME_EVENT_RETRY_MS, last, last]);
   });
 });
