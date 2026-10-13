@@ -1,5 +1,5 @@
 import { evictDurableObject, runInDurableObject } from "cloudflare:test";
-import { CloseCode, PlayerAttachment } from "@sorak/shared";
+import { CloseCode, PlayerAttachment, StorageKey } from "@sorak/shared";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   alarm,
@@ -244,6 +244,61 @@ describe("kick", () => {
     const game = await startedGame(["Andi"]);
     game.host.send({ t: "kick", playerId: "orang-lain" });
     await expectNext(game.host, { t: "error", code: "NOT_ALLOWED_NOW", message: "Pemain tidak ditemukan" });
+  });
+});
+
+describe("soal selesai lebih awal (all_answered)", () => {
+  /** Tiga pemain, dua sudah menjawab soal 0; yang ketiga belum. */
+  async function twoOfThreeAnswered() {
+    const game = await startedGame(["Andi", "Budi", "Cici"]);
+    const [andi, budi, cici] = game.players as [Player, Player, Player];
+    for (const player of [andi, budi]) {
+      answer(player, 0, 1);
+      await expectNext(player.client, { t: "answer_received", q: 0 });
+    }
+    await expectNext(game.host, { t: "answer_count", answered: 1, total: 3 });
+    await expectNext(game.host, { t: "answer_count", answered: 2, total: 3 });
+    return { game, andi, budi, cici };
+  }
+
+  /** Tahap tersimpan dan alarm yang terpasang, untuk membuktikan grace datang dari deadline atau lebih awal. */
+  const storedTiming = (pin: string) =>
+    runInDurableObject(roomStub(pin), async (_instance, state) => ({
+      stored: await state.storage.get<Record<string, unknown>>(StorageKey.state),
+      alarmAt: await state.storage.getAlarm(),
+    }));
+
+  it("yang belum menjawab di-kick -> grace sebelum deadline", async () => {
+    const { game, andi, budi, cici } = await twoOfThreeAnswered();
+    game.host.send({ t: "kick", playerId: cici.playerId });
+    expect(await cici.client.closed).toMatchObject({ code: CloseCode.KICKED });
+    await expectNext(game.host, { t: "player_left", playerId: cici.playerId, kicked: true, playerCount: 2 });
+    // Alarm deadline tidak pernah dijalankan di test ini: grace datang dari pengecekan setelah kick.
+    await expectNext(game.host, { t: "grace", q: 0 });
+    for (const player of [andi, budi]) await expectNext(player.client, { t: "grace", q: 0 });
+  });
+
+  it("yang belum menjawab putus -> grace sebelum deadline", async () => {
+    const { game, andi, budi, cici } = await twoOfThreeAnswered();
+    cici.client.close();
+    await expectNext(game.host, { t: "player_left", playerId: cici.playerId, kicked: false, playerCount: 3 });
+    await expectNext(game.host, { t: "grace", q: 0 });
+    for (const player of [andi, budi]) await expectNext(player.client, { t: "grace", q: 0 });
+  });
+
+  it("semua pemain putus -> tetap question, menunggu alarm deadline", async () => {
+    const { game, andi, budi, cici } = await twoOfThreeAnswered();
+    // Yang sudah menjawab putus duluan, jadi Cici (belum menjawab) selalu menahan; lalu Cici juga putus.
+    for (const player of [andi, budi, cici]) {
+      player.client.close();
+      await expectNext(game.host, { t: "player_left", playerId: player.playerId, kicked: false });
+    }
+    const { stored, alarmAt } = await storedTiming(game.pin);
+    expect(stored).toMatchObject({ phase: "question" });
+    expect(alarmAt).toBe(stored?.deadlineAt);
+
+    await alarm(game.pin);
+    await expectNext(game.host, { t: "grace", q: 0 });
   });
 });
 

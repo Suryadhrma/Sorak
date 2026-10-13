@@ -218,25 +218,25 @@ export class GameRoom extends DurableObject<Env> {
 
     const taken = takeToken(this.buckets.get(ws), now);
     this.buckets.set(ws, taken.bucket);
-    if (!taken.allowed) return this.close(ws, CloseCode.RATE_LIMITED, "Terlalu banyak pesan");
+    if (!taken.allowed) return this.close(ws, CloseCode.RATE_LIMITED, "Terlalu banyak pesan", now);
 
     if (attachment.role === "host" || attachment.role === "pending_host") {
       const decoded = decodeHostMessage(message);
-      if (!decoded.ok) return this.reject(ws, decoded, false);
+      if (!decoded.ok) return this.reject(ws, decoded, false, now);
       this.invalidStreaks.delete(ws);
       return this.onHostMessage(ws, attachment.role === "pending_host", attachment.hostId, decoded.data, now);
     }
 
     const decoded = decodePlayerMessage(message);
-    if (!decoded.ok) return this.reject(ws, decoded, true);
+    if (!decoded.ok) return this.reject(ws, decoded, true, now);
     this.invalidStreaks.delete(ws);
     return this.onPlayerMessage(ws, attachment, decoded.data, now);
   }
 
-  private async reject(ws: WebSocket, failure: DecodeFailure, fromPlayer: boolean): Promise<void> {
+  private async reject(ws: WebSocket, failure: DecodeFailure, fromPlayer: boolean, now: number): Promise<void> {
     if (failure.reason === "unsupported_version") {
       this.sendError(ws, "UNSUPPORTED_VERSION", "Versi aplikasi sudah usang. Muat ulang halaman.");
-      return this.close(ws, CloseCode.UNSUPPORTED_VERSION, "Versi protokol tidak didukung");
+      return this.close(ws, CloseCode.UNSUPPORTED_VERSION, "Versi protokol tidak didukung", now);
     }
     // Nickname salah ketik bukan pesan sampah, jadi tidak dihitung ke batas pesan rusak.
     const onlyNickname =
@@ -246,15 +246,15 @@ export class GameRoom extends DurableObject<Env> {
     if (fromPlayer && onlyNickname) {
       return this.sendError(ws, "NICKNAME_INVALID", "Nickname hanya boleh huruf, angka, spasi, titik, _ dan -");
     }
-    return this.badMessage(ws);
+    return this.badMessage(ws, now);
   }
 
-  private async badMessage(ws: WebSocket): Promise<void> {
+  private async badMessage(ws: WebSocket, now: number): Promise<void> {
     const streak = (this.invalidStreaks.get(ws) ?? 0) + 1;
     this.invalidStreaks.set(ws, streak);
     this.sendError(ws, "BAD_MESSAGE", "Pesan tidak valid");
     if (streak >= MAX_CONSECUTIVE_INVALID_MESSAGES) {
-      await this.close(ws, CloseCode.TOO_MANY_INVALID, "Terlalu banyak pesan rusak");
+      await this.close(ws, CloseCode.TOO_MANY_INVALID, "Terlalu banyak pesan rusak", now);
     }
   }
 
@@ -264,7 +264,7 @@ export class GameRoom extends DurableObject<Env> {
     if (pending && !opening) return this.sendError(ws, "NOT_JOINED", "Masuk dulu dengan nickname");
     if (!pending && opening) return this.sendError(ws, "NOT_ALLOWED_NOW", "Kamu sudah masuk");
     const phase = this.state?.phase ?? "lobby";
-    if (message.t === "join" && phase !== "lobby") return this.refuseLateJoin(ws);
+    if (message.t === "join" && phase !== "lobby") return this.refuseLateJoin(ws, now);
     if (!isAllowedInPhase(message.t, phase)) return log.info("player_message_ignored", { t: message.t, phase });
 
     switch (message.t) {
@@ -287,9 +287,9 @@ export class GameRoom extends DurableObject<Env> {
   }
 
   /** Pemain baru hanya bisa join di lobby; pemain lama kembali lewat resume. */
-  private async refuseLateJoin(ws: WebSocket): Promise<void> {
+  private async refuseLateJoin(ws: WebSocket, now: number): Promise<void> {
     this.sendError(ws, "GAME_ALREADY_STARTED", "Permainan sudah dimulai.");
-    return this.close(ws, CloseCode.GAME_ALREADY_STARTED, "Permainan sudah dimulai");
+    return this.close(ws, CloseCode.GAME_ALREADY_STARTED, "Permainan sudah dimulai", now);
   }
 
   private async onHostMessage(ws: WebSocket, pending: boolean, hostId: string, message: HostMessage, now: number): Promise<void> {
@@ -307,7 +307,7 @@ export class GameRoom extends DurableObject<Env> {
       case "next":
         return this.next(now);
       case "kick":
-        return this.kick(ws, message.playerId);
+        return this.kick(ws, message.playerId, now);
       case "end":
         if (phase === "lobby") return this.closeRoom("cancelled_by_host");
         return this.endGame("end", now);
@@ -329,11 +329,11 @@ export class GameRoom extends DurableObject<Env> {
 
     if (this.players().length >= MAX_PLAYERS_PER_ROOM) {
       for (const [other, player] of this.players()) {
-        if (this.isStaleSocket(other, player, now)) await this.close(other, CloseCode.GOING_AWAY, "Koneksi tidak aktif");
+        if (this.isStaleSocket(other, player, now)) await this.close(other, CloseCode.GOING_AWAY, "Koneksi tidak aktif", now);
       }
       if (this.players().length >= MAX_PLAYERS_PER_ROOM) {
         this.sendError(ws, "ROOM_FULL", "Room sudah penuh");
-        return this.close(ws, CloseCode.ROOM_FULL, "Room sudah penuh");
+        return this.close(ws, CloseCode.ROOM_FULL, "Room sudah penuh", now);
       }
     }
 
@@ -344,7 +344,7 @@ export class GameRoom extends DurableObject<Env> {
       if (!this.isStaleSocket(holderWs, holderPlayer, now)) {
         return this.sendError(ws, "NICKNAME_TAKEN", "Nickname sudah dipakai pemain lain");
       }
-      await this.close(holderWs, CloseCode.GOING_AWAY, "Koneksi tidak aktif");
+      await this.close(holderWs, CloseCode.GOING_AWAY, "Koneksi tidak aktif", now);
     }
 
     const player: PlayerAttachment = {
@@ -377,7 +377,7 @@ export class GameRoom extends DurableObject<Env> {
     const previous = this.players().find(([other, player]) => other !== ws && player.tokenHash === tokenHash);
     if (!previous) {
       this.sendError(ws, "SESSION_INVALID", "Sesi tidak dikenal. Masuk lagi dengan nickname.");
-      return this.close(ws, CloseCode.SESSION_INVALID, "Sesi tidak dikenal");
+      return this.close(ws, CloseCode.SESSION_INVALID, "Sesi tidak dikenal", now);
     }
 
     const [previousWs, player] = previous;
@@ -412,7 +412,7 @@ export class GameRoom extends DurableObject<Env> {
     const entry = this.roster.find((player) => player.tokenHash === tokenHash);
     if (!entry) {
       this.sendError(ws, "SESSION_INVALID", "Sesi tidak dikenal.");
-      return this.close(ws, CloseCode.SESSION_INVALID, "Sesi tidak dikenal");
+      return this.close(ws, CloseCode.SESSION_INVALID, "Sesi tidak dikenal", now);
     }
 
     const q = state.questionIndex;
@@ -455,7 +455,7 @@ export class GameRoom extends DurableObject<Env> {
    * dengan nama lain, dan guru cukup kick sekali lagi). Di tengah game pemain dihapus dari roster dan scoreboard
    * dalam satu put, sehingga token-nya tidak bisa dipakai resume lagi.
    */
-  private async kick(ws: WebSocket, playerId: string): Promise<void> {
+  private async kick(ws: WebSocket, playerId: string, now: number): Promise<void> {
     const { state } = this.requireRoom();
     const socket = this.players().find(([, player]) => player.playerId === playerId);
 
@@ -483,6 +483,7 @@ export class GameRoom extends DurableObject<Env> {
     if (socket) this.replaceSocket(socket[0], CloseCode.KICKED, "Dikeluarkan oleh guru");
     this.broadcast("host", { t: "player_left", playerId, kicked: true, playerCount: this.roster.length });
     log.info("player_kicked", { pin: state.pin, phase: state.phase });
+    await this.graceIfAllAnswered(now);
   }
 
   /** Socket lama ditandai replaced dulu, baru ditutup, supaya webSocketClose-nya tidak menulis pending atau player_left. */
@@ -536,7 +537,7 @@ export class GameRoom extends DurableObject<Env> {
     }
     const question = quiz.questions[message.q];
     if (!question) throw new Error(`soal aktif ${message.q} tidak ada di kuis`);
-    if (message.choice >= question.options.length) return this.badMessage(ws);
+    if (message.choice >= question.options.length) return this.badMessage(ws, now);
 
     // Idempotent: tombol ditekan berkali-kali tetap satu jawaban, dan klien tetap mendapat konfirmasi.
     if (player.answer?.q === message.q) return this.send(ws, { t: "answer_received", q: message.q });
@@ -553,10 +554,18 @@ export class GameRoom extends DurableObject<Env> {
     this.send(ws, { t: "answer_received", q: message.q });
     this.broadcast("host", { t: "answer_count", q: message.q, answered: this.answeredCount(message.q), total: this.roster.length });
 
+    await this.graceIfAllAnswered(now);
+  }
+
+  /** Dipanggil setelah answer, kick, dan pemain putus: soal selesai lebih awal kalau semua yang tersambung sudah menjawab. */
+  private async graceIfAllAnswered(now: number): Promise<void> {
+    const { state } = this.requireRoom();
+    const q = state.questionIndex;
+    if (state.phase !== "question" || q === null) return;
     const openPlayers = this.players();
     // Tanpa satu pun pemain tersambung, "semua sudah menjawab" selalu benar; tunggu alarm deadline saja.
-    const everyoneAnswered = openPlayers.length > 0 && openPlayers.every(([, other]) => other.answer?.q === message.q);
-    if (state.phase === "question" && everyoneAnswered) await this.toGrace("all_answered", now);
+    if (openPlayers.length === 0) return;
+    if (openPlayers.every(([, player]) => player.answer?.q === q)) await this.toGrace("all_answered", now);
   }
 
   private async toGrace(event: Extract<PhaseEvent, "deadline" | "all_answered">, now: number): Promise<void> {
@@ -675,11 +684,11 @@ export class GameRoom extends DurableObject<Env> {
   }
 
   override async webSocketClose(ws: WebSocket): Promise<void> {
-    await this.leave(ws);
+    await this.leave(ws, Date.now());
   }
 
   override async webSocketError(ws: WebSocket): Promise<void> {
-    await this.leave(ws);
+    await this.leave(ws, Date.now());
   }
 
   override async alarm(): Promise<void> {
@@ -713,12 +722,12 @@ export class GameRoom extends DurableObject<Env> {
   }
 
   /** Server menutup socket: keluarkan dari roster dulu, karena HP yang hilang sinyal tidak pernah membalas close. */
-  private async close(ws: WebSocket, code: number, reason: string): Promise<void> {
+  private async close(ws: WebSocket, code: number, reason: string, now: number): Promise<void> {
     ws.close(code, reason);
-    await this.leave(ws);
+    await this.leave(ws, now);
   }
 
-  private async leave(ws: WebSocket): Promise<void> {
+  private async leave(ws: WebSocket, now: number): Promise<void> {
     const attachment = this.sockets.get(ws);
     this.sockets.delete(ws);
     if (attachment?.role !== "player" || !this.state) return;
@@ -736,6 +745,7 @@ export class GameRoom extends DurableObject<Env> {
     const playerCount = phase === "lobby" ? this.players().length : this.roster.length;
     this.broadcast("host", { t: "player_left", playerId: attachment.playerId, kicked: false, playerCount });
     if (phase === "lobby") this.broadcast("player", { t: "lobby", playerCount });
+    await this.graceIfAllAnswered(now);
   }
 
   /** Mengubah tahap lewat tabel transisi; transisi yang tidak sah dicatat dan tidak mengubah apa pun. */
