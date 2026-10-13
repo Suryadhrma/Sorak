@@ -4,7 +4,7 @@ import { NICKNAME_MAX_LENGTH, Nickname, Pin } from "@sorak/shared";
 import { ApiRequestError, describeError, lookupRoom } from "../api.ts";
 import { AnswerButton, answersClass } from "../AnswerOption.tsx";
 import { initialPlayerScreen, type PlayerScreen, type PlayerView } from "../player-screen.ts";
-import { createPlayerSession, type PlayerSession } from "../player-session.ts";
+import { createPlayerSession, hasSavedSession, type PlayerSession } from "../player-session.ts";
 import type { ConnectionStatus } from "../socket.ts";
 import { useRemainingMs } from "../useRemainingMs.ts";
 import { useTheme } from "../theme.ts";
@@ -20,20 +20,26 @@ function lookupMessage(error: unknown): string {
   return describeError(error);
 }
 
+function initialCheck(pin: Pin | null): CheckState {
+  if (!pin) return { kind: "error", message: "PIN terdiri dari 6 angka." };
+  // Muat ulang atau tab kedua di tengah game: cek PIN akan menjawab "sudah dimulai", padahal HP ini peserta.
+  // Langsung resume; token yang tidak berlaku ditolak server dengan 4003.
+  if (hasSavedSession(pin)) return { kind: "ready" };
+  return { kind: "checking" };
+}
+
 export function PlayPage() {
   useTheme("papan");
   const params = useParams();
   const parsed = Pin.safeParse(params.pin);
   const pin = parsed.success ? parsed.data : null;
-  const [check, setCheck] = useState<CheckState>(
-    pin ? { kind: "checking" } : { kind: "error", message: "PIN terdiri dari 6 angka." },
-  );
+  const [check, setCheck] = useState<CheckState>(() => initialCheck(pin));
   const [screen, setScreen] = useState<PlayerScreen>(initialPlayerScreen);
   const [status, setStatus] = useState<ConnectionStatus>({ kind: "connecting", attempt: 0 });
   const session = useRef<PlayerSession | null>(null);
 
   useEffect(() => {
-    if (!pin) return;
+    if (!pin || check.kind !== "checking") return;
     let active = true;
     lookupRoom(pin)
       .then(() => {
@@ -45,7 +51,7 @@ export function PlayPage() {
     return () => {
       active = false;
     };
-  }, [pin]);
+  }, [pin, check.kind]);
 
   useEffect(() => {
     if (!pin || check.kind !== "ready") return;
@@ -257,7 +263,8 @@ function QuestionScreen({
       {offline && (
         <div className="offline-banner" role="status">
           <p>
-            <strong>Sinyal putus sebentar.</strong> Kalau tersambung sebelum waktunya habis, kamu masih bisa menjawab.
+            <strong>Sinyal putus sebentar.</strong>
+            {!timeUp && " Kalau tersambung sebelum waktunya habis, kamu masih bisa menjawab."}
           </p>
           <ReconnectProgress status={offline} />
           <button type="button" className="button" onClick={onRetry}>

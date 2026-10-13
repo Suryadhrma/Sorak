@@ -50,6 +50,11 @@ function saveToken(pin: Pin, token: string): void {
   }
 }
 
+/** HP ini pernah masuk ke PIN ini: halaman langsung resume tanpa cek PIN (cek PIN menolak game yang sudah mulai). */
+export function hasSavedSession(pin: Pin): boolean {
+  return loadToken(pin) !== null;
+}
+
 function forgetToken(pin: Pin): void {
   try {
     localStorage.removeItem(tokenKey(pin));
