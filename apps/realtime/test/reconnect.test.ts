@@ -1,5 +1,5 @@
 import { evictDurableObject, runInDurableObject } from "cloudflare:test";
-import { CloseCode, PlayerAttachment, StorageKey } from "@sorak/shared";
+import { CloseCode, PlayerAttachment, RoomState, StorageKey } from "@sorak/shared";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   alarm,
@@ -18,6 +18,7 @@ import {
 
 afterEach(() => {
   vi.restoreAllMocks();
+  vi.useRealTimers();
 });
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -314,21 +315,45 @@ describe("moderasi nickname", () => {
 });
 
 describe("kompensasi latency end-to-end", () => {
+  /**
+   * Tunggu sampai ack pemain tercatat (ack tidak punya balasan), lalu kembalikan latencyMs-nya. Bukan vi.waitFor:
+   * dengan fake timer, vi.waitFor memajukan jam setiap pengecekan. Jeda polling memakai setTimeout sungguhan
+   * (yang dipalsukan hanya Date), jadi jam GameRoom tetap diam dan hasilnya tidak bergantung pada lamanya menunggu.
+   */
+  async function ackedLatency(pin: string, playerId: string): Promise<number | null> {
+    for (let check = 0; check < 200; check++) {
+      const [attachment] = (await playerAttachments(pin)).filter((p) => p.playerId === playerId);
+      if (attachment?.ackedQ === 0) return attachment.latencyMs;
+      await new Promise((resolve) => setTimeout(resolve, 10));
+    }
+    throw new Error("ack tidak pernah diproses");
+  }
+
   it("pemain dengan jeda besar (ack ditunda) dan klaim jujur mendapat poin hampir sama dengan pemain tanpa jeda", async () => {
     const game = await startedGame(["Cepat", "Lambat"]);
     const [cepat, lambat] = game.players as [Player, Player];
     const reactionMs = 500;
+    // Jam dibekukan dan dimajukan manual, diukur dari saat soal dikirim: hasilnya tidak bergantung pada beban CPU.
+    const sentAt = await runInDurableObject(roomStub(game.pin), async (_instance, state) => {
+      return RoomState.parse(await state.storage.get(StorageKey.state)).questionSentAt ?? 0;
+    });
+    vi.useFakeTimers({ toFake: ["Date"] });
+    const at = (ms: number) => vi.setSystemTime(sentAt + ms);
 
     // Cepat: ack langsung, menjawab setelah 500 ms.
+    at(0);
     cepat.client.send({ t: "ack", q: 0 });
-    // Lambat: seolah jeda satu arah 800 ms. Soal sampai di HP 800 ms setelah dikirim, ack tiba di server
-    // 1.600 ms, dan jawaban (reaksi 500 ms) tiba 800 + 500 + 800 = 2.100 ms setelah soal dikirim.
-    await sleep(reactionMs);
+    expect(await ackedLatency(game.pin, cepat.playerId)).toBe(0);
+    at(reactionMs);
     cepat.client.send({ t: "answer", q: 0, choice: 1, elapsedMs: reactionMs });
     await expectNext(cepat.client, { t: "answer_received" });
-    await sleep(1600 - reactionMs);
+
+    // Lambat: seolah jeda satu arah 800 ms. Soal sampai di HP 800 ms setelah dikirim, ack tiba di server
+    // 1.600 ms, dan jawaban (reaksi 500 ms) tiba 800 + 500 + 800 = 2.100 ms setelah soal dikirim.
+    at(1600);
     lambat.client.send({ t: "ack", q: 0 });
-    await sleep(reactionMs);
+    expect(await ackedLatency(game.pin, lambat.playerId)).toBe(800);
+    at(1600 + reactionMs);
     lambat.client.send({ t: "answer", q: 0, choice: 1, elapsedMs: reactionMs });
     await expectNext(lambat.client, { t: "answer_received" });
 
