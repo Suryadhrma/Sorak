@@ -23,6 +23,9 @@ export const TEAM_SIZE_MAX = 10;
 export const TIME_LIMIT_MIN_SEC = 5;
 export const TIME_LIMIT_MAX_SEC = 120;
 
+/** Hitung mundur berwarna waktu-kritis di detik-detik terakhir ini. */
+export const COUNTDOWN_URGENT_SEC = 5;
+
 /** Jendela toleransi setelah waktu habis, untuk jawaban yang tertahan sinyal. */
 export const GRACE_MS = 2000;
 

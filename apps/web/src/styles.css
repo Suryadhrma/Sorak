@@ -30,6 +30,8 @@
   --waktu-kritis: #ff8b7e;
   --buku-garis: #dde6ee;
   --buku-margin: #e7a9ac;
+  /* Garis belah di tengah ubin angka (FlapDigits). */
+  --flap-belah: rgb(0 0 0 / 0.32);
 
   /* Kartu jawaban: warna seragam sekolah per huruf. Hurufnya yang membedakan pilihan, bukan warnanya. */
   --kartu-a: #c0262d;
@@ -61,6 +63,13 @@
   --gerak-angkat-jeda: 70ms;
   --gerak-geser: 600ms cubic-bezier(0.5, 0, 0.2, 1);
   --gerak-naik: 700ms cubic-bezier(0.2, 0.8, 0.2, 1);
+  --gerak-naik-jeda: 150ms;
+  /* Gulung angka hitung mundur setiap detik. */
+  --gerak-gulung: 200ms ease-out;
+  /* Batang waktu bergeser mulus di antara pembaruan; sama dengan TICK_MS di useRemainingMs.ts. */
+  --gerak-tik: 250ms linear;
+  /* Logo bersorak: tangan terangkat dan garis sorak, sekali. */
+  --gerak-sorak: 900ms cubic-bezier(0.34, 1.56, 0.64, 1);
 
   --space-1: 0.25rem;
   --space-2: 0.5rem;
@@ -968,4 +977,237 @@ input.pin-input,
 .correct-label {
   color: var(--color-success);
   font-weight: 700;
+}
+
+/*
+ * Komponen gerak (board Gerak). Gaya dasar selalu keadaan akhir; animasinya hanya dipasang kalau HP tidak meminta
+ * gerak dikurangi. Yang dianimasikan hanya transform dan opacity (dikerjakan compositor, tanpa hitung ulang tata letak).
+ */
+
+.flap-tiles {
+  display: inline-flex;
+  gap: var(--space-1);
+}
+
+.flap-digit {
+  position: relative;
+  display: inline-grid;
+  place-items: center;
+  min-width: 1.15ch;
+  padding: 0 0.12em;
+  border-radius: var(--radius-kecil);
+  background: var(--color-surface);
+  font-family: var(--font-angka);
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.1;
+  overflow: hidden;
+}
+
+.flap-digit::after {
+  content: "";
+  position: absolute;
+  inset-inline: 0;
+  top: calc(50% - 1px);
+  height: 2px;
+  background: var(--flap-belah);
+}
+
+.tally {
+  height: 1em;
+  width: auto;
+  overflow: visible;
+}
+
+.tally-mark {
+  stroke: currentColor;
+  stroke-width: 7px;
+  stroke-linecap: round;
+  stroke-dasharray: 1;
+}
+
+.countdown-block {
+  display: grid;
+  gap: var(--space-1);
+}
+
+.countdown-number {
+  display: inline-block;
+}
+
+.countdown-track {
+  display: block;
+  height: 0.5rem;
+  border-radius: var(--radius-kecil);
+  background: var(--color-border);
+  overflow: hidden;
+}
+
+.countdown-bar {
+  display: block;
+  height: 100%;
+  background: var(--color-primary);
+  transform-origin: 0 50%;
+}
+
+.countdown-block.is-urgent .countdown {
+  color: var(--color-urgent);
+}
+
+.countdown-block.is-urgent .countdown-bar {
+  background: var(--color-urgent);
+}
+
+.raise-in {
+  display: grid;
+  transform-origin: 50% 0;
+}
+
+.rise-in {
+  display: block;
+}
+
+.rise-in-x {
+  height: 100%;
+  transform-origin: 0 50%;
+}
+
+/* Baris yang naik peringkat diberi bingkai kapur. */
+.leaderboard-item.is-rising {
+  outline: 3px solid var(--color-primary);
+  outline-offset: -3px;
+  border-radius: var(--radius-kecil);
+}
+
+.logo-hand,
+.logo-cheer {
+  transform-box: fill-box;
+  transform-origin: 50% 100%;
+}
+
+.logo-cheer {
+  stroke: var(--logo-manset);
+  opacity: 0;
+}
+
+.logo-animate .logo-mark {
+  overflow: visible;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .flap-turn {
+    animation: flap-turn var(--gerak-balik) both;
+  }
+
+  .tally-mark {
+    animation: tally-draw var(--gerak-turus) both;
+  }
+
+  .countdown-number {
+    animation: countdown-roll var(--gerak-gulung) both;
+  }
+
+  .countdown-bar {
+    transition: transform var(--gerak-tik);
+  }
+
+  .raise-in {
+    animation: raise-in var(--gerak-angkat) both;
+  }
+
+  .rise-in-x {
+    animation: rise-x var(--gerak-naik) both;
+  }
+
+  .rise-in-y {
+    animation: rise-y var(--gerak-naik) both;
+  }
+
+  .leaderboard-item {
+    transition: transform var(--gerak-geser);
+  }
+
+  .logo-animate .logo-hand {
+    animation: logo-lift var(--gerak-sorak) both;
+  }
+
+  .logo-animate .logo-cheer {
+    animation: logo-cheer var(--gerak-sorak) both;
+  }
+}
+
+@keyframes flap-turn {
+  from {
+    transform: perspective(400px) rotateX(-95deg);
+    opacity: 0;
+  }
+}
+
+@keyframes tally-draw {
+  from {
+    stroke-dashoffset: 1;
+  }
+}
+
+@keyframes countdown-roll {
+  from {
+    transform: translateY(-40%);
+    opacity: 0;
+  }
+}
+
+@keyframes raise-in {
+  from {
+    transform: perspective(700px) rotateX(85deg);
+    opacity: 0;
+  }
+}
+
+@keyframes rise-x {
+  from {
+    transform: scaleX(0);
+  }
+}
+
+@keyframes rise-y {
+  from {
+    transform: translateY(105%);
+  }
+}
+
+@keyframes logo-lift {
+  0% {
+    transform: translateY(40%) rotate(8deg);
+    opacity: 0;
+  }
+  30% {
+    transform: translateY(-5%) rotate(-6deg);
+    opacity: 1;
+  }
+  55% {
+    transform: rotate(3deg);
+  }
+  78% {
+    transform: rotate(-2deg);
+  }
+}
+
+@keyframes logo-cheer {
+  0%,
+  30% {
+    transform: scale(0.2);
+    opacity: 0;
+  }
+  45% {
+    transform: scale(1.2);
+    opacity: 1;
+  }
+  60%,
+  85% {
+    transform: none;
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
 }
