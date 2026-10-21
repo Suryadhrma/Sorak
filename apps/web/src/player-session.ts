@@ -27,6 +27,8 @@ export type PlayerSession = {
   takeOver(): void;
   /** "Sambung sekarang": tidak menunggu sisa jeda reconnect. */
   retryNow(): void;
+  /** "Keluar dari ruang" di lobby: HP melupakan sesi ini; server membuang pemain lobby saat socket-nya tertutup. */
+  leave(): void;
   stop(): void;
 };
 
@@ -137,7 +139,7 @@ export function createPlayerSession(
     if (!queued) return;
     if (decideQueuedAnswer(snapshot, queued) === "drop") return forgetQueue();
     sendAnswer(queued);
-    dispatch({ type: "answer_sent", choice: queued.choice });
+    dispatch({ type: "answer_sent", choice: queued.choice, elapsedMs: queued.elapsedMs });
   }
 
   function onEnd(code: number): void {
@@ -174,7 +176,7 @@ export function createPlayerSession(
       queued = { q: view.question.q, choice, elapsedMs: Math.min(Math.max(elapsedMs, 0), TIME_LIMIT_MAX_SEC * 1000) };
       saveQueuedAnswer(pin, queued);
       sendAnswer(queued);
-      dispatch({ type: "answer_sent", choice });
+      dispatch({ type: "answer_sent", choice, elapsedMs: queued.elapsedMs });
     },
     takeOver() {
       show({ ...screen, view: { kind: "connecting" } });
@@ -182,6 +184,12 @@ export function createPlayerSession(
     },
     retryNow() {
       connection?.retryNow();
+    },
+    leave() {
+      forgetToken(pin);
+      forgetQueue();
+      connection?.close();
+      connection = null;
     },
     stop() {
       connection?.close();

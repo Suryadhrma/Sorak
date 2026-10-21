@@ -59,6 +59,17 @@ export function AnswerRow(props: { index: number; text: string; correct?: boolea
 }
 
 /** Ubin huruf kecil berwarna kartu, untuk daftar sebaran jawaban. */
+/** Kartu pilihan yang hanya ditampilkan di HP (layar terkirim dan hasil), bukan tombol. */
+export function AnswerCard(props: { index: number; text: string; className?: string }) {
+  const classes = ["answer", `answer-${props.index}`, "answer-card", props.className].filter(Boolean).join(" ");
+  return (
+    <div className={classes}>
+      <span className="visually-hidden">Pilihan {answerLetter(props.index)}:</span>
+      <CardContent index={props.index} text={props.text} />
+    </div>
+  );
+}
+
 export function AnswerTile({ index }: { index: number }) {
   return (
     <span className={`answer-tile answer-${index}`} aria-hidden="true">

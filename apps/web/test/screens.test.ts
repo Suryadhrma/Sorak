@@ -2,7 +2,7 @@ import { CloseCode, type HostServerMessage, type PlayerServerMessage, type Playe
 import { describe, expect, it } from "vitest";
 import { remainingMs } from "../src/countdown.ts";
 import { applyRosterMessage, disconnectedCount, hostScreen, type HostView } from "../src/host-screen.ts";
-import { initialPlayerScreen, playerScreen, type PlayerEvent, type PlayerScreen, type PlayerView } from "../src/player-screen.ts";
+import { initialPlayerScreen, playerScreen, rankClimb, type PlayerEvent, type PlayerScreen, type PlayerView } from "../src/player-screen.ts";
 
 const room = { pin: "123456", scoringMode: "classic", teamMode: false, questionCount: 3 } as const;
 const question = { q: 0, total: 3, prompt: "Planet terbesar?", options: ["Mars", "Jupiter", "Venus"], durationMs: 20_000, imageUrl: null };
@@ -43,12 +43,72 @@ function playThrough(events: PlayerEvent[]): PlayerView[] {
 
 const server = (message: PlayerServerMessage, at = 0): PlayerEvent => ({ type: "server", message, at });
 
+/** Seluruh layar (bukan hanya view) setelah semua kejadian. */
+function screenAfter(events: PlayerEvent[]): PlayerScreen {
+  return events.reduce(playerScreen, initialPlayerScreen);
+}
+
+const question2 = { ...question, q: 1, prompt: "Planet terdekat dari Matahari?", options: ["Merkurius", "Venus", "Mars"] };
+
+describe("data layar hasil dan rapor (Hari 5)", () => {
+  it("rankClimb: naik dihitung dari peringkat lama; turun, tetap, atau belum ada peringkat lama -> null", () => {
+    expect(rankClimb(7, 4)).toBe(3);
+    expect(rankClimb(4, 4)).toBeNull();
+    expect(rankClimb(2, 5)).toBeNull();
+    expect(rankClimb(null, 1)).toBeNull();
+  });
+
+  it("welcome membawa judul kuis dan poin/peringkat/kombo dari snapshot", () => {
+    const screen = screenAfter([server(resumedWelcome({ score: 2340, rank: 9, streak: 2 }))]);
+    expect(screen.quizTitle).toBeNull();
+    expect(screen.standing).toEqual({ score: 2340, rank: 9, streak: 2 });
+    const titled = screenAfter([server({ ...welcome, room: { ...room, quizTitle: "Tata Surya" } })]);
+    expect(titled.quizTitle).toBe("Tata Surya");
+  });
+
+  it("jawaban terkirim menyimpan lama berpikir untuk layar terkirim", () => {
+    const screen = screenAfter([server(welcome), server({ t: "question", ...question }), { type: "answer_sent", choice: 2, elapsedMs: 4200 }]);
+    expect(screen.view).toMatchObject({ kind: "question", choice: 2, elapsedMs: 4200 });
+  });
+
+  it("result membawa keadaan sebelumnya (untuk naik tingkat dan kombo terputus), soal, dan pilihan pemain", () => {
+    const screen = screenAfter([
+      server(resumedWelcome({ score: 2340, rank: 7, streak: 2 })),
+      server({ t: "result", q: 0, outcome: "correct", correctIndex: 1, points: 870, score: 3210, rank: 4, streak: 3 }),
+      server({ t: "question", ...question2 }),
+      { type: "answer_sent", choice: 0, elapsedMs: 5000 },
+      server({ t: "result", q: 1, outcome: "wrong", correctIndex: 1, points: 0, score: 3210, rank: 5, streak: 0 }),
+    ]);
+    expect(screen.view).toMatchObject({
+      kind: "result",
+      previous: { score: 3210, rank: 4, streak: 3 },
+      question: { q: 1, options: ["Merkurius", "Venus", "Mars"] },
+      choice: 0,
+    });
+    expect(screen.standing).toEqual({ score: 3210, rank: 5, streak: 0 });
+  });
+
+  it("tersambung lagi saat reveal: hasil tetap tampil, tanpa teks soal dan pilihan yang tidak diketahui", () => {
+    const screen = screenAfter([server(resumedWelcome({ phase: "reveal", remainingMs: null, rank: 3 })), server(result)]);
+    expect(screen.view).toMatchObject({ kind: "result", question: null, choice: null, previous: { rank: 3 } });
+  });
+
+  it("tidak menjawab: pilihan null, soal tetap diingat untuk menampilkan jawaban benar", () => {
+    const screen = screenAfter([
+      server(welcome),
+      server({ t: "question", ...question }),
+      server({ t: "result", q: 0, outcome: "no_answer", correctIndex: 1, points: 0, score: 0, rank: 2, streak: 0 }),
+    ]);
+    expect(screen.view).toMatchObject({ kind: "result", choice: null, question: { q: 0 } });
+  });
+});
+
 describe("layar siswa", () => {
   it("welcome -> question -> answer_received -> grace -> result -> final", () => {
     const views = playThrough([
       server(welcome),
       server({ t: "question", ...question }, 1234),
-      { type: "answer_sent", choice: 1 },
+      { type: "answer_sent", choice: 1, elapsedMs: 3000 },
       server({ t: "answer_received", q: 0 }),
       server({ t: "grace", q: 0, ms: 2000 }),
       server(result),
@@ -74,7 +134,7 @@ describe("layar siswa", () => {
   it("tersambung lagi di tengah soal: hitung mundur dari sisa waktu, jawaban antrean dikirim ulang lalu dikonfirmasi", () => {
     const views = playThrough([
       server(resumedWelcome({ remainingMs: 7000, answered: false }), 500),
-      { type: "answer_sent", choice: 1 },
+      { type: "answer_sent", choice: 1, elapsedMs: 3000 },
       server({ t: "answer_received", q: 0 }),
       server({ t: "grace", q: 0, ms: 2000 }),
       server(result),
@@ -109,12 +169,12 @@ describe("layar siswa", () => {
   });
 
   it("jawaban hanya bisa dipilih sekali per soal", () => {
-    const views = playThrough([server(welcome), server({ t: "question", ...question }), { type: "answer_sent", choice: 2 }, { type: "answer_sent", choice: 0 }]);
+    const views = playThrough([server(welcome), server({ t: "question", ...question }), { type: "answer_sent", choice: 2, elapsedMs: 3000 }, { type: "answer_sent", choice: 0, elapsedMs: 3000 }]);
     expect(views.at(-1)).toMatchObject({ choice: 2 });
   });
 
   it("answer_received untuk soal lain tidak mengonfirmasi jawaban ini", () => {
-    const views = playThrough([server(welcome), server({ t: "question", ...question }), { type: "answer_sent", choice: 1 }, server({ t: "answer_received", q: 5 })]);
+    const views = playThrough([server(welcome), server({ t: "question", ...question }), { type: "answer_sent", choice: 1, elapsedMs: 3000 }, server({ t: "answer_received", q: 5 })]);
     expect(views.at(-1)).toMatchObject({ confirmed: false });
   });
 

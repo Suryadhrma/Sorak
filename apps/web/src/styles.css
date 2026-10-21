@@ -96,6 +96,14 @@
 
   --page-max-width: 48rem;
   --tap-target: 2.75rem;
+  /* Layar HP (board HP-1 sampai HP-9). */
+  --hp-max-width: 28rem;
+  --font-size-hp-judul: 1.75rem;
+  --font-size-hp-nama: clamp(3.5rem, 20vw, 5.5rem);
+  --font-size-hp-vonis: clamp(3rem, 17vw, 4.5rem);
+  --font-size-hp-peringkat: clamp(4.5rem, 26vw, 6.5rem);
+  --keypad-tinggi: 3.5rem;
+  --hp-batang-waktu: 0.375rem;
   /* Kertas bergaris buku (board Guru-2): jarak garis dan posisi garis margin merah. */
   --buku-baris: 2.25rem;
   --buku-margin-x: 5.5rem;
@@ -385,33 +393,9 @@ textarea {
 
 /* Siswa: halaman PIN, nickname, dan lobby. */
 
-.join-form {
-  display: grid;
-  gap: var(--space-3);
-}
-
 .button-block {
   justify-self: stretch;
   width: 100%;
-}
-
-/* Selektor input.* supaya mengalahkan font: inherit di aturan input umum. */
-input.pin-input {
-  font-size: var(--font-size-pin-input);
-  letter-spacing: 0.3em;
-  text-align: center;
-  font-variant-numeric: tabular-nums;
-}
-
-.lobby {
-  text-align: center;
-}
-
-.lobby-nickname {
-  font-size: var(--font-size-title);
-  font-weight: 700;
-  margin: 0;
-  overflow-wrap: anywhere;
 }
 
 /* Layar proyektor: dibaca dari belakang kelas. */
@@ -493,7 +477,6 @@ input.pin-input {
 
 /* Soal dan pilihan jawaban (HP siswa dan proyektor). */
 
-.question-meta,
 .host-question-meta {
   display: flex;
   justify-content: space-between;
@@ -506,10 +489,6 @@ input.pin-input {
   font-size: var(--font-size-countdown);
   font-weight: 800;
   font-variant-numeric: tabular-nums;
-}
-
-.question-prompt {
-  overflow-wrap: anywhere;
 }
 
 .answers {
@@ -653,26 +632,9 @@ button.answer-selected:disabled {
 
 /* Hasil dan skor di HP siswa. */
 
-.result-title {
-  font-size: var(--font-size-score);
-}
-
-.result-correct .result-title {
-  color: var(--color-success);
-}
-
-.result-wrong .result-title {
-  color: var(--color-danger);
-}
-
 .score-big {
   font-size: var(--font-size-score);
   font-weight: 800;
-  margin: 0;
-}
-
-.combo {
-  font-weight: 700;
   margin: 0;
 }
 
@@ -814,7 +776,6 @@ button.answer-selected:disabled {
   overflow-wrap: anywhere;
 }
 
-
 /* Pilihan mode di Kuis saya. */
 
 .quiz-item {
@@ -842,7 +803,6 @@ button.answer-selected:disabled {
 
 /* Angka besar dan huruf kartu memakai font angka (hanya bobot 800 yang dimuat). */
 .host-pin,
-input.pin-input,
 .countdown,
 .host-countdown,
 .score-big,
@@ -1210,4 +1170,492 @@ input.pin-input,
   100% {
     opacity: 0;
   }
+}
+
+/* Layar HP (board HP-1 sampai HP-9): satu kolom setinggi layar, aksi utama di bawah. */
+
+.hp-screen {
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-4) max(var(--space-3), calc((100% - var(--hp-max-width)) / 2));
+}
+
+.hp-screen h1,
+.hp-screen h2,
+.hp-screen p {
+  margin: 0;
+}
+
+.hp-title {
+  font-size: var(--font-size-hp-judul);
+  line-height: 1.15;
+  overflow-wrap: anywhere;
+}
+
+.hp-subtitle {
+  font-size: var(--font-size-title);
+  line-height: 1.2;
+}
+
+.hp-prompt {
+  font-size: var(--font-size-hp-judul);
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+}
+
+.hp-name,
+.hp-verdict {
+  font-family: var(--font-angka);
+  font-weight: 800;
+  line-height: 0.95;
+  overflow-wrap: anywhere;
+}
+
+.hp-name {
+  font-size: var(--font-size-hp-nama);
+  color: var(--color-primary);
+}
+
+.hp-verdict {
+  font-size: var(--font-size-hp-vonis);
+}
+
+.hp-topbar,
+.hp-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.hp-topbar {
+  font-weight: 700;
+  font-size: var(--font-size-small);
+}
+
+.hp-row-start {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.hp-stack {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.hp-fill {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.hp-fill > .hp-bottom,
+.hp-screen > .hp-bottom {
+  margin-top: auto;
+}
+
+.hp-center {
+  display: grid;
+  justify-items: center;
+  gap: var(--space-2);
+  text-align: center;
+}
+
+.hp-block {
+  display: block;
+}
+
+.hp-footer {
+  font-weight: 700;
+  font-size: var(--font-size-small);
+}
+
+.hp-footnote {
+  text-align: center;
+}
+
+.hp-pill {
+  display: inline-flex;
+  align-self: flex-start;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-kecil);
+  background: var(--color-surface);
+  font-weight: 700;
+}
+
+.hp-pill-kapur {
+  align-self: center;
+  background: var(--color-primary);
+  color: var(--color-primary-text);
+}
+
+.hp-panel {
+  display: grid;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  border-radius: var(--radius-panel);
+  background: var(--color-surface);
+}
+
+.hp-panel.hp-row {
+  display: flex;
+}
+
+.button-hp {
+  min-height: var(--keypad-tinggi);
+  font-weight: 800;
+  box-shadow: var(--shadow-alas);
+}
+
+.link-button {
+  min-height: var(--tap-target);
+  border: 0;
+  background: none;
+  color: var(--color-link);
+  font: inherit;
+  font-weight: 700;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.hp-screen > .hp-bottom:has(> .link-button) {
+  display: flex;
+  justify-content: center;
+}
+
+/* HP-1: ubin PIN 3 + 3 dan keypad angka. */
+.pin-tiles {
+  display: flex;
+  gap: var(--space-1);
+  font-size: var(--font-size-pin-input);
+}
+
+.pin-tile {
+  flex: 1;
+  min-height: 1.6em;
+}
+
+.pin-tile:nth-child(3) {
+  margin-right: var(--space-2);
+}
+
+.pin-tile-empty {
+  opacity: 0.45;
+}
+
+.keypad {
+  margin-top: auto;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--space-2);
+}
+
+.keypad-key {
+  min-height: var(--keypad-tinggi);
+  border: 0;
+  border-radius: var(--radius-kecil);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-family: var(--font-angka);
+  font-weight: 800;
+  font-size: var(--font-size-title);
+  box-shadow: var(--shadow-alas);
+  cursor: pointer;
+}
+
+.keypad-text {
+  background: none;
+  box-shadow: none;
+  font-family: var(--font-body);
+  font-size: var(--font-size-small);
+}
+
+.keypad-enter {
+  background: var(--color-primary);
+  color: var(--color-primary-text);
+  font-family: var(--font-body);
+  font-size: var(--font-size-body);
+}
+
+/* HP-2: nama besar bergaris bawah kapur. */
+input.name-input {
+  min-height: auto;
+  padding: 0;
+  border: 0;
+  border-bottom: 4px solid var(--color-primary);
+  border-radius: 0;
+  background: none;
+  color: var(--color-text);
+  font-family: var(--font-angka);
+  font-weight: 800;
+  font-size: var(--font-size-hp-nama);
+  line-height: 1;
+}
+
+/* HP-4: batang waktu di tepi atas layar, angka di ubin kanan atas. */
+.countdown-hp .countdown-track {
+  position: fixed;
+  inset: 0 0 auto 0;
+  height: var(--hp-batang-waktu);
+  border-radius: 0;
+}
+
+.countdown-hp .countdown {
+  display: inline-grid;
+  place-items: center;
+  min-width: 2.2em;
+  padding: 0 var(--space-2);
+  border-radius: var(--radius-kecil);
+  background: var(--color-surface);
+  color: var(--color-primary);
+}
+
+.hp-answers {
+  margin-top: auto;
+}
+
+.hp-answers .answer {
+  min-height: 9rem;
+  height: 100%;
+}
+
+.hp-answers .answer-letter {
+  font-size: var(--font-size-score);
+}
+
+/* HP-5 dan HP-7: kartu pilihan yang ditampilkan, dengan lencana centang. */
+.sent-card {
+  position: relative;
+  width: 100%;
+}
+
+/* HP-5: kartu yang dipilih tampil besar, persegi, dan sedikit miring (rotasi tetap, bukan animasi). */
+.sent-card-big {
+  align-self: center;
+  width: min(14rem, 70%);
+  margin-block: var(--space-3);
+  transform: rotate(-3deg);
+}
+
+.sent-card-big > .answer {
+  aspect-ratio: 1;
+}
+
+.sent-card-big .answer-letter {
+  font-size: var(--font-size-hp-vonis);
+}
+
+/* HP-7: kartu hasil berupa strip, huruf dan teks dalam satu baris. */
+.answer-strip {
+  grid-template-columns: auto 1fr;
+  grid-template-rows: none;
+  align-items: center;
+  min-height: 0;
+}
+
+.answer-strip .answer-letter {
+  font-size: var(--font-size-title);
+}
+
+.answer-strip .answer-text {
+  align-self: center;
+}
+
+.check-badge {
+  position: absolute;
+  top: calc(-1 * var(--space-2));
+  right: calc(-1 * var(--space-2));
+  display: grid;
+  place-items: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 50%;
+  background: var(--color-primary);
+  box-shadow: 0 0 0 3px var(--color-background);
+}
+
+.check-badge svg {
+  width: 1.4rem;
+  height: 1.4rem;
+  fill: none;
+  stroke: var(--color-primary-text);
+  stroke-width: 3;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.hp-screen .answer-correct {
+  --kartu-cincin: 0 0 0 4px var(--color-primary);
+}
+
+.answer-struck {
+  opacity: 0.75;
+}
+
+.answer-struck .answer-text {
+  text-decoration: line-through;
+  text-decoration-thickness: 3px;
+}
+
+/* Turus menunggu: digambar ulang pelan selama hasil belum datang. Ini indikator tunggu, bukan animasi masuk. */
+.tally-waiting {
+  font-size: var(--font-size-title);
+  color: var(--color-primary);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .tally-waiting .tally-mark {
+    animation: tally-wait 3s ease-out infinite both;
+  }
+
+  .tally-waiting .tally-mark:nth-child(2) {
+    animation-delay: 150ms;
+  }
+
+  .tally-waiting .tally-mark:nth-child(3) {
+    animation-delay: 300ms;
+  }
+
+  .tally-waiting .tally-mark:nth-child(4) {
+    animation-delay: 450ms;
+  }
+
+  .tally-waiting .tally-mark:nth-child(5) {
+    animation-delay: 600ms;
+  }
+}
+
+@keyframes tally-wait {
+  0% {
+    stroke-dashoffset: 1;
+  }
+  12%,
+  80% {
+    stroke-dashoffset: 0;
+  }
+  92%,
+  100% {
+    stroke-dashoffset: -1;
+  }
+}
+
+/* HP-6: layar benar berwarna "benar", peringkat lama dicoret menuju ubin peringkat baru. */
+.hp-correct {
+  background: var(--benar);
+}
+
+.hp-correct .hp-panel {
+  background: var(--benar-gelap);
+}
+
+.hp-correct .logo-mark {
+  width: 4.5rem;
+  height: 4.5rem;
+}
+
+.hp-correct .logo-wordmark {
+  display: none;
+}
+
+.hp-correct .muted {
+  color: var(--color-text);
+}
+
+.rank-pair {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.rank-old {
+  font-family: var(--font-angka);
+  font-weight: 800;
+  font-size: var(--font-size-countdown);
+  opacity: 0.7;
+}
+
+.rank-tile {
+  display: inline-grid;
+  place-items: center;
+  min-width: 1.6em;
+  padding: 0 var(--space-2);
+  border-radius: var(--radius-kecil);
+  background: var(--color-primary);
+  color: var(--color-primary-text);
+  font-family: var(--font-angka);
+  font-weight: 800;
+  font-size: var(--font-size-countdown);
+  line-height: 1.2;
+}
+
+/* HP-8: peringkat besar dan rapor bergaya kertas bergaris. */
+.rank-tile-big {
+  font-size: var(--font-size-hp-peringkat);
+}
+
+.final-rank {
+  align-items: flex-end;
+}
+
+.rapor {
+  padding: var(--space-3) var(--space-3) var(--space-3) var(--space-4);
+  border-radius: var(--radius-panel);
+  background-color: var(--kertas-putih);
+  background-image:
+    linear-gradient(90deg, transparent calc(var(--space-3) - 1px), var(--buku-margin) calc(var(--space-3) - 1px) calc(var(--space-3) + 1px), transparent calc(var(--space-3) + 1px)),
+    repeating-linear-gradient(180deg, transparent 0 calc(var(--buku-baris) - 1px), var(--buku-garis) calc(var(--buku-baris) - 1px) var(--buku-baris));
+  color: var(--tinta);
+}
+
+.rapor h2 {
+  font-family: var(--font-angka);
+  font-size: var(--font-size-title);
+}
+
+.rapor dl {
+  margin: 0;
+}
+
+.rapor-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: var(--buku-baris);
+}
+
+.rapor-row dt {
+  color: var(--tinta-redup);
+}
+
+.rapor-row dd {
+  margin: 0;
+  font-weight: 800;
+  text-align: right;
+}
+
+/* Turus di panel (percobaan sambung ulang, kombo): kapur dan sebesar judul kecil. */
+.hp-panel .tally {
+  font-size: var(--font-size-title);
+  color: var(--color-primary);
+}
+
+/* HP-9: tangan redup sebagai tanda terputus. */
+.disconnected .logo {
+  color: var(--color-muted);
+}
+
+.disconnected .logo-mark {
+  width: 5rem;
+  height: 5rem;
+}
+
+.disconnected .logo-wordmark {
+  display: none;
 }

@@ -199,6 +199,17 @@ describe("player session", () => {
     expect(view()).toEqual({ kind: "ended", message: "Room ditutup oleh guru.", takeOver: false });
   });
 
+  it("Keluar dari ruang: token dan antrean dilupakan, socket ditutup, tidak menyambung lagi", () => {
+    const { player, ws } = joinedAtQuestion();
+    player.answer(1);
+    player.leave();
+    expect(fakes.storage.has(TOKEN_KEY)).toBe(false);
+    expect(fakes.storage.has(QUEUE_KEY)).toBe(false);
+    expect(ws.closedWith).toBe(CloseCode.NORMAL);
+    vi.advanceTimersByTime(60_000);
+    expect(fakes.latest()).toBe(ws);
+  });
+
   it("Sambung sekarang tidak menunggu sisa jeda", () => {
     const { player, ws, status } = joinedAtQuestion();
     ws.serverClose(CloseCode.ABNORMAL);
