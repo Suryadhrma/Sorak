@@ -80,9 +80,14 @@ export function QuizListPage() {
           <h1>Kuis saya</h1>
           <p className="muted">Masuk sebagai {host.displayName}</p>
         </div>
-        <button type="button" className="button" onClick={handleLogout}>
-          Keluar
-        </button>
+        <div className="header-actions">
+          <Link className="button" to="/games">
+            Riwayat
+          </Link>
+          <button type="button" className="button" onClick={handleLogout}>
+            Keluar
+          </button>
+        </div>
       </header>
 
       <Link className="button button-primary" to="/quizzes/new">

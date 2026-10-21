@@ -87,6 +87,9 @@
 
   --page-max-width: 48rem;
   --tap-target: 2.75rem;
+  /* Kertas bergaris buku (board Guru-2): jarak garis dan posisi garis margin merah. */
+  --buku-baris: 2.25rem;
+  --buku-margin-x: 5.5rem;
 }
 
 /* Tema kertas (bawaan): layar proyektor, login, dan halaman guru. */
@@ -867,4 +870,102 @@ input.pin-input,
   font-size: 2rem;
   line-height: 1;
   color: var(--color-text);
+}
+
+/* Riwayat dan laporan guru: kertas bergaris buku (board Guru-2). */
+
+.buku {
+  max-width: none;
+  min-height: 100vh;
+  padding-inline: max(var(--space-3), calc((100% - var(--page-max-width)) / 2));
+  background-color: var(--kertas-putih);
+  background-image: repeating-linear-gradient(180deg, transparent 0 calc(var(--buku-baris) - 1px), var(--buku-garis) calc(var(--buku-baris) - 1px) var(--buku-baris));
+}
+
+/* Garis margin merah hanya di layar lebar: di HP akan menabrak isi halaman. */
+@media (min-width: 64rem) {
+  .buku {
+    background-image:
+      linear-gradient(90deg, transparent calc(var(--buku-margin-x) - 1px), var(--buku-margin) calc(var(--buku-margin-x) - 1px) calc(var(--buku-margin-x) + 1px), transparent calc(var(--buku-margin-x) + 1px)),
+      repeating-linear-gradient(180deg, transparent 0 calc(var(--buku-baris) - 1px), var(--buku-garis) calc(var(--buku-baris) - 1px) var(--buku-baris));
+  }
+}
+
+.header-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.report-head h2,
+.report-prompt,
+.report-percent {
+  margin: 0;
+}
+
+.report-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: var(--color-surface);
+}
+
+.report-table th,
+.report-table td {
+  padding: var(--space-1) var(--space-2);
+  border-bottom: 1px solid var(--color-border);
+  text-align: left;
+  overflow-wrap: anywhere;
+}
+
+.report-questions {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: var(--space-4);
+}
+
+.report-question {
+  display: grid;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-kecil);
+  background: var(--color-surface);
+}
+
+.report-prompt {
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.report-percent {
+  font-weight: 700;
+}
+
+.review-flag {
+  color: var(--color-danger);
+}
+
+/* Sebaran di laporan: ukuran teks halaman biasa, bukan ukuran proyektor. */
+.report-distribution {
+  max-width: none;
+  font-size: var(--font-size-body);
+}
+
+.report-option {
+  display: grid;
+  gap: var(--space-1);
+  overflow-wrap: anywhere;
+}
+
+/* Cincin "benar" di ubin huruf pilihan yang benar. */
+.distribution-correct .answer-tile {
+  outline: 3px solid var(--color-success);
+  outline-offset: 2px;
+}
+
+.correct-label {
+  color: var(--color-success);
+  font-weight: 700;
 }

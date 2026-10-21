@@ -2,6 +2,8 @@ import type { z } from "zod";
 import {
   ApiError,
   CreateRoomResult,
+  GameDetail,
+  GameListResponse,
   Host,
   QuizDetail,
   QuizSummary,
@@ -72,6 +74,12 @@ export const createRoom = (input: CreateRoomInput) => sendJson("/api/rooms", Cre
 
 /** Cek PIN sebelum membuka WebSocket, supaya PIN salah atau room penuh dijelaskan dengan pesan yang jelas. */
 export const lookupRoom = (pin: string) => sendJson(`/api/rooms/${encodeURIComponent(pin)}`, RoomLookup);
+
+/** Riwayat game, terbaru dulu; `cursor` dari nextCursor halaman sebelumnya. */
+export const listGames = (cursor: string | null) =>
+  sendJson(cursor ? `/api/games?cursor=${encodeURIComponent(cursor)}` : "/api/games", GameListResponse);
+
+export const getGame = (id: string) => sendJson(`/api/games/${encodeURIComponent(id)}`, GameDetail);
 
 export async function deleteQuiz(id: string): Promise<void> {
   await send(`/api/quizzes/${encodeURIComponent(id)}`, { method: "DELETE" });

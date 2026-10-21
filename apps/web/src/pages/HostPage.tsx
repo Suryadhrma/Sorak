@@ -4,6 +4,7 @@ import { Pin, type RosterEntry } from "@sorak/shared";
 import { AnswerRow, AnswerTile, answerLetter } from "../AnswerOption.tsx";
 import { disconnectedCount, type HostBase } from "../host-screen.ts";
 import { createHostSession, type HostSession, type HostView } from "../host-session.ts";
+import type { PodiumNavigationState } from "../report.ts";
 import { SCORING_MODES } from "../scoring-modes.ts";
 import type { ConnectionStatus } from "../socket.ts";
 import { useRemainingMs } from "../useRemainingMs.ts";
@@ -308,6 +309,12 @@ function KickDialog({ target, onConfirm, onCancel }: { target: KickTarget; onCon
 
 function Podium({ view, onDone }: { view: EndedView; onDone: () => void }) {
   const { podium } = view;
+  const navigate = useNavigate();
+  // Laporan baru ada setelah consumer Queue menyimpannya; halaman laporan menunggu kalau dibuka terlalu cepat.
+  const onReport = () => {
+    const state: PodiumNavigationState = { gameEndedAt: performance.now() };
+    navigate(`/games/${podium.gameId}`, { state });
+  };
   return (
     <main className="host-screen">
       <h1 className="host-prompt">Podium</h1>
@@ -326,7 +333,10 @@ function Podium({ view, onDone }: { view: EndedView; onDone: () => void }) {
       )}
       <p className="host-count">{podium.playerCount} pemain</p>
       <div className="host-actions">
-        <button type="button" className="button button-primary button-large" onClick={onDone}>
+        <button type="button" className="button button-primary button-large" onClick={onReport}>
+          Lihat rapor kelas
+        </button>
+        <button type="button" className="button button-large" onClick={onDone}>
           Selesai
         </button>
       </div>

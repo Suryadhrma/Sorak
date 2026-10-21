@@ -14,6 +14,8 @@ const QuizEditorPage = lazy(() =>
   import("./pages/QuizEditorPage.tsx").then((module) => ({ default: module.QuizEditorPage })),
 );
 const HostPage = lazy(() => import("./pages/HostPage.tsx").then((module) => ({ default: module.HostPage })));
+const GamesPage = lazy(() => import("./pages/GamesPage.tsx").then((module) => ({ default: module.GamesPage })));
+const GameReportPage = lazy(() => import("./pages/GameReportPage.tsx").then((module) => ({ default: module.GameReportPage })));
 
 // Pesan validasi lokal tampil di bawah kotak isian, jadi pakai Bahasa Indonesia seperti server.
 z.config(z.locales.id());
@@ -40,6 +42,8 @@ createRoot(root).render(
             <Route path="/quizzes/new" element={<QuizEditorPage />} />
             <Route path="/quizzes/:id" element={<QuizEditorPage />} />
             <Route path="/host/:pin" element={<HostPage />} />
+            <Route path="/games" element={<GamesPage />} />
+            <Route path="/games/:id" element={<GameReportPage />} />
           </Route>
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

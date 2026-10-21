@@ -88,6 +88,15 @@ export const RETENTION_MAX_ROUNDS = 40;
 /** Jumlah game per halaman riwayat. */
 export const GAMES_PAGE_SIZE = 20;
 
+/** Laporan guru: pengecoh terpopuler ditampilkan kalau dipilih minimal porsi ini dari yang menjawab. */
+export const DISTRACTOR_MIN_SHARE = 0.2;
+/** Soal dengan persen benar di bawah angka ini ditandai "Perlu dibahas ulang". */
+export const REVIEW_BELOW_PERCENT = 50;
+/** Laporan dibuka dari podium: 404 dalam jendela ini berarti consumer Queue belum selesai menyimpan. */
+export const REPORT_SAVING_WINDOW_MS = 60_000;
+export const REPORT_RETRY_ATTEMPTS = 3;
+export const REPORT_RETRY_DELAY_MS = 2000;
+
 /** Heartbeat berupa teks biasa supaya bisa dijawab auto-response tanpa membangunkan GameRoom. */
 export const HEARTBEAT = {
   request: "ping",
