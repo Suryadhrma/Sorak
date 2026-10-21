@@ -84,7 +84,8 @@
   --font-size-title: 1.5rem;
   --font-size-pin-input: 2.25rem;
   /* Proyektor: tumbuh mengikuti lebar layar, dengan batas supaya tetap muat di laptop kecil. */
-  --font-size-host-pin: clamp(4rem, 18vw, 12rem);
+  /* PIN di panel kiri lobby proyektor (sekitar 45% lebar layar). */
+  --font-size-host-pin: clamp(3.5rem, 7vw, 6.5rem);
   --font-size-host-text: clamp(1.25rem, 3vw, 2.25rem);
   --font-size-host-name: clamp(1.125rem, 2.2vw, 1.75rem);
   --font-size-host-prompt: clamp(1.75rem, 4vw, 3.25rem);
@@ -96,6 +97,15 @@
 
   --page-max-width: 48rem;
   --tap-target: 2.75rem;
+  /* Layar proyektor (board Proyektor-1 sampai 5). */
+  --projector-pad: clamp(1.5rem, 3vw, 3rem);
+  /* Teks pilihan di proyektor: minimal 28 px di 1280x720 supaya terbaca dari belakang kelas. */
+  --font-size-host-pilihan: clamp(1.75rem, 2.4vw, 2.25rem);
+  --konfeti-jeda: 400ms;
+  --podium-tinggi-1: 34vh;
+  --podium-tinggi-2: 25vh;
+  --podium-tinggi-3: 17vh;
+  --shadow-alas-gelap: 0 4px 0 #000;
   /* Layar HP (board HP-1 sampai HP-9). */
   --hp-max-width: 28rem;
   --font-size-hp-judul: 1.75rem;
@@ -400,40 +410,6 @@ textarea {
 
 /* Layar proyektor: dibaca dari belakang kelas. */
 
-.host-screen {
-  min-height: 100vh;
-  padding: var(--space-4);
-  display: grid;
-  align-content: start;
-  justify-items: center;
-  gap: var(--space-3);
-  text-align: center;
-}
-
-.host-join-hint {
-  font-size: var(--font-size-host-text);
-  margin: 0;
-}
-
-.host-pin {
-  font-size: var(--font-size-host-pin);
-  font-weight: 800;
-  line-height: 1;
-  letter-spacing: 0.05em;
-  font-variant-numeric: tabular-nums;
-  margin: 0;
-}
-
-.host-screen .empty {
-  font-size: var(--font-size-host-text);
-}
-
-.host-count {
-  font-size: var(--font-size-host-text);
-  font-weight: 600;
-  margin: 0;
-}
-
 .roster {
   list-style: none;
   margin: 0;
@@ -476,14 +452,6 @@ textarea {
 }
 
 /* Soal dan pilihan jawaban (HP siswa dan proyektor). */
-
-.host-question-meta {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: var(--space-2);
-  width: 100%;
-}
 
 .countdown {
   font-size: var(--font-size-countdown);
@@ -640,17 +608,6 @@ button.answer-selected:disabled {
 
 /* Proyektor: soal, papan skor, podium. */
 
-.host-progress {
-  font-size: var(--font-size-host-text);
-  margin: 0;
-}
-
-.host-countdown {
-  font-size: var(--font-size-host-countdown);
-  font-weight: 800;
-  font-variant-numeric: tabular-nums;
-}
-
 .host-prompt {
   font-size: var(--font-size-host-prompt);
   max-width: 72rem;
@@ -658,8 +615,7 @@ button.answer-selected:disabled {
   margin: 0;
 }
 
-.leaderboard,
-.podium {
+.leaderboard {
   list-style: none;
   margin: 0;
   padding: 0;
@@ -670,8 +626,7 @@ button.answer-selected:disabled {
   font-size: var(--font-size-host-name);
 }
 
-.leaderboard-row,
-.podium li {
+.leaderboard-row {
   display: grid;
   grid-template-columns: 3ch 1fr auto auto;
   gap: var(--space-3);
@@ -695,11 +650,6 @@ button.answer-selected:disabled {
 /* Pemain terputus diredupkan, sama seperti pilihan salah di reveal. */
 .leaderboard-row.is-offline {
   opacity: 0.4;
-}
-
-.podium li {
-  grid-template-columns: 3ch 1fr auto;
-  font-size: var(--font-size-host-text);
 }
 
 .leaderboard-rank {
@@ -795,16 +745,8 @@ button.answer-selected:disabled {
   text-align: left;
 }
 
-@media (prefers-reduced-motion: no-preference) {
-  .distribution-bar {
-    transition: width var(--gerak-turus);
-  }
-}
-
 /* Angka besar dan huruf kartu memakai font angka (hanya bobot 800 yang dimuat). */
-.host-pin,
 .countdown,
-.host-countdown,
 .score-big,
 .leaderboard-rank,
 .answer-letter {
@@ -1658,4 +1600,466 @@ input.name-input {
 
 .disconnected .logo-wordmark {
   display: none;
+}
+
+/* Layar proyektor (board Proyektor-1 sampai 5): satu layar penuh tanpa scroll, dibaca dari belakang kelas. */
+
+.projector {
+  position: relative;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--projector-pad);
+  overflow: hidden;
+}
+
+.projector h1,
+.projector p {
+  margin: 0;
+}
+
+.projector-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: var(--space-3);
+  font-size: var(--font-size-host-name);
+  font-weight: 700;
+}
+
+.projector-brand {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.projector-count {
+  font-size: var(--font-size-host-name);
+}
+
+.projector-count-number {
+  font-family: var(--font-angka);
+  font-size: var(--font-size-host-countdown);
+  line-height: 1;
+}
+
+.projector-end {
+  align-self: flex-start;
+  font-size: var(--font-size-host-name);
+}
+
+.projector-answers {
+  margin-top: auto;
+  max-width: none;
+}
+
+.answers-host .answer-text {
+  font-size: var(--font-size-host-pilihan);
+}
+
+.projector-prompt-small {
+  font-size: var(--font-size-host-text);
+}
+
+.button-tinta {
+  background: var(--tinta);
+  border-color: var(--tinta);
+  color: var(--kapur);
+  font-weight: 800;
+  box-shadow: var(--shadow-alas-gelap);
+}
+
+.projector-actions {
+  margin-top: auto;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+/* Proyektor-2: batang waktu di tepi atas, angka di ubin gelap. */
+.countdown-projector .countdown-track {
+  position: fixed;
+  inset: 0 0 auto 0;
+  height: var(--hp-batang-waktu);
+  border-radius: 0;
+}
+
+.countdown-projector .countdown {
+  display: inline-grid;
+  place-items: center;
+  min-width: 1.6em;
+  padding: 0 var(--space-3);
+  border-radius: var(--radius-kartu);
+  background: var(--tinta);
+  color: var(--kapur);
+  font-size: var(--font-size-host-countdown);
+  box-shadow: var(--shadow-alas-gelap);
+}
+
+.countdown-projector.is-urgent .countdown {
+  color: var(--waktu-kritis);
+}
+
+/* Proyektor-1: panel kapur (PIN) dan panel kertas (pemain). */
+.projector-lobby {
+  min-height: 100vh;
+  display: grid;
+  grid-template-columns: minmax(0, 9fr) minmax(0, 11fr);
+}
+
+.lobby-join {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: var(--space-4);
+  padding: var(--projector-pad);
+  background: var(--kapur);
+  color: var(--tinta);
+}
+
+.lobby-join .logo-wordmark {
+  color: var(--tinta);
+}
+
+.lobby-join .logo {
+  color: var(--tinta);
+}
+
+.lobby-hint {
+  margin: 0;
+  font-size: var(--font-size-host-text);
+  font-weight: 700;
+}
+
+.lobby-pin {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  margin: 0;
+  font-size: var(--font-size-host-pin);
+}
+
+.lobby-pin .flap-digit {
+  background: var(--tinta);
+  color: var(--kapur-putih);
+}
+
+.lobby-quiz {
+  margin: 0;
+  font-size: var(--font-size-host-name);
+}
+
+.lobby-players {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--projector-pad);
+}
+
+.lobby-count {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin: 0;
+  font-size: var(--font-size-host-name);
+  font-weight: 700;
+}
+
+.lobby-count-number {
+  font-family: var(--font-angka);
+  font-weight: 800;
+  font-size: var(--font-size-host-countdown);
+  line-height: 1;
+}
+
+.lobby-tally {
+  display: block;
+  font-size: var(--font-size-host-text);
+}
+
+.lobby-players .roster {
+  justify-content: flex-start;
+}
+
+.lobby-actions {
+  margin-top: auto;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+/* Proyektor-3: sebaran dengan teks pilihan di atas batang. */
+.reveal-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+  gap: var(--space-4);
+  align-items: center;
+}
+
+.projector-distribution {
+  max-width: none;
+  font-size: var(--font-size-host-name);
+}
+
+.projector-distribution li {
+  grid-template-columns: 4.5rem 1fr 4ch;
+}
+
+.projector-distribution .answer-tile {
+  width: 4.5rem;
+  height: 4.5rem;
+}
+
+.projector-distribution .answer-letter {
+  font-size: var(--font-size-host-text);
+}
+
+.projector-distribution .distribution-track {
+  height: 1.75rem;
+}
+
+.projector-distribution .distribution-count {
+  font-size: var(--font-size-host-text);
+}
+
+.reveal-answer {
+  display: grid;
+  gap: var(--space-2);
+  padding: var(--space-4);
+  border-radius: var(--radius-panel);
+  background: var(--kertas-putih);
+  border: 2px solid var(--garis);
+  font-size: var(--font-size-host-name);
+}
+
+.reveal-answer-key {
+  font-weight: 800;
+  font-size: var(--font-size-host-text);
+}
+
+/* Proyektor-4: papan skor gelap dan kolom statistik. */
+.projector-split {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+  align-items: stretch;
+}
+
+.scoreboard-panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-4);
+  border-radius: var(--radius-sorak);
+  background: var(--papan);
+  color: var(--kapur-putih);
+  box-shadow: var(--shadow-alas-gelap);
+}
+
+.scoreboard-title {
+  font-family: var(--font-angka);
+  font-size: var(--font-size-host-text);
+}
+
+.scoreboard-panel .leaderboard {
+  max-width: none;
+}
+
+.scoreboard-panel .leaderboard-row {
+  grid-template-columns: 3ch 1fr auto;
+  border-bottom: 0;
+  border-radius: var(--radius-kecil);
+  background: var(--papan-2);
+  color: var(--kapur-putih);
+}
+
+.scoreboard-panel .leaderboard-rank {
+  color: var(--kapur);
+}
+
+.scoreboard-panel .flap-digit {
+  background: var(--papan);
+}
+
+.leaderboard-climb {
+  color: var(--kapur);
+  font-size: var(--font-size-small);
+  font-weight: 800;
+}
+
+.scoreboard-side {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  font-size: var(--font-size-host-name);
+}
+
+.scoreboard-stats {
+  display: grid;
+  gap: var(--space-3);
+  margin: 0;
+}
+
+.scoreboard-stats dt {
+  font-size: var(--font-size-body);
+  color: var(--color-muted);
+}
+
+.scoreboard-stats dd {
+  margin: 0;
+  font-weight: 800;
+}
+
+.scoreboard-next {
+  margin-top: auto;
+  display: grid;
+  gap: var(--space-2);
+  justify-items: start;
+}
+
+/* Proyektor-5: podium dan konfeti turus. */
+.podium-title {
+  font-family: var(--font-angka);
+  font-size: var(--font-size-host-prompt);
+}
+
+.podium-actions {
+  display: grid;
+  justify-items: end;
+  gap: var(--space-2);
+}
+
+.podium-stage {
+  flex: 1;
+  display: grid;
+  grid-template-rows: auto 1fr;
+  justify-items: center;
+  gap: var(--space-3);
+}
+
+.podium-stage .logo-wordmark {
+  display: none;
+}
+
+.podium-stage .logo-mark {
+  width: 5rem;
+  height: 5rem;
+}
+
+.podium-blocks {
+  align-self: end;
+  display: flex;
+  align-items: flex-end;
+  gap: var(--space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.podium-place {
+  display: grid;
+  justify-items: center;
+  gap: var(--space-1);
+  width: clamp(10rem, 20vw, 16rem);
+  font-size: var(--font-size-host-name);
+}
+
+.podium-name {
+  font-weight: 800;
+  overflow-wrap: anywhere;
+}
+
+.podium-block-wrap {
+  display: block;
+  width: 100%;
+  overflow: hidden;
+}
+
+.podium-block {
+  display: grid;
+  place-items: center;
+  border-radius: var(--radius-kartu) var(--radius-kartu) 0 0;
+  background: var(--tinta);
+  color: var(--kapur-putih);
+  font-family: var(--font-angka);
+  font-weight: 800;
+  font-size: var(--font-size-host-countdown);
+}
+
+.podium-place-1 .podium-block {
+  height: var(--podium-tinggi-1);
+  background: var(--kapur);
+  color: var(--tinta);
+}
+
+.podium-place-2 .podium-block {
+  height: var(--podium-tinggi-2);
+}
+
+.podium-place-3 .podium-block {
+  height: var(--podium-tinggi-3);
+}
+
+.podium-footer {
+  font-size: var(--font-size-host-name);
+}
+
+.confetti {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+/* Tanpa gerak (atau sebelum animasi): konfeti tidak tampil sama sekali. */
+.confetti-piece {
+  display: none;
+  position: absolute;
+  top: -2rem;
+  width: 0.4rem;
+  height: 1.6rem;
+  border-radius: var(--radius-kecil);
+}
+
+.confetti-0 {
+  background: var(--kartu-a);
+  --putar: 200deg;
+}
+
+.confetti-1 {
+  background: var(--kartu-b);
+  --putar: -160deg;
+}
+
+.confetti-2 {
+  background: var(--kapur);
+  --putar: 240deg;
+}
+
+.confetti-3 {
+  background: var(--kartu-c);
+  --putar: -220deg;
+}
+
+.confetti-4 {
+  background: var(--tinta);
+  --putar: 180deg;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .confetti-piece {
+    display: block;
+    animation: confetti-fall 6s linear infinite both;
+  }
+}
+
+@keyframes confetti-fall {
+  from {
+    transform: translateY(0) rotate(0);
+  }
+  to {
+    transform: translateY(110vh) rotate(var(--putar));
+  }
 }

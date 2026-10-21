@@ -1,7 +1,7 @@
 import { CloseCode, type HostServerMessage, type PlayerServerMessage, type PlayerSnapshot, type RosterEntry } from "@sorak/shared";
 import { describe, expect, it } from "vitest";
 import { remainingMs } from "../src/countdown.ts";
-import { applyRosterMessage, disconnectedCount, hostScreen, type HostView } from "../src/host-screen.ts";
+import { applyRosterMessage, disconnectedCount, hostScreen, revealStats, type HostView } from "../src/host-screen.ts";
 import { initialPlayerScreen, playerScreen, rankClimb, type PlayerEvent, type PlayerScreen, type PlayerView } from "../src/player-screen.ts";
 
 const room = { pin: "123456", scoringMode: "classic", teamMode: false, questionCount: 3 } as const;
@@ -373,6 +373,75 @@ describe("layar guru", () => {
   it("applyRosterMessage: pemain yang sama tidak pernah ganda", () => {
     const once = applyRosterMessage([andi], { t: "player_joined", player: budi, playerCount: 2 });
     expect(applyRosterMessage(once, { t: "player_joined", player: budi, playerCount: 2 })).toEqual([andi, budi]);
+  });
+});
+
+describe("papan skor proyektor (Hari 5)", () => {
+  const entry = (playerId: string, rank: number, score: number, delta: number) => ({ playerId, nickname: playerId, teamSize: null, score, delta, rank });
+  const revealOf = (q: number, leaderboard: ReturnType<typeof entry>[], counts = [0, 2, 0]): HostServerMessage => ({
+    t: "reveal",
+    q,
+    correctIndex: 1,
+    counts,
+    answered: 3,
+    total: 4,
+    leaderboard,
+    isLastQuestion: false,
+  });
+  const first = [entry("dimas", 1, 985, 985), entry("nayla", 2, 925, 925), entry("budi", 3, 0, 0)];
+  const second = [entry("nayla", 1, 1850, 925), entry("budi", 2, 940, 940), entry("dimas", 3, 985, 0)];
+
+  it("reveal kedua membawa papan skor reveal pertama sebagai posisi lama (FLIP); reveal pertama tanpa posisi lama", () => {
+    const views = hostThrough([
+      hostWelcome({ players: [andi, budi] }),
+      { t: "question", ...question },
+      revealOf(0, first),
+      { t: "question", ...question, q: 1 },
+      revealOf(1, second),
+    ]);
+    expect(views[2]).toMatchObject({ kind: "reveal", previous: null });
+    expect(views[4]).toMatchObject({ kind: "reveal", previous: first });
+  });
+
+  it("refresh di tengah game: tidak ada posisi lama, papan skor langsung di tempatnya", () => {
+    const views = hostThrough([hostWelcome({ phase: "reveal", players: [andi, budi], question }), revealOf(0, first)]);
+    expect(views[1]).toMatchObject({ kind: "reveal", previous: null });
+  });
+
+  it("pemain yang di-kick saat reveal tidak muncul sebagai posisi lama di reveal berikutnya", () => {
+    const views = hostThrough([
+      hostWelcome({ players: [andi, budi] }),
+      revealOf(0, first),
+      { t: "player_left", playerId: "budi", kicked: true, playerCount: 2 },
+      revealOf(1, second.filter((row) => row.playerId !== "budi")),
+    ]);
+    expect(views.at(-1)).toMatchObject({ previous: first.filter((row) => row.playerId !== "budi") });
+  });
+
+  it("revealStats: naik paling jauh (seri: yang lebih tinggi di papan skor), poin terbesar soal ini, benar dari seluruh peserta", () => {
+    const reveal = revealOf(1, second, [1, 1, 2]);
+    if (reveal.t !== "reveal") throw new Error("bukan reveal");
+    // Nayla (2 -> 1) dan Budi (3 -> 2) sama-sama naik satu tingkat; Nayla di atas Budi di papan skor.
+    expect(revealStats(reveal, first)).toEqual({
+      biggestClimb: { nickname: "nayla", from: 2, to: 1 },
+      topPoints: { nickname: "budi", points: 940 },
+      correct: 1,
+      total: 4,
+    });
+  });
+
+  it("revealStats: yang naik paling banyak menang walau di bawah papan skor", () => {
+    const third = [entry("nayla", 1, 2000, 150), entry("dimas", 2, 1900, 915), entry("budi", 3, 940, 0)];
+    const reveal = revealOf(2, third);
+    if (reveal.t !== "reveal") throw new Error("bukan reveal");
+    // Dibanding papan skor kedua: Nayla tetap 1, Dimas 3 -> 2, Budi 2 -> 3.
+    expect(revealStats(reveal, second).biggestClimb).toEqual({ nickname: "dimas", from: 3, to: 2 });
+  });
+
+  it("revealStats tanpa posisi lama (reveal pertama): tidak ada yang naik; tidak ada poin -> null", () => {
+    const reveal = revealOf(0, [entry("a", 1, 0, 0), entry("b", 1, 0, 0)], [2, 0, 0]);
+    if (reveal.t !== "reveal") throw new Error("bukan reveal");
+    expect(revealStats(reveal, null)).toEqual({ biggestClimb: null, topPoints: null, correct: 0, total: 4 });
   });
 });
 

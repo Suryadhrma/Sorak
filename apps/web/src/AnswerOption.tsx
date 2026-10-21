@@ -46,15 +46,22 @@ export function AnswerButton(props: {
   );
 }
 
-/** Kartu pilihan di layar proyektor (tidak bisa ditekan). Saat reveal: jawaban benar bercincin, sisanya redup. */
+/**
+ * Kartu pilihan di layar proyektor (tidak bisa ditekan). Saat reveal: jawaban benar bercincin, sisanya redup.
+ * div role="listitem", bukan li: kartu dibungkus RaiseIn, dan li hanya sah sebagai anak langsung ul.
+ */
 export function AnswerRow(props: { index: number; text: string; correct?: boolean; dimmed?: boolean }) {
   const classes = ["answer", `answer-${props.index}`];
   if (props.correct) classes.push("answer-correct");
   if (props.dimmed) classes.push("answer-dimmed");
   return (
-    <li className={classes.join(" ")} aria-label={`Pilihan ${answerLetter(props.index)}: ${props.text}${props.correct ? " (jawaban benar)" : ""}`}>
+    <div
+      role="listitem"
+      className={classes.join(" ")}
+      aria-label={`Pilihan ${answerLetter(props.index)}: ${props.text}${props.correct ? " (jawaban benar)" : ""}`}
+    >
       <CardContent index={props.index} text={props.text} />
-    </li>
+    </div>
   );
 }
 

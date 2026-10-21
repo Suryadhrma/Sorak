@@ -1,4 +1,4 @@
-import { CloseCode, type HostServerMessage, type PublicQuestion, type RoomInfo, type RosterEntry } from "@sorak/shared";
+import { CloseCode, type HostServerMessage, type LeaderboardEntry, type PublicQuestion, type RoomInfo, type RosterEntry } from "@sorak/shared";
 import { closeMessage } from "./socket.ts";
 
 /**
@@ -10,8 +10,11 @@ type HostWelcomeMessage = Extract<HostServerMessage, { t: "host_welcome" }>;
 type RevealMessage = Extract<HostServerMessage, { t: "reveal" }>;
 type PodiumMessage = Extract<HostServerMessage, { t: "podium" }>;
 
-/** Bagian yang ada di semua tahap: info room, daftar pemain, dan pesan dari server (misalnya "Belum ada pemain"). */
-export type HostBase = { room: RoomInfo; players: RosterEntry[]; notice: string | null };
+/**
+ * Bagian yang ada di semua tahap: info room, daftar pemain, pesan dari server (misalnya "Belum ada pemain"), dan
+ * papan skor reveal terakhir (posisi lama untuk FLIP di reveal berikutnya; null setelah refresh).
+ */
+export type HostBase = { room: RoomInfo; players: RosterEntry[]; notice: string | null; lastLeaderboard: LeaderboardEntry[] | null };
 
 export type HostView =
   | { kind: "connecting" }
@@ -20,7 +23,8 @@ export type HostView =
   | { kind: "lobby"; base: HostBase }
   | { kind: "question"; base: HostBase; question: PublicQuestion; startedAt: number; durationMs: number; answered: number; total: number }
   | { kind: "grace"; base: HostBase; question: PublicQuestion; answered: number; total: number }
-  | { kind: "reveal"; base: HostBase; question: PublicQuestion | null; reveal: RevealMessage }
+  /** previous: papan skor reveal sebelumnya, untuk FLIP dan "naik paling jauh"; null di reveal pertama atau setelah refresh. */
+  | { kind: "reveal"; base: HostBase; question: PublicQuestion | null; reveal: RevealMessage; previous: LeaderboardEntry[] | null }
   | { kind: "ended"; base: HostBase; podium: PodiumMessage }
   /** Ditutup server dengan kode yang tidak di-reconnect. */
   | { kind: "closed"; message: string };
@@ -59,7 +63,7 @@ export function hostScreen(view: HostView, event: HostEvent): HostView {
       // Papan skor reveal berasal dari pesan reveal; baris pemain yang di-kick dibuang juga supaya tidak bisa di-kick lagi.
       if (view.kind === "reveal" && message.kicked) {
         const leaderboard = view.reveal.leaderboard.filter((entry) => entry.playerId !== message.playerId);
-        return { ...view, base: { ...next, players }, reveal: { ...view.reveal, leaderboard } };
+        return { ...view, base: { ...next, players, lastLeaderboard: leaderboard }, reveal: { ...view.reveal, leaderboard } };
       }
       return withBase(view, { ...next, players });
     }
@@ -82,7 +86,13 @@ export function hostScreen(view: HostView, event: HostEvent): HostView {
       if (view.kind !== "question") return view;
       return { kind: "grace", base: next, question: view.question, answered: view.answered, total: view.total };
     case "reveal":
-      return { kind: "reveal", base: { ...next, notice: null }, question: questionOf(view), reveal: message };
+      return {
+        kind: "reveal",
+        base: { ...next, notice: null, lastLeaderboard: message.leaderboard },
+        question: questionOf(view),
+        reveal: message,
+        previous: next.lastLeaderboard,
+      };
     case "podium":
       return { kind: "ended", base: { ...next, notice: null }, podium: message };
     case "error":
@@ -93,7 +103,7 @@ export function hostScreen(view: HostView, event: HostEvent): HostView {
 }
 
 function fromWelcome(message: HostWelcomeMessage, at: number): HostView {
-  const base: HostBase = { room: message.room, players: message.players, notice: null };
+  const base: HostBase = { room: message.room, players: message.players, notice: null, lastLeaderboard: null };
   const total = message.players.length;
   switch (message.phase) {
     case "lobby":
@@ -125,6 +135,31 @@ function closedView(view: HostView, code: number): HostView {
   if (code === CloseCode.ROOM_NOT_FOUND) return { kind: "closed", message: "Room tidak ditemukan, atau bukan milik akun ini." };
   if (code === CloseCode.ROOM_CLOSED) return { kind: "closed", message: "Room sudah ditutup." };
   return { kind: "closed", message: closeMessage(code) };
+}
+
+/** Kolom kanan papan skor proyektor (board Proyektor-4), dihitung dari data yang sudah ada di layar guru. */
+export type RevealStats = {
+  /** Naik peringkat terbanyak dibanding reveal sebelumnya; hanya pemain yang ada di kedua papan skor. */
+  biggestClimb: { nickname: string; from: number; to: number } | null;
+  /** Poin terbanyak di soal ini (di antara papan skor yang tampil). */
+  topPoints: { nickname: string; points: number } | null;
+  /** "X dari Y benar di soal ini": Y seluruh peserta, bukan hanya yang menjawab. */
+  correct: number;
+  total: number;
+};
+
+export function revealStats(reveal: RevealMessage, previous: readonly LeaderboardEntry[] | null): RevealStats {
+  const oldRank = new Map((previous ?? []).map((entry) => [entry.playerId, entry.rank]));
+  let biggestClimb: RevealStats["biggestClimb"] = null;
+  let topPoints: RevealStats["topPoints"] = null;
+  for (const entry of reveal.leaderboard) {
+    const from = oldRank.get(entry.playerId);
+    if (from !== undefined && from - entry.rank > (biggestClimb ? biggestClimb.from - biggestClimb.to : 0)) {
+      biggestClimb = { nickname: entry.nickname, from, to: entry.rank };
+    }
+    if (entry.delta > (topPoints?.points ?? 0)) topPoints = { nickname: entry.nickname, points: entry.delta };
+  }
+  return { biggestClimb, topPoints, correct: reveal.counts[reveal.correctIndex] ?? 0, total: reveal.total };
 }
 
 /** Peserta yang sedang terputus (tampil sebagai "N terputus" di layar guru). */

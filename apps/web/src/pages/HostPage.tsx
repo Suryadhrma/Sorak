@@ -1,19 +1,30 @@
 import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router";
-import { Pin, type RosterEntry } from "@sorak/shared";
+import { Pin, type LeaderboardEntry, type RosterEntry } from "@sorak/shared";
 import { AnswerRow, AnswerTile, answerLetter } from "../AnswerOption.tsx";
-import { disconnectedCount, type HostBase } from "../host-screen.ts";
+import { disconnectedCount, revealStats, type HostBase } from "../host-screen.ts";
 import { createHostSession, type HostSession, type HostView } from "../host-session.ts";
+import { Logo } from "../Logo.tsx";
+import { Countdown } from "../motion/Countdown.tsx";
+import { FlapDigits } from "../motion/FlapDigits.tsx";
+import { Leaderboard } from "../motion/Leaderboard.tsx";
+import { RaiseIn } from "../motion/RaiseIn.tsx";
+import { RiseIn } from "../motion/RiseIn.tsx";
+import { Tally } from "../motion/Tally.tsx";
+import { rankClimb } from "../player-screen.ts";
 import type { PodiumNavigationState } from "../report.ts";
 import { SCORING_MODES } from "../scoring-modes.ts";
 import type { ConnectionStatus } from "../socket.ts";
-import { useRemainingMs } from "../useRemainingMs.ts";
 import { useTheme } from "../theme.ts";
 
 type QuestionView = Extract<HostView, { kind: "question" }>;
 type RevealView = Extract<HostView, { kind: "reveal" }>;
 type EndedView = Extract<HostView, { kind: "ended" }>;
 type KickTarget = { playerId: string; nickname: string };
+
+const numberFormat = new Intl.NumberFormat("id-ID");
+/** Konfeti turus di podium: jumlah elemen CSS (board Proyektor-5), hanya di layar proyektor. */
+const CONFETTI_PIECES = 30;
 
 /** Layar proyektor: dibaca dari belakang kelas, jadi PIN, soal, dan hitung mundur sebesar mungkin. */
 export function HostPage() {
@@ -96,18 +107,24 @@ function HostStage(props: {
       return <QuestionScreen view={view} onEndGame={props.onEndGame} />;
     case "grace":
       return (
-        <main className="host-screen">
+        <main className="projector">
           <Notice base={view.base} />
-          <p className="host-progress">
-            Soal {view.question.q + 1}/{view.question.total}
-          </p>
+          <header className="projector-bar">
+            <span className="projector-brand">
+              <Logo />
+              <span>
+                Soal {view.question.q + 1} dari {view.question.total}
+              </span>
+            </span>
+          </header>
           <h1 className="host-prompt">Menghitung jawaban…</h1>
           <AnsweredCount answered={view.answered} total={view.total} players={view.base.players} />
           <EndGameButton onEndGame={props.onEndGame} />
         </main>
       );
     case "reveal":
-      return <RevealScreen view={view} onNext={() => session?.next()} onEndGame={props.onEndGame} onKick={props.onKick} />;
+      // Key per soal: langkah "sebaran -> papan skor" mulai lagi dari sebaran setiap reveal baru.
+      return <RevealScreen key={view.reveal.q} view={view} onNext={() => session?.next()} onEndGame={props.onEndGame} onKick={props.onKick} />;
     case "ended":
       return <Podium view={view} onDone={props.navigateHome} />;
   }
@@ -126,8 +143,8 @@ function Notice({ base }: { base: HostBase }) {
 function AnsweredCount({ answered, total, players }: { answered: number; total: number; players: readonly RosterEntry[] }) {
   const offline = disconnectedCount(players);
   return (
-    <p className="host-count" role="status" aria-live="polite">
-      {answered} dari {total} sudah menjawab
+    <p className="projector-count" role="status" aria-live="polite">
+      <strong className="projector-count-number">{answered}</strong> dari {total} sudah menjawab
       {offline > 0 && <span className="host-offline"> · {offline} terputus</span>}
     </p>
   );
@@ -135,147 +152,255 @@ function AnsweredCount({ answered, total, players }: { answered: number; total: 
 
 function EndGameButton({ onEndGame }: { onEndGame: () => void }) {
   return (
-    <div className="host-actions">
-      <button type="button" className="button button-danger button-large" onClick={onEndGame}>
-        Akhiri game
-      </button>
-    </div>
+    <button type="button" className="link-button projector-end" onClick={onEndGame}>
+      Akhiri game
+    </button>
   );
 }
 
+/** Proyektor-1: panel kapur dengan PIN, panel kertas dengan pemain yang sudah masuk. */
 function Lobby(props: { pin: Pin; base: HostBase; onStart: () => void; onCancel: () => void; onKick: (target: KickTarget) => void }) {
   const { pin, base } = props;
   const players = base.players;
+  const mode = SCORING_MODES[base.room.scoringMode];
   return (
-    <main className="host-screen">
-      <p className="host-join-hint">
-        Buka <strong>{location.host}</strong> lalu masukkan PIN
-      </p>
-      <p className="host-pin">
-        {pin.slice(0, 3)} {pin.slice(3)}
-      </p>
-      <p className="host-count" role="status" aria-live="polite">
-        {players.length} pemain · Mode {SCORING_MODES[base.room.scoringMode].name}
-      </p>
-      <Notice base={base} />
-      {players.length === 0 ? (
-        <p className="empty">Menunggu siswa masuk…</p>
-      ) : (
-        <ul className="roster">
-          {players.map((player) => (
-            <li key={player.playerId}>
-              <button
-                type="button"
-                className="roster-name"
-                aria-label={`${player.nickname}. Tekan untuk mengeluarkan.`}
-                onClick={() => props.onKick({ playerId: player.playerId, nickname: player.nickname })}
-              >
-                {player.nickname}
-              </button>
-            </li>
-          ))}
-        </ul>
-      )}
-      <div className="host-actions">
-        <button type="button" className="button button-primary button-large" disabled={players.length === 0} onClick={props.onStart}>
-          Mulai
-        </button>
-        <button type="button" className="button button-danger button-large" onClick={props.onCancel}>
-          Batalkan
-        </button>
-      </div>
+    <main className="projector-lobby">
+      <section className="lobby-join">
+        <Logo />
+        <div className="hp-stack">
+          <p className="lobby-hint">
+            Buka <strong>{location.host}</strong> di HP,
+            <br />
+            lalu masukkan PIN ini
+          </p>
+          <p className="lobby-pin" aria-label={`PIN ${pin}`}>
+            <FlapDigits value={pin.slice(0, 3)} />
+            <FlapDigits value={pin.slice(3)} />
+          </p>
+        </div>
+        <p className="lobby-quiz">
+          {base.room.quizTitle && (
+            <strong className="hp-block">
+              {base.room.quizTitle}, {base.room.questionCount} soal
+            </strong>
+          )}
+          Mode {mode.name}: {mode.hint}
+        </p>
+      </section>
+      <section className="lobby-players">
+        <p className="lobby-count" role="status" aria-live="polite">
+          <span className="lobby-count-number">{players.length}</span>
+          <span>
+            pemain sudah masuk
+            <span className="lobby-tally" aria-hidden="true">
+              <Tally count={players.length} label={`${players.length} pemain`} />
+            </span>
+          </span>
+        </p>
+        <Notice base={base} />
+        {players.length === 0 ? (
+          <p className="empty">Menunggu siswa masuk…</p>
+        ) : (
+          <ul className="roster">
+            {players.map((player) => (
+              <li key={player.playerId}>
+                <button
+                  type="button"
+                  className="roster-name"
+                  aria-label={`${player.nickname}. Tekan untuk mengeluarkan.`}
+                  onClick={() => props.onKick({ playerId: player.playerId, nickname: player.nickname })}
+                >
+                  {player.nickname}
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+        <div className="lobby-actions">
+          <button type="button" className="link-button" onClick={props.onCancel}>
+            Batalkan room
+          </button>
+          <button type="button" className="button button-tinta button-large" disabled={players.length === 0} onClick={props.onStart}>
+            Mulai kuis
+          </button>
+        </div>
+      </section>
     </main>
   );
 }
 
+/** Proyektor-2: soal, hitung mundur, dan kartu pilihan yang berputar masuk. */
 function QuestionScreen({ view, onEndGame }: { view: QuestionView; onEndGame: () => void }) {
   const { question } = view;
-  const remaining = useRemainingMs(view.startedAt, view.durationMs);
   return (
-    <main className="host-screen">
+    <main className="projector">
       <Notice base={view.base} />
-      <div className="host-question-meta">
-        <span className="host-progress">
-          Soal {question.q + 1}/{question.total}
+      <header className="projector-bar">
+        <span className="projector-brand">
+          <Logo />
+          <span>
+            Soal {question.q + 1} dari {question.total}
+          </span>
         </span>
-        <span className="host-countdown" role="timer" aria-label={`Sisa waktu ${Math.ceil(remaining / 1000)} detik`}>
-          {Math.ceil(remaining / 1000)}
-        </span>
-      </div>
+        <Countdown startedAt={view.startedAt} durationMs={view.durationMs} className="countdown-projector" />
+      </header>
       <h1 className="host-prompt">{question.prompt}</h1>
-      <ul className="answers answers-host">
-        {question.options.map((text, index) => (
-          <AnswerRow key={index} index={index} text={text} />
-        ))}
-      </ul>
       <AnsweredCount answered={view.answered} total={view.total} players={view.base.players} />
+      <div className="answers answers-host projector-answers" role="list">
+        {question.options.map((text, index) => (
+          <RaiseIn key={index} index={index}>
+            <AnswerRow index={index} text={text} />
+          </RaiseIn>
+        ))}
+      </div>
       <EndGameButton onEndGame={onEndGame} />
     </main>
   );
 }
 
+/** Proyektor-3 (sebaran, kunci dibuka) lalu Proyektor-4 (papan skor): dua langkah di layar guru, tanpa pesan baru. */
 function RevealScreen(props: { view: RevealView; onNext: () => void; onEndGame: () => void; onKick: (target: KickTarget) => void }) {
-  const { reveal, question, base } = props.view;
+  const [step, setStep] = useState<"distribution" | "scoreboard">("distribution");
+  if (step === "distribution") return <DistributionScreen view={props.view} onShowScoreboard={() => setStep("scoreboard")} onEndGame={props.onEndGame} />;
+  return <ScoreboardScreen view={props.view} onNext={props.onNext} onEndGame={props.onEndGame} onKick={props.onKick} />;
+}
+
+function DistributionScreen(props: { view: RevealView; onShowScoreboard: () => void; onEndGame: () => void }) {
+  const { reveal, question } = props.view;
   const most = Math.max(1, ...reveal.counts);
-  const offlineIds = new Set(base.players.filter((player) => !player.connected).map((player) => player.playerId));
+  const correctText = question?.options[reveal.correctIndex];
+  const stats = revealStats(reveal, props.view.previous);
   return (
-    <main className="host-screen">
-      <p className="host-progress">
-        Soal {reveal.q + 1}
-        {question ? `/${question.total}` : ""} · {reveal.answered}/{reveal.total} menjawab
-        {offlineIds.size > 0 && <span className="host-offline"> · {offlineIds.size} terputus</span>}
-      </p>
-      {question && <h1 className="host-prompt">{question.prompt}</h1>}
-      <ul className="answers answers-host">
-        {(question?.options ?? reveal.counts.map(() => "")).map((text, index) => (
-          <AnswerRow
-            key={index}
-            index={index}
-            text={text}
-            correct={index === reveal.correctIndex}
-            dimmed={index !== reveal.correctIndex}
-          />
-        ))}
-      </ul>
-      <ul className="distribution" aria-label="Sebaran jawaban">
-        {reveal.counts.map((count, index) => (
-          <li key={index} aria-label={`Pilihan ${answerLetter(index)}: ${count} jawaban`}>
-            <AnswerTile index={index} />
-            <span className="distribution-track">
-              <span className={`distribution-bar answer-${index}`} style={{ width: `${(count / most) * 100}%` }} />
-            </span>
-            <span className="distribution-count">{count}</span>
-          </li>
-        ))}
-      </ul>
-      <ol className="leaderboard">
-        {reveal.leaderboard.map((entry) => (
-          <li key={entry.playerId}>
-            <button
-              type="button"
-              className={`leaderboard-row${offlineIds.has(entry.playerId) ? " is-offline" : ""}`}
-              aria-label={`Peringkat ${entry.rank}, ${entry.nickname}, ${entry.score} poin${offlineIds.has(entry.playerId) ? ", terputus" : ""}. Tekan untuk mengeluarkan.`}
-              onClick={() => props.onKick({ playerId: entry.playerId, nickname: entry.nickname })}
-            >
-              <span className="leaderboard-rank">{entry.rank}</span>
-              <span className="leaderboard-name">{entry.nickname}</span>
-              <span className="leaderboard-score">{entry.score}</span>
-              <span className="leaderboard-delta">
-                {entry.delta >= 0 ? "+" : ""}
-                {entry.delta}
+    <main className="projector">
+      <header className="projector-bar">
+        <span className="projector-brand">
+          <Logo />
+          <span>
+            Soal {reveal.q + 1}
+            {question ? ` dari ${question.total}` : ""}, kunci dibuka
+          </span>
+        </span>
+      </header>
+      {question && <h1 className="host-prompt projector-prompt-small">{question.prompt}</h1>}
+      <div className="reveal-layout">
+        <ul className="distribution projector-distribution" aria-label="Sebaran jawaban">
+          {reveal.counts.map((count, index) => (
+            <li key={index} className={index === reveal.correctIndex ? "distribution-correct" : undefined}>
+              <AnswerTile index={index} />
+              <span className="report-option">
+                <span>{question?.options[index] ?? `Pilihan ${answerLetter(index)}`}</span>
+                <span className="distribution-track">
+                  <RiseIn axis="x" order={index}>
+                    <span className={`distribution-bar answer-${index}`} style={{ width: `${(count / most) * 100}%` }} />
+                  </RiseIn>
+                </span>
               </span>
-            </button>
-          </li>
-        ))}
-      </ol>
-      <div className="host-actions">
-        <button type="button" className="button button-primary button-large" onClick={props.onNext}>
-          {reveal.isLastQuestion ? "Lihat podium" : "Lanjut"}
-        </button>
-        <button type="button" className="button button-danger button-large" onClick={props.onEndGame}>
-          Akhiri game
+              <span className="distribution-count" aria-label={`${count} jawaban`}>
+                {count}
+              </span>
+            </li>
+          ))}
+        </ul>
+        <aside className="reveal-answer">
+          <p className="reveal-answer-key">
+            {answerLetter(reveal.correctIndex)}
+            {correctText ? `, ${correctText}` : ""}
+          </p>
+          <p>
+            {stats.correct} dari {stats.total} siswa menjawab benar
+          </p>
+        </aside>
+      </div>
+      <div className="projector-actions">
+        <EndGameButton onEndGame={props.onEndGame} />
+        <button type="button" className="button button-tinta button-large" onClick={props.onShowScoreboard}>
+          Lihat papan skor
         </button>
       </div>
+    </main>
+  );
+}
+
+function ScoreboardScreen(props: { view: RevealView; onNext: () => void; onEndGame: () => void; onKick: (target: KickTarget) => void }) {
+  const { reveal, question, base, previous } = props.view;
+  const offlineIds = new Set(base.players.filter((player) => !player.connected).map((player) => player.playerId));
+  const oldRank = new Map((previous ?? []).map((entry) => [entry.playerId, entry.rank]));
+  const stats = revealStats(reveal, previous);
+
+  const row = (entry: LeaderboardEntry) => {
+    const offline = offlineIds.has(entry.playerId);
+    const climb = rankClimb(oldRank.get(entry.playerId) ?? null, entry.rank);
+    return (
+      <button
+        type="button"
+        className={`leaderboard-row${offline ? " is-offline" : ""}`}
+        aria-label={`Peringkat ${entry.rank}, ${entry.nickname}, ${entry.score} poin${offline ? ", terputus" : ""}. Tekan untuk mengeluarkan.`}
+        onClick={() => props.onKick({ playerId: entry.playerId, nickname: entry.nickname })}
+      >
+        <span className="leaderboard-rank">{entry.rank}</span>
+        <span className="leaderboard-name">
+          {entry.nickname}
+          {climb !== null && <span className="leaderboard-climb"> naik {climb}</span>}
+        </span>
+        <span className="leaderboard-score">
+          <FlapDigits value={numberFormat.format(entry.score)} />
+        </span>
+      </button>
+    );
+  };
+
+  return (
+    <main className="projector projector-split">
+      <section className="scoreboard-panel">
+        <header className="projector-bar">
+          <h1 className="scoreboard-title">Papan skor</h1>
+          <span>
+            setelah soal {reveal.q + 1}
+            {question ? ` dari ${question.total}` : ""}
+          </span>
+        </header>
+        <Leaderboard entries={reveal.leaderboard} previous={previous} renderRow={row} />
+      </section>
+      <aside className="scoreboard-side">
+        <Logo />
+        <dl className="scoreboard-stats">
+          {stats.biggestClimb && (
+            <div>
+              <dt>Naik paling jauh</dt>
+              <dd>
+                {stats.biggestClimb.nickname}, dari {stats.biggestClimb.from} ke {stats.biggestClimb.to}
+              </dd>
+            </div>
+          )}
+          {stats.topPoints && (
+            <div>
+              <dt>Poin terbesar soal ini</dt>
+              <dd>
+                {stats.topPoints.nickname}, +{numberFormat.format(stats.topPoints.points)}
+              </dd>
+            </div>
+          )}
+          <div>
+            <dt>Soal ini</dt>
+            <dd>
+              {stats.correct} dari {stats.total} benar
+            </dd>
+          </div>
+          {offlineIds.size > 0 && (
+            <div>
+              <dt>Terputus</dt>
+              <dd>{offlineIds.size} pemain</dd>
+            </div>
+          )}
+        </dl>
+        <div className="scoreboard-next">
+          <button type="button" className="button button-tinta button-large" onClick={props.onNext}>
+            {reveal.isLastQuestion ? "Lihat podium" : "Soal berikutnya"}
+          </button>
+          <p className="muted">Siswa melihat peringkat masing-masing di HP.</p>
+          <EndGameButton onEndGame={props.onEndGame} />
+        </div>
+      </aside>
     </main>
   );
 }
@@ -307,39 +432,71 @@ function KickDialog({ target, onConfirm, onCancel }: { target: KickTarget; onCon
   );
 }
 
+/** Proyektor-5: balok podium naik bergantian (juara 1 terakhir), konfeti turus, dan tombol rapor kelas. */
 function Podium({ view, onDone }: { view: EndedView; onDone: () => void }) {
-  const { podium } = view;
+  const { podium, base } = view;
   const navigate = useNavigate();
   // Laporan baru ada setelah consumer Queue menyimpannya; halaman laporan menunggu kalau dibuka terlalu cepat.
   const onReport = () => {
     const state: PodiumNavigationState = { gameEndedAt: performance.now() };
     navigate(`/games/${podium.gameId}`, { state });
   };
+  // Urutan tampil kiri ke kanan: juara 2, juara 1, juara 3. Urutan naik: juara 3 dulu, juara 1 terakhir.
+  const [first, second, third] = podium.top;
+  const blocks = [
+    { entry: second, place: 2, order: 1 },
+    { entry: first, place: 1, order: 2 },
+    { entry: third, place: 3, order: 0 },
+  ];
+
   return (
-    <main className="host-screen">
-      <h1 className="host-prompt">Podium</h1>
-      {podium.top.length === 0 ? (
-        <p className="empty">Belum ada skor.</p>
-      ) : (
-        <ol className="podium">
-          {podium.top.map((entry) => (
-            <li key={entry.playerId}>
-              <span className="leaderboard-rank">{entry.rank}</span>
-              <span className="leaderboard-name">{entry.nickname}</span>
-              <span className="leaderboard-score">{entry.score} poin</span>
-            </li>
-          ))}
-        </ol>
-      )}
-      <p className="host-count">{podium.playerCount} pemain</p>
-      <div className="host-actions">
-        <button type="button" className="button button-primary button-large" onClick={onReport}>
-          Lihat rapor kelas
-        </button>
-        <button type="button" className="button button-large" onClick={onDone}>
-          Selesai
-        </button>
+    <main className="projector projector-podium">
+      <div className="confetti" aria-hidden="true">
+        {Array.from({ length: CONFETTI_PIECES }, (_, index) => (
+          <span
+            key={index}
+            className={`confetti-piece confetti-${index % 5}`}
+            style={{ left: `${(index * 37) % 100}%`, animationDelay: `calc(var(--konfeti-jeda) * ${index % 10})` }}
+          />
+        ))}
       </div>
+      <header className="projector-bar">
+        <div>
+          {base.room.quizTitle && <p className="muted">{base.room.quizTitle} selesai</p>}
+          <h1 className="podium-title">Juara kelas hari ini</h1>
+        </div>
+        <div className="podium-actions">
+          <button type="button" className="button button-tinta button-large" onClick={onReport}>
+            Lihat rapor kelas
+          </button>
+          <button type="button" className="link-button" onClick={onDone}>
+            Tutup ruang
+          </button>
+        </div>
+      </header>
+      <div className="podium-stage">
+        <Logo animate />
+        {podium.top.length === 0 ? (
+          <p className="empty">Belum ada skor.</p>
+        ) : (
+          <ol className="podium-blocks">
+            {blocks.map(({ entry, place, order }) =>
+              entry ? (
+                <li key={entry.playerId} className={`podium-place podium-place-${place}`}>
+                  <span className="podium-name">{entry.nickname}</span>
+                  <span className="podium-points">{numberFormat.format(entry.score)} poin</span>
+                  <span className="podium-block-wrap">
+                    <RiseIn axis="y" order={order}>
+                      <span className="podium-block">{entry.rank}</span>
+                    </RiseIn>
+                  </span>
+                </li>
+              ) : null,
+            )}
+          </ol>
+        )}
+      </div>
+      <p className="podium-footer">{podium.playerCount} pemain.</p>
     </main>
   );
 }
