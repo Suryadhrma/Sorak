@@ -4,6 +4,7 @@ import { HTTPException } from "hono/http-exception";
 import { z } from "zod";
 import { apiError } from "./api-error.ts";
 import { authRoutes } from "./auth.ts";
+import { gameRoutes } from "./game-routes.ts";
 import { log } from "./log.ts";
 import { quizRoutes } from "./quiz-routes.ts";
 import { roomRoutes, wsRoutes } from "./room-routes.ts";
@@ -30,6 +31,8 @@ app.route("/api/auth", authRoutes);
 app.get("/api/me", requireHost, (c) => c.json(c.var.host));
 
 app.route("/api/quizzes", quizRoutes);
+
+app.route("/api/games", gameRoutes);
 
 app.route("/api/rooms", roomRoutes);
 
