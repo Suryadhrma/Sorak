@@ -26,7 +26,7 @@ describe("kontrol room", () => {
   it("init sukses membuka lobby", async () => {
     const pin = uniquePin();
     expect((await initRoom(pin)).body).toEqual({ ok: true });
-    expect(await joinInfo(pin)).toEqual({ status: "open", playerCount: 0 });
+    expect(await joinInfo(pin)).toEqual({ status: "open", playerCount: 0, quizTitle: "Kuis Uji" });
   });
 
   it("init kedua untuk PIN yang sama ditolak pin_in_use", async () => {
@@ -51,7 +51,7 @@ describe("kontrol room", () => {
     const pin = uniquePin();
     await initRoom(pin, initInput(pin, { mode: "accurate" }));
     const { welcome } = await joinedPlayer(pin, "Andi");
-    expect(welcome).toMatchObject({ room: { scoringMode: "accurate" } });
+    expect(welcome).toMatchObject({ room: { scoringMode: "accurate", quizTitle: "Kuis Uji" } });
   });
 
   it("room yang sudah lewat lobby menjawab started", async () => {
@@ -64,7 +64,7 @@ describe("kontrol room", () => {
     });
     // State dibaca ulang dari storage oleh constructor setelah objek dikeluarkan dari memori.
     await evictDurableObject(stub);
-    expect(await joinInfo(pin)).toEqual({ status: "started", playerCount: 0 });
+    expect(await joinInfo(pin)).toEqual({ status: "started", playerCount: 0, quizTitle: "Kuis Uji" });
   });
 
   it("storage dari versi lama (skor tanpa lastOutcome, state tanpa field event) tetap terbaca, lalu room dibersihkan", async () => {
@@ -182,7 +182,7 @@ describe("join", () => {
     await initRoom(pin);
     const started = performance.now();
     for (let i = 0; i < MAX_PLAYERS_PER_ROOM; i++) await joinedPlayer(pin, `Pemain ${i}`);
-    expect(await joinInfo(pin)).toEqual({ status: "full", playerCount: MAX_PLAYERS_PER_ROOM });
+    expect(await joinInfo(pin)).toEqual({ status: "full", playerCount: MAX_PLAYERS_PER_ROOM, quizTitle: "Kuis Uji" });
 
     const late = await connect(pin, "play");
     late.send({ t: "join", v: 1, nickname: "Telat" });
@@ -271,7 +271,7 @@ describe("resume", () => {
     expect(welcome).toMatchObject({ t: "welcome", playerId, nickname: "Dimas" });
     expect(welcome).not.toHaveProperty("sessionToken");
     expect(await original.client.closed).toMatchObject({ code: CloseCode.REPLACED });
-    expect(await joinInfo(pin)).toEqual({ status: "open", playerCount: 1 });
+    expect(await joinInfo(pin)).toEqual({ status: "open", playerCount: 1, quizTitle: "Kuis Uji" });
   });
 
   it("token tidak dikenal -> SESSION_INVALID lalu 4003", async () => {
@@ -359,7 +359,7 @@ describe("putus dan penutupan room", () => {
     await runInDurableObject(roomStub(pin), async (_instance, state) => {
       expect(await state.storage.getAlarm()).not.toBeNull();
     });
-    expect(await joinInfo(pin)).toEqual({ status: "open", playerCount: 0 });
+    expect(await joinInfo(pin)).toEqual({ status: "open", playerCount: 0, quizTitle: "Kuis Uji" });
   });
 });
 

@@ -15,8 +15,8 @@ async function control(pin: string, path: string, init?: RequestInit): Promise<u
 }
 
 const occupy = (pin: string) => control(pin, "/init", { method: "POST", body: "{}" });
-const setJoinInfo = (pin: string, status: string, playerCount = 0) =>
-  control(pin, "/fake/join-info", { method: "PUT", body: JSON.stringify({ status, playerCount }) });
+const setJoinInfo = (pin: string, status: string, playerCount = 0, quizTitle?: string) =>
+  control(pin, "/fake/join-info", { method: "PUT", body: JSON.stringify({ status, playerCount, quizTitle }) });
 
 /** PIN yang akan dihasilkan newPin berikutnya, berurutan. */
 function nextPins(...pins: string[]) {
@@ -138,6 +138,13 @@ describe("GET /api/rooms/:pin", () => {
     const res = await lookup("100001");
     expect(res.status).toBe(200);
     expect(await res.json()).toEqual({ pin: "100001", playerCount: 7 });
+  });
+
+  it("judul kuis dari GameRoom diteruskan ke HP (untuk form nama)", async () => {
+    await occupy("100009");
+    await setJoinInfo("100009", "open", 3, "Geografi Sumatra");
+    const res = await lookup("100009");
+    expect(await res.json()).toEqual({ pin: "100009", playerCount: 3, quizTitle: "Geografi Sumatra" });
   });
 
   it.each([

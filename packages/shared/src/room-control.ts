@@ -2,6 +2,7 @@ import { z } from "zod";
 import { MAX_PLAYERS_PER_ROOM } from "./constants.ts";
 import { GameId, Pin, ScoringMode } from "./primitives.ts";
 import { QuizSnapshot } from "./room-storage.ts";
+import { QuizTitleText } from "./server-messages.ts";
 
 /**
  * Kontrak Worker "sorak" ke GameRoom di Worker "sorak-realtime", lewat fetch internal.
@@ -49,5 +50,7 @@ export type InitRoomResult = z.infer<typeof InitRoomResult>;
 export const JoinInfo = z.object({
   status: z.enum(["open", "not_found", "started", "full"]),
   playerCount: z.number().int().min(0).max(MAX_PLAYERS_PER_ROOM),
+  /** Untuk form nama di HP ("Kamu masuk ke …"); tidak ada kalau room tidak ditemukan. */
+  quizTitle: QuizTitleText.optional(),
 });
 export type JoinInfo = z.infer<typeof JoinInfo>;

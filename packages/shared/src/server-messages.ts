@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { LEADERBOARD_SIZE, MAX_PLAYERS_PER_ROOM, PODIUM_SIZE, PROTOCOL_VERSION, REACTIONS } from "./constants.ts";
+import { LEADERBOARD_SIZE, MAX_PLAYERS_PER_ROOM, PODIUM_SIZE, PROTOCOL_VERSION, QUIZ_TITLE_MAX_LENGTH, REACTIONS } from "./constants.ts";
 import {
   ChoiceIndex,
   GameId,
@@ -27,11 +27,15 @@ const Count = z.number().int().min(0).max(MAX_PLAYERS_PER_ROOM);
 const Score = z.number().int().min(0);
 const Rank = z.number().int().min(1);
 
+/** Judul kuis; opsional supaya web baru tetap jalan dengan GameRoom lama (field tidak ada = tidak ditampilkan). */
+export const QuizTitleText = z.string().min(1).max(QUIZ_TITLE_MAX_LENGTH);
+
 export const RoomInfo = z.object({
   pin: Pin,
   scoringMode: ScoringMode,
   teamMode: z.boolean(),
   questionCount: z.number().int().min(1),
+  quizTitle: QuizTitleText.optional(),
 });
 export type RoomInfo = z.infer<typeof RoomInfo>;
 
@@ -162,6 +166,12 @@ export const FinalMessage = z.object({
   rank: Rank,
   playerCount: Count,
   highlights: Highlights,
+  /**
+   * "Benar X dari Y" di rapor HP: jawaban benar dan jumlah soal yang di-reveal. Opsional supaya web baru tetap
+   * jalan dengan GameRoom lama (barisnya disembunyikan).
+   */
+  correctCount: Count.optional(),
+  questionCount: Count.optional(),
 });
 
 export const ErrorMessage = z.object({

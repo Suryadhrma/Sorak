@@ -94,7 +94,7 @@ roomRoutes.get("/:pin", async (c) => {
   const info = await getJoinInfo(roomStub(c.env, pin.data));
   switch (info.status) {
     case "open":
-      return c.json({ pin: pin.data, playerCount: info.playerCount } satisfies RoomLookup);
+      return c.json({ pin: pin.data, playerCount: info.playerCount, quizTitle: info.quizTitle } satisfies RoomLookup);
     case "not_found":
       return roomNotFound(c);
     case "started":

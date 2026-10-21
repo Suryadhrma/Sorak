@@ -18,7 +18,9 @@ import {
   PlayerAttachment,
   PlayerScore,
   PlayerServerMessage,
+  QUIZ_TITLE_MAX_LENGTH,
   QuizSnapshot,
+  RoomInfo,
   RoomState,
   STALE_SOCKET_MS,
   SocketAttachment,
@@ -207,6 +209,17 @@ describe("pesan server sesuai skema", () => {
       rank: 3,
       playerCount: 36,
       highlights: { bestStreak: 4, confidentCorrect: 5, biggestRankClimb: 9, fastestCorrectMs: 2100 },
+    },
+    // Hari 5: field opsional dari GameRoom baru; versi tanpa field di atas tetap sah (GameRoom lama).
+    {
+      t: "final",
+      gameId: "7c9e6679-7425-40de-944b-e07fc1f90ae7",
+      score: 4200,
+      rank: 3,
+      playerCount: 36,
+      highlights: { bestStreak: 4, confidentCorrect: 5, biggestRankClimb: 9, fastestCorrectMs: 2100 },
+      correctCount: 8,
+      questionCount: 10,
     },
     { t: "error", code: "NICKNAME_TAKEN", message: "Nickname sudah dipakai" },
   ];
@@ -407,6 +420,19 @@ describe("skor pemain di storage", () => {
   it("poin per soal boleh negatif (Taruhan Yakin), skor total tidak", () => {
     expect(PlayerScore.safeParse({ ...score, lastPoints: -1800 }).success).toBe(true);
     expect(PlayerScore.safeParse({ ...score, score: -1 }).success).toBe(false);
+  });
+});
+
+describe("info room (judul kuis opsional, Hari 5)", () => {
+  const room = { pin: "482913", scoringMode: "classic", teamMode: false, questionCount: 10 };
+
+  it("tanpa judul tetap sah (GameRoom lama), dengan judul juga sah", () => {
+    expect(RoomInfo.safeParse(room).success).toBe(true);
+    expect(RoomInfo.parse({ ...room, quizTitle: "Geografi Sumatra" }).quizTitle).toBe("Geografi Sumatra");
+  });
+
+  it(`judul lebih dari ${QUIZ_TITLE_MAX_LENGTH} huruf ditolak`, () => {
+    expect(RoomInfo.safeParse({ ...room, quizTitle: "x".repeat(QUIZ_TITLE_MAX_LENGTH + 1) }).success).toBe(false);
   });
 });
 

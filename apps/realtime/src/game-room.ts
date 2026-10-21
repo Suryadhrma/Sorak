@@ -173,7 +173,8 @@ export class GameRoom extends DurableObject<Env> {
   }
 
   private joinInfo(): Response {
-    return Response.json({ status: this.joinStatus(), playerCount: this.players().length } satisfies JoinInfo);
+    const info: JoinInfo = { status: this.joinStatus(), playerCount: this.players().length };
+    return Response.json(this.quiz ? { ...info, quizTitle: this.quiz.title } : info);
   }
 
   private joinStatus(): JoinInfo["status"] {
@@ -915,7 +916,13 @@ export class GameRoom extends DurableObject<Env> {
 
   private roomInfo(): RoomInfo {
     const { state, quiz } = this.requireRoom();
-    return { pin: state.pin, scoringMode: state.scoringMode, teamMode: state.teamMode, questionCount: quiz.questions.length };
+    return {
+      pin: state.pin,
+      scoringMode: state.scoringMode,
+      teamMode: state.teamMode,
+      questionCount: quiz.questions.length,
+      quizTitle: quiz.title,
+    };
   }
 
   /** Snapshot tahap saat ini dari sudut pandang pemain ini: HP langsung menampilkan layar yang benar. */
@@ -985,6 +992,9 @@ export class GameRoom extends DurableObject<Env> {
         biggestRankClimb: score.biggestRankClimb,
         fastestCorrectMs: score.fastestCorrectMs,
       },
+      correctCount: score.correct,
+      // Soal yang sudah di-reveal (game yang diakhiri lebih awal tidak menghitung soal yang belum dibuka).
+      questionCount: this.qstats.length,
     };
   }
 

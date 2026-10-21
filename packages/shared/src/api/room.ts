@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { MAX_PLAYERS_PER_ROOM } from "../constants.ts";
 import { Pin, ScoringMode } from "../primitives.ts";
+import { QuizTitleText } from "../server-messages.ts";
 import { QuizId } from "./quiz.ts";
 
 /**
@@ -21,5 +22,7 @@ export type CreateRoomResult = z.infer<typeof CreateRoomResult>;
 export const RoomLookup = z.object({
   pin: Pin,
   playerCount: z.number().int().min(0).max(MAX_PLAYERS_PER_ROOM),
+  /** Opsional: Worker atau GameRoom versi lama tidak mengirimnya. */
+  quizTitle: QuizTitleText.optional(),
 });
 export type RoomLookup = z.infer<typeof RoomLookup>;

@@ -89,7 +89,8 @@ describe("satu game 3 soal, 2 pemain, 1 host", () => {
     game.host.send({ t: "next" });
     const podium = await expectNext(game.host, { t: "podium", playerCount: 2 });
     expect((podium.top as { nickname: string }[]).map((entry) => entry.nickname)).toEqual(["Andi", "Budi"]);
-    await expectNext(andi.client, { t: "final", rank: 1, playerCount: 2, highlights: { bestStreak: 2 } });
+    // Rapor HP "benar X dari Y": Andi benar di soal 1 dan 2, salah di soal 3; tiga soal sudah di-reveal.
+    await expectNext(andi.client, { t: "final", rank: 1, playerCount: 2, highlights: { bestStreak: 2 }, correctCount: 2, questionCount: 3 });
     await expectNext(budi.client, { t: "final", rank: 2, playerCount: 2, highlights: { bestStreak: 1, biggestRankClimb: 0 } });
   });
 
@@ -214,7 +215,8 @@ describe("kasus game", () => {
     await expectGraceEverywhere(game, 0);
     game.host.send({ t: "end" });
     await expectNext(game.host, { t: "podium", top: [{ nickname: "Andi", score: 0 }], playerCount: 1 });
-    await expectNext(andi.client, { t: "final", score: 0, rank: 1 });
+    // Diakhiri sebelum reveal pertama: belum ada soal yang dihitung.
+    await expectNext(andi.client, { t: "final", score: 0, rank: 1, correctCount: 0, questionCount: 0 });
   });
 
   it("host_hello di tengah soal mendapat soal, sisa waktu, dan jumlah yang menjawab", async () => {
@@ -269,7 +271,7 @@ describe("kasus game", () => {
     late.send({ t: "join", v: 1, nickname: "Telat" });
     await expectNext(late, { t: "error", code: "GAME_ALREADY_STARTED", message: "Permainan sudah dimulai." });
     expect(await late.closed).toMatchObject({ code: CloseCode.GAME_ALREADY_STARTED });
-    expect(await joinInfo(game.pin)).toEqual({ status: "started", playerCount: 1 });
+    expect(await joinInfo(game.pin)).toEqual({ status: "started", playerCount: 1, quizTitle: "Kuis Uji" });
   });
 
   it("objek dikeluarkan dari memori di tengah soal, lalu alarm berbunyi -> reveal tetap benar", async () => {
