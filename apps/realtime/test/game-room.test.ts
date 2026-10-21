@@ -3,14 +3,19 @@ import { CloseCode, MAX_PLAYERS_PER_ROOM, ROOM_CONTROL_ORIGIN, STALE_SOCKET_MS, 
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   HOST_ID,
+  alarm,
+  answer,
   connect,
   connectedHost,
+  expectNext,
   initInput,
   initRoom,
   joinInfo,
   joinedPlayer,
   roomStub,
+  startedGame,
   uniquePin,
+  type Player,
 } from "./room.ts";
 
 afterEach(() => {
@@ -60,6 +65,38 @@ describe("kontrol room", () => {
     // State dibaca ulang dari storage oleh constructor setelah objek dikeluarkan dari memori.
     await evictDurableObject(stub);
     expect(await joinInfo(pin)).toEqual({ status: "started", playerCount: 0 });
+  });
+
+  it("storage dari versi lama (skor tanpa lastOutcome, state tanpa field event) tetap terbaca, lalu room dibersihkan", async () => {
+    // Room yang masih hidup saat deploy: storage-nya ditulis kode lama, lalu dibaca kode baru setelah objek bangun lagi.
+    const game = await startedGame(["Andi"], { questions: 1 });
+    const [andi] = game.players as [Player];
+    answer(andi, 0, 1);
+    await expectNext(andi.client, { t: "answer_received" });
+    await expectNext(game.host, { t: "answer_count" });
+    await expectNext(game.host, { t: "grace" });
+    await alarm(game.pin);
+    await expectNext(game.host, { t: "reveal" });
+    game.host.send({ t: "next" });
+    await expectNext(game.host, { t: "podium" });
+
+    const stub = roomStub(game.pin);
+    await runInDurableObject(stub, async (_instance, state) => {
+      const scoreboard = await state.storage.get<Record<string, Record<string, unknown>>>(StorageKey.scoreboard);
+      const legacyScores = Object.fromEntries(
+        Object.entries(scoreboard ?? {}).map(([playerId, { lastOutcome: _added, ...score }]) => [playerId, score]),
+      );
+      const { gameEventSentAt: _sentAt, gameEventAttempts: _attempts, ...legacyState } =
+        (await state.storage.get<Record<string, unknown>>(StorageKey.state)) ?? {};
+      await state.storage.put({ [StorageKey.scoreboard]: legacyScores, [StorageKey.state]: legacyState });
+    });
+    await evictDurableObject(stub);
+
+    expect(await alarm(game.pin)).toBe(true);
+    expect(await game.host.closed).toMatchObject({ code: CloseCode.ROOM_CLOSED });
+    await runInDurableObject(stub, async (_instance, state) => {
+      expect((await state.storage.list()).size).toBe(0);
+    });
   });
 
   it.each([

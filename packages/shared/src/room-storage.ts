@@ -103,8 +103,12 @@ export const PlayerScore = z.object({
    * sedangkan skor total tidak. Dipakai untuk mengirim ulang reveal/podium dan result setelah refresh atau resume.
    */
   lastPoints: z.number().int(),
-  /** Hasil soal yang terakhir di-reveal: lastPoints 0 bisa berarti salah atau tidak menjawab. Null sebelum reveal pertama. */
-  lastOutcome: z.enum(["correct", "wrong", "no_answer"]).nullable(),
+  /**
+   * Hasil soal yang terakhir di-reveal: lastPoints 0 bisa berarti salah atau tidak menjawab. Null sebelum reveal
+   * pertama. Default untuk skor yang ditulis sebelum Hari 4: room yang hidup saat deploy tetap bisa dibaca
+   * (null dibaca sebagai no_answer).
+   */
+  lastOutcome: z.enum(["correct", "wrong", "no_answer"]).nullable().default(null),
 });
 export type PlayerScore = z.infer<typeof PlayerScore>;
 

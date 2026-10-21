@@ -399,6 +399,11 @@ describe("skor pemain di storage", () => {
     expect(PlayerScore.safeParse({ ...score, lastOutcome: "late" }).success).toBe(false);
   });
 
+  it("skor yang ditulis sebelum Hari 4 (tanpa lastOutcome) tetap terbaca sebagai null", () => {
+    const { lastOutcome: _added, ...beforeDay4 } = score;
+    expect(PlayerScore.parse(beforeDay4)).toMatchObject({ lastOutcome: null });
+  });
+
   it("poin per soal boleh negatif (Taruhan Yakin), skor total tidak", () => {
     expect(PlayerScore.safeParse({ ...score, lastPoints: -1800 }).success).toBe(true);
     expect(PlayerScore.safeParse({ ...score, score: -1 }).success).toBe(false);
