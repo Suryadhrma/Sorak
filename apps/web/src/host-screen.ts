@@ -186,3 +186,10 @@ function questionOf(view: HostView): PublicQuestion | null {
       return null;
   }
 }
+
+const pointsFormat = new Intl.NumberFormat("id-ID");
+
+/** Poin soal ini di papan skor proyektor: "+630", atau "−120" (tanda minus) di mode Taruhan Yakin. */
+export function pointsDelta(delta: number): string {
+  return delta > 0 ? `+${pointsFormat.format(delta)}` : `−${pointsFormat.format(-delta)}`;
+}

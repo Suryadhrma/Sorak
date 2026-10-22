@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router";
 import { Pin, type LeaderboardEntry, type RosterEntry } from "@sorak/shared";
 import { AnswerRow, AnswerTile, answerLetter } from "../AnswerOption.tsx";
-import { disconnectedCount, revealStats, type HostBase } from "../host-screen.ts";
+import { disconnectedCount, pointsDelta, revealStats, type HostBase } from "../host-screen.ts";
 import { createHostSession, type HostSession, type HostView } from "../host-session.ts";
 import { Logo } from "../Logo.tsx";
 import { Countdown } from "../motion/Countdown.tsx";
@@ -334,13 +334,17 @@ function ScoreboardScreen(props: { view: RevealView; onNext: () => void; onEndGa
       <button
         type="button"
         className={`leaderboard-row${offline ? " is-offline" : ""}`}
-        aria-label={`Peringkat ${entry.rank}, ${entry.nickname}, ${entry.score} poin${offline ? ", terputus" : ""}. Tekan untuk mengeluarkan.`}
+        aria-label={`Peringkat ${entry.rank}, ${entry.nickname}, ${entry.score} poin${entry.delta !== 0 ? ` (${pointsDelta(entry.delta)} soal ini)` : ""}${offline ? ", terputus" : ""}. Tekan untuk mengeluarkan.`}
         onClick={() => props.onKick({ playerId: entry.playerId, nickname: entry.nickname })}
       >
         <span className="leaderboard-rank">{entry.rank}</span>
         <span className="leaderboard-name">
           {entry.nickname}
           {climb !== null && <span className="leaderboard-climb"> naik {climb}</span>}
+        </span>
+        {/* Selalu dipasang (kosong kalau 0) supaya kolom skor tetap sejajar. */}
+        <span className="leaderboard-delta" aria-hidden="true">
+          {entry.delta !== 0 && pointsDelta(entry.delta)}
         </span>
         <span className="leaderboard-score">
           <FlapDigits value={numberFormat.format(entry.score)} />

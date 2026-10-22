@@ -74,7 +74,18 @@ export function QuizEditorPage() {
     };
   }, [id]);
 
+  // "Tersimpan" di kepala hanya benar sampai guru mengubah sesuatu lagi.
+  function clearSavedNotice() {
+    setNotice((current) => (current?.kind === "success" ? null : current));
+  }
+
+  function editDraft(patch: Partial<QuizDraft>) {
+    setDraft((current) => ({ ...current, ...patch }));
+    clearSavedNotice();
+  }
+
   function updateQuestion(index: number, patch: Partial<QuestionDraft>) {
+    clearSavedNotice();
     setDraft((current) => ({
       ...current,
       questions: current.questions.map((question, i) => (i === index ? { ...question, ...patch } : question)),
@@ -83,7 +94,7 @@ export function QuizEditorPage() {
 
   // Error ditandai per nomor soal; begitu urutan soal berubah, nomornya tidak lagi menunjuk soal yang sama.
   function changeQuestionList(questions: QuestionDraft[]) {
-    setDraft((current) => ({ ...current, questions }));
+    editDraft({ questions });
     setErrors({});
   }
 
@@ -159,9 +170,9 @@ export function QuizEditorPage() {
       </header>
 
       <div className="editor-tata">
-        {draft.questions.length > 0 && (
-          <nav className="editor-daftar" aria-label="Daftar soal">
-            <p className="muted-strong">{draft.questions.length} soal</p>
+        <nav className="editor-daftar" aria-label="Daftar soal">
+          <p className="muted-strong">{draft.questions.length > 0 ? `${draft.questions.length} soal` : "Belum ada soal"}</p>
+          {draft.questions.length > 0 && (
             <ol>
               {draft.questions.map((question, index) => (
                 <li key={question.key}>
@@ -176,8 +187,8 @@ export function QuizEditorPage() {
                 </li>
               ))}
             </ol>
-          </nav>
-        )}
+          )}
+        </nav>
 
         <main className="buku-isi editor-isi">
           <h1 className="visually-hidden">{id ? "Ubah kuis" : "Kuis baru"}</h1>
@@ -186,7 +197,7 @@ export function QuizEditorPage() {
             <input
               id="quiz-title"
               value={draft.title}
-              onChange={(event) => setDraft({ ...draft, title: event.target.value })}
+              onChange={(event) => editDraft({ title: event.target.value })}
               {...invalidProps("quiz-title-error", errors.title)}
             />
             <FieldError id="quiz-title-error" message={errors.title} />
@@ -198,7 +209,7 @@ export function QuizEditorPage() {
               id="quiz-description"
               rows={2}
               value={draft.description}
-              onChange={(event) => setDraft({ ...draft, description: event.target.value })}
+              onChange={(event) => editDraft({ description: event.target.value })}
               {...invalidProps("quiz-description-error", errors.description)}
             />
             <FieldError id="quiz-description-error" message={errors.description} />

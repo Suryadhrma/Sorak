@@ -76,8 +76,8 @@
   --gerak-baris: 450ms cubic-bezier(0.4, 0, 0.2, 1);
   --gerak-baris-jeda: 150ms;
   --gerak-baris-mulai: 200ms;
-  /* Panel login: papan peringkat bertukar berulang (satu siklus). Hanya hiasan, jadi boleh berulang. */
-  --gerak-papan-siklus: 6s;
+  /* Panel login: satu arah tukar baris (diam, bergeser 600 ms, diam); diputar bolak-balik. Hanya hiasan. */
+  --gerak-papan-siklus: 3s;
 
   --space-1: 0.25rem;
   --space-2: 0.5rem;
@@ -91,24 +91,27 @@
   --font-size-small: 0.875rem;
   --font-size-title: 1.5rem;
   --font-size-pin-input: 2.25rem;
-  /* Proyektor: tumbuh mengikuti lebar layar, dengan batas supaya tetap muat di laptop kecil. */
+  /* Proyektor: tumbuh mengikuti lebar layar, dengan batas supaya tetap muat di laptop kecil. Batas atas dipilih
+     untuk proyektor 1920x1080; di 1280x720 nilai vw-nya yang berlaku. */
   /* PIN di panel kiri lobby proyektor (sekitar 45% lebar layar). */
-  --font-size-host-pin: clamp(3.5rem, 7vw, 6.5rem);
-  --font-size-host-text: clamp(1.25rem, 3vw, 2.25rem);
-  --font-size-host-name: clamp(1.125rem, 2.2vw, 1.75rem);
-  --font-size-host-prompt: clamp(1.75rem, 4vw, 3.25rem);
-  --font-size-host-countdown: clamp(3rem, 8vw, 6rem);
+  --font-size-host-pin: clamp(3.5rem, 7vw, 9rem);
+  --font-size-host-text: clamp(1.25rem, 3vw, 3rem);
+  --font-size-host-name: clamp(1.125rem, 2.2vw, 2.5rem);
+  --font-size-host-prompt: clamp(1.75rem, 4vw, 4.75rem);
+  --font-size-host-countdown: clamp(3rem, 8vw, 8rem);
   --font-size-countdown: 2.5rem;
   --font-size-score: 3rem;
   --font-size-kartu-huruf: 2rem;
-  --font-size-host-kartu-huruf: clamp(2.5rem, 4vw, 4rem);
+  --font-size-host-kartu-huruf: clamp(2.5rem, 4vw, 5rem);
 
   --page-max-width: 48rem;
   --tap-target: 2.75rem;
   /* Layar proyektor (board Proyektor-1 sampai 5). */
   --projector-pad: clamp(1.5rem, 3vw, 3rem);
   /* Teks pilihan di proyektor: minimal 28 px di 1280x720 supaya terbaca dari belakang kelas. */
-  --font-size-host-pilihan: clamp(1.75rem, 2.4vw, 2.25rem);
+  --font-size-host-pilihan: clamp(1.75rem, 2.4vw, 3rem);
+  /* Label kecil di proyektor (judul statistik, catatan): 17 px di 1280, ikut membesar di 1080p. */
+  --font-size-host-label: clamp(1rem, 1.35vw, 1.625rem);
   --konfeti-jeda: 400ms;
   --podium-tinggi-1: 34vh;
   --podium-tinggi-2: 25vh;
@@ -127,6 +130,8 @@
   --buku-margin-x: 5.5rem;
   /* Halaman guru (board Guru-1 sampai 4). */
   --kapur-muda: #fff8dc;
+  /* Chip poin di papan skor proyektor: kapur tipis di atas papan gelap. */
+  --kapur-latar: rgb(242 183 5 / 0.16);
   --space-5: 2.5rem;
   /* Lebar kolom isi halaman guru. Di layar lebar kolom ini (beserta garis margin) diletakkan di tengah. */
   --buku-isi-max: 72rem;
@@ -614,9 +619,14 @@ button.answer-selected:disabled {
   font-variant-numeric: tabular-nums;
 }
 
-.leaderboard-delta {
-  color: var(--color-success);
-  font-weight: 600;
+/* Poin soal ini (board Proyektor-4): chip kapur tipis di samping skor. */
+.leaderboard-delta:not(:empty) {
+  padding: 0.15em 0.45em;
+  border-radius: var(--radius-kecil);
+  background: var(--kapur-latar);
+  color: var(--kapur);
+  font-family: var(--font-angka);
+  font-weight: 800;
 }
 
 .button-large {
@@ -1831,18 +1841,24 @@ a.buku-baris-judul:hover {
     animation: pantul var(--gerak-pantul) both;
   }
 
+  /* Chip poin memantul setelah baris papan skor selesai bergeser (FLIP 600 ms). */
+  .scoreboard-panel .leaderboard-delta:not(:empty) {
+    animation: pantul var(--gerak-pantul) both;
+    animation-delay: 600ms;
+  }
+
   .check-mark {
     animation: tally-draw var(--gerak-turus) both;
     animation-delay: 150ms;
   }
 
-  /* Berulang atas permintaan pemilik produk: panel ini hiasan, bukan layar game (pengecualian aturan "sekali"). */
+  /* Bolak-balik terus atas permintaan pemilik produk: panel ini hiasan, bukan layar game (pengecualian aturan "sekali"). */
   .login-papan-skor li:nth-child(2) .login-papan-baris {
-    animation: tukar-naik var(--gerak-papan-siklus) cubic-bezier(0.5, 0, 0.2, 1) infinite both;
+    animation: tukar-naik var(--gerak-papan-siklus) cubic-bezier(0.5, 0, 0.2, 1) infinite alternate both;
   }
 
   .login-papan-skor li:nth-child(3) .login-papan-baris {
-    animation: tukar-turun var(--gerak-papan-siklus) cubic-bezier(0.5, 0, 0.2, 1) infinite both;
+    animation: tukar-turun var(--gerak-papan-siklus) cubic-bezier(0.5, 0, 0.2, 1) infinite alternate both;
   }
 }
 
@@ -1861,56 +1877,29 @@ a.buku-baris-judul:hover {
 }
 
 /*
- * Panel login, satu siklus: Rara di peringkat 3, naik ke 2 sementara Nayla turun (600 ms seperti FLIP papan skor),
- * diam, lalu papan memudar dan kembali ke urutan awal untuk siklus berikutnya. Satu baris = tinggi baris + celah.
+ * Panel login, bolak-balik (animation-direction: alternate): Rara naik dari peringkat 3 ke 2 sementara Nayla turun,
+ * diam, lalu kembali 2 ke 3, dan seterusnya. Geser 20% dari 3 detik = 600 ms, sama dengan FLIP papan skor.
+ * Satu baris = tinggi baris + celah.
  */
 @keyframes tukar-naik {
   0%,
-  14% {
+  25% {
     transform: translateY(calc(var(--tap-target) + var(--space-2)));
   }
-  24%,
-  84% {
-    transform: none;
-    opacity: 1;
-  }
-  90% {
-    transform: none;
-    opacity: 0;
-  }
-  91% {
-    transform: translateY(calc(var(--tap-target) + var(--space-2)));
-    opacity: 0;
-  }
-  97%,
+  45%,
   100% {
-    transform: translateY(calc(var(--tap-target) + var(--space-2)));
-    opacity: 1;
+    transform: none;
   }
 }
 
 @keyframes tukar-turun {
   0%,
-  14% {
+  25% {
     transform: translateY(calc(-1 * (var(--tap-target) + var(--space-2))));
   }
-  24%,
-  84% {
-    transform: none;
-    opacity: 1;
-  }
-  90% {
-    transform: none;
-    opacity: 0;
-  }
-  91% {
-    transform: translateY(calc(-1 * (var(--tap-target) + var(--space-2))));
-    opacity: 0;
-  }
-  97%,
+  45%,
   100% {
-    transform: translateY(calc(-1 * (var(--tap-target) + var(--space-2))));
-    opacity: 1;
+    transform: none;
   }
 }
 
@@ -2721,6 +2710,7 @@ input.name-input {
   display: grid;
   grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
   align-items: stretch;
+  column-gap: var(--space-5);
 }
 
 .scoreboard-panel {
@@ -2744,7 +2734,7 @@ input.name-input {
 }
 
 .scoreboard-panel .leaderboard-row {
-  grid-template-columns: 3ch 1fr auto;
+  grid-template-columns: 3ch 1fr auto auto;
   border-bottom: 0;
   border-radius: var(--radius-kecil);
   background: var(--papan-2);
@@ -2761,7 +2751,7 @@ input.name-input {
 
 .leaderboard-climb {
   color: var(--kapur);
-  font-size: var(--font-size-small);
+  font-size: var(--font-size-host-label);
   font-weight: 800;
 }
 
@@ -2778,8 +2768,9 @@ input.name-input {
   margin: 0;
 }
 
-.scoreboard-stats dt {
-  font-size: var(--font-size-body);
+.scoreboard-stats dt,
+.scoreboard-next .muted {
+  font-size: var(--font-size-host-label);
   color: var(--color-muted);
 }
 

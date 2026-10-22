@@ -1,7 +1,7 @@
 import { CloseCode, type HostServerMessage, type PlayerServerMessage, type PlayerSnapshot, type RosterEntry } from "@sorak/shared";
 import { describe, expect, it } from "vitest";
 import { remainingMs } from "../src/countdown.ts";
-import { applyRosterMessage, disconnectedCount, hostScreen, revealStats, type HostView } from "../src/host-screen.ts";
+import { applyRosterMessage, disconnectedCount, hostScreen, pointsDelta, revealStats, type HostView } from "../src/host-screen.ts";
 import { initialPlayerScreen, playerScreen, rankClimb, type PlayerEvent, type PlayerScreen, type PlayerView } from "../src/player-screen.ts";
 
 const room = { pin: "123456", scoringMode: "classic", teamMode: false, questionCount: 3 } as const;
@@ -453,5 +453,13 @@ describe("hitung mundur", () => {
     [25_000, 0],
   ])("%i ms setelah soal diterima -> sisa %i ms", (elapsed, remaining) => {
     expect(remainingMs(1000, 20_000, 1000 + elapsed)).toBe(remaining);
+  });
+});
+
+describe("pointsDelta", () => {
+  it("poin soal ini: plus dengan pemisah ribuan, minus memakai tanda minus (mode Taruhan Yakin)", () => {
+    expect(pointsDelta(630)).toBe("+630");
+    expect(pointsDelta(1250)).toBe("+1.250");
+    expect(pointsDelta(-120)).toBe("−120");
   });
 });
