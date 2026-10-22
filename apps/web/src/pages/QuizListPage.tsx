@@ -1,10 +1,9 @@
-import { useEffect, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router";
 import { CreateRoomInput, type QuizSummary } from "@sorak/shared";
-import { createRoom, deleteQuiz, describeError, listQuizzes, logout } from "../api.ts";
-import { useHost } from "../RequireHost.tsx";
+import { createRoom, deleteQuiz, describeError, listQuizzes } from "../api.ts";
 import { SCORING_MODES } from "../scoring-modes.ts";
-import { Logo } from "../Logo.tsx";
+import { TeacherHeader } from "../TeacherHeader.tsx";
 import { useTheme } from "../theme.ts";
 
 /** Mode yang diterima server saat membuat room; satu sumber dengan skema REST. */
@@ -12,16 +11,15 @@ const PLAYABLE_MODES = CreateRoomInput.shape.scoringMode.options;
 
 type ListState = { kind: "loading" } | { kind: "ready"; quizzes: QuizSummary[] } | { kind: "error"; message: string };
 
-const updatedAtFormat = new Intl.DateTimeFormat("id-ID", { dateStyle: "medium", timeStyle: "short" });
+const updatedAtFormat = new Intl.DateTimeFormat("id-ID", { dateStyle: "long" });
 
+/** Guru-2: daftar kuis di kertas bergaris. Mainkan membuka dialog pilih mode (Guru-4). */
 export function QuizListPage() {
   useTheme("kertas");
-  const host = useHost();
-  const navigate = useNavigate();
   const [state, setState] = useState<ListState>({ kind: "loading" });
   const [actionError, setActionError] = useState<string | null>(null);
-  const [choosingQuizId, setChoosingQuizId] = useState<string | null>(null);
-  const [startingQuizId, setStartingQuizId] = useState<string | null>(null);
+  const [query, setQuery] = useState("");
+  const [playing, setPlaying] = useState<QuizSummary | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -50,112 +48,167 @@ export function QuizListPage() {
     }
   }
 
-  async function handlePlay(quiz: QuizSummary, scoringMode: CreateRoomInput["scoringMode"]) {
-    setActionError(null);
-    setStartingQuizId(quiz.id);
-    try {
-      const { pin } = await createRoom({ quizId: quiz.id, scoringMode });
-      navigate(`/host/${pin}`);
-    } catch (error) {
-      setActionError(describeError(error));
-      setStartingQuizId(null);
-    }
-  }
+  const needle = query.trim().toLocaleLowerCase("id");
+  const shown =
+    state.kind === "ready" ? state.quizzes.filter((quiz) => quiz.title.toLocaleLowerCase("id").includes(needle)) : [];
 
-  async function handleLogout() {
-    setActionError(null);
+  return (
+    <div className="buku">
+      <TeacherHeader />
+      <main className="buku-isi">
+        <div className="buku-judul">
+          <div>
+            <h1>Kuis saya</h1>
+            {state.kind === "ready" && state.quizzes.length > 0 && (
+              <p className="buku-lead">{state.quizzes.length} kuis. Kuis yang sudah punya soal bisa langsung dimainkan.</p>
+            )}
+          </div>
+          <Link className="button button-primary" to="/quizzes/new">
+            Buat kuis baru
+          </Link>
+        </div>
+
+        {actionError && (
+          <p className="alert" role="alert">
+            {actionError}
+          </p>
+        )}
+
+        {state.kind === "loading" && <p role="status">Memuat daftar kuis…</p>}
+        {state.kind === "error" && (
+          <p className="alert" role="alert">
+            {state.message}
+          </p>
+        )}
+        {state.kind === "ready" && state.quizzes.length === 0 && (
+          <p className="empty">Belum ada kuis. Buat kuis pertamamu dengan tombol "Buat kuis baru".</p>
+        )}
+        {state.kind === "ready" && state.quizzes.length > 0 && (
+          <>
+            <div className="buku-cari">
+              <label htmlFor="quiz-search" className="visually-hidden">
+                Cari judul kuis
+              </label>
+              <input
+                id="quiz-search"
+                type="search"
+                placeholder="Cari judul kuis"
+                value={query}
+                onChange={(event) => setQuery(event.target.value)}
+              />
+            </div>
+            {shown.length === 0 && <p className="empty">Tidak ada kuis dengan judul itu.</p>}
+            <ul className="buku-daftar">
+              {shown.map((quiz) => (
+                <QuizRow key={quiz.id} quiz={quiz} onPlay={() => setPlaying(quiz)} onDelete={() => handleDelete(quiz)} />
+              ))}
+            </ul>
+          </>
+        )}
+      </main>
+      {playing && <PlayDialog quiz={playing} onClose={() => setPlaying(null)} />}
+    </div>
+  );
+}
+
+function QuizRow({ quiz, onPlay, onDelete }: { quiz: QuizSummary; onPlay: () => void; onDelete: () => void }) {
+  // Room butuh minimal satu soal; server juga menolaknya dengan 409. Soal yang tersimpan selalu lengkap
+  // (divalidasi saat simpan), jadi satu-satunya kuis yang belum bisa dimainkan adalah kuis tanpa soal.
+  const playable = quiz.questionCount > 0;
+  return (
+    <li className="buku-baris">
+      <div className="buku-baris-isi">
+        <p className="buku-baris-judul">{quiz.title}</p>
+        <p className="muted">
+          {playable ? `${quiz.questionCount} soal` : "Draf"}, diubah {updatedAtFormat.format(quiz.updatedAt)}
+        </p>
+        {!playable && <p className="buku-peringatan">Belum bisa dimainkan: kuis ini belum punya soal.</p>}
+      </div>
+      <div className="quiz-actions">
+        {playable ? (
+          <button type="button" className="button button-tinta" onClick={onPlay}>
+            Mainkan
+          </button>
+        ) : (
+          <Link className="button" to={`/quizzes/${quiz.id}`}>
+            Lengkapi soal
+          </Link>
+        )}
+        <Link className="button" to={`/quizzes/${quiz.id}`} aria-label={`Ubah ${quiz.title}`}>
+          Ubah
+        </Link>
+        <button type="button" className="button button-teks button-teks-bahaya" onClick={onDelete} aria-label={`Hapus ${quiz.title}`}>
+          Hapus
+        </button>
+      </div>
+    </li>
+  );
+}
+
+/** Guru-4: pilih mode skor lalu buka room. <dialog> bawaan browser: fokus terkunci di dialog, Esc menutupnya. */
+function PlayDialog({ quiz, onClose }: { quiz: QuizSummary; onClose: () => void }) {
+  const navigate = useNavigate();
+  const dialog = useRef<HTMLDialogElement | null>(null);
+  const titleId = useId();
+  const [mode, setMode] = useState<CreateRoomInput["scoringMode"]>("classic");
+  const [starting, setStarting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const element = dialog.current;
+    element?.showModal();
+    return () => element?.close();
+  }, []);
+
+  async function handleStart() {
+    setError(null);
+    setStarting(true);
     try {
-      await logout();
-      navigate("/login", { replace: true });
-    } catch (error) {
-      setActionError(describeError(error));
+      const { pin } = await createRoom({ quizId: quiz.id, scoringMode: mode });
+      navigate(`/host/${pin}`);
+    } catch (caught) {
+      setError(describeError(caught));
+      setStarting(false);
     }
   }
 
   return (
-    <main className="page">
-      <header className="page-header">
-        <div>
-          <Logo />
-          <h1>Kuis saya</h1>
-          <p className="muted">Masuk sebagai {host.displayName}</p>
-        </div>
-        <div className="header-actions">
-          <Link className="button" to="/games">
-            Riwayat
-          </Link>
-          <button type="button" className="button" onClick={handleLogout}>
-            Keluar
-          </button>
-        </div>
-      </header>
-
-      <Link className="button button-primary" to="/quizzes/new">
-        Kuis baru
-      </Link>
-
-      {actionError && (
+    <dialog ref={dialog} className="mode-dialog" aria-labelledby={titleId} onCancel={onClose}>
+      <p className="muted-strong">Mainkan</p>
+      <h2 id={titleId} className="mode-dialog-title">
+        {quiz.title}
+      </h2>
+      <p className="buku-lead">{quiz.questionCount} soal. Pilih cara menghitung poin.</p>
+      <fieldset className="mode-cards">
+        <legend className="visually-hidden">Cara menghitung poin</legend>
+        {PLAYABLE_MODES.map((option) => (
+          <label key={option} className="mode-card">
+            <input
+              type="radio"
+              name="scoring-mode"
+              value={option}
+              checked={mode === option}
+              disabled={starting}
+              onChange={() => setMode(option)}
+            />
+            <span className="mode-card-name">{SCORING_MODES[option].name}</span>
+            <span className="mode-card-text">{SCORING_MODES[option].description}</span>
+          </label>
+        ))}
+      </fieldset>
+      {error && (
         <p className="alert" role="alert">
-          {actionError}
+          {error}
         </p>
       )}
-
-      {state.kind === "loading" && <p role="status">Memuat daftar kuis…</p>}
-      {state.kind === "error" && (
-        <p className="alert" role="alert">
-          {state.message}
-        </p>
-      )}
-      {state.kind === "ready" && state.quizzes.length === 0 && (
-        <p className="empty">Belum ada kuis. Buat kuis pertamamu dengan tombol "Kuis baru".</p>
-      )}
-      {state.kind === "ready" && state.quizzes.length > 0 && (
-        <ul className="quiz-list">
-          {state.quizzes.map((quiz) => (
-            <li key={quiz.id} className="quiz-item">
-              <div>
-                <Link className="quiz-title" to={`/quizzes/${quiz.id}`}>
-                  {quiz.title}
-                </Link>
-                <p className="muted">
-                  {quiz.questionCount} soal · diubah {updatedAtFormat.format(quiz.updatedAt)}
-                </p>
-              </div>
-              <div className="quiz-actions">
-                {/* Room butuh minimal satu soal; server juga menolaknya dengan 409. */}
-                <button
-                  type="button"
-                  className="button button-primary"
-                  disabled={quiz.questionCount === 0 || startingQuizId !== null}
-                  aria-expanded={choosingQuizId === quiz.id}
-                  onClick={() => setChoosingQuizId(choosingQuizId === quiz.id ? null : quiz.id)}
-                >
-                  {startingQuizId === quiz.id ? "Membuka…" : "Mainkan"}
-                </button>
-                <button type="button" className="button button-danger" onClick={() => handleDelete(quiz)}>
-                  Hapus
-                </button>
-              </div>
-              {choosingQuizId === quiz.id && (
-                <div className="mode-choice" role="group" aria-label={`Pilih mode skor untuk ${quiz.title}`}>
-                  {PLAYABLE_MODES.map((mode) => (
-                    <button
-                      key={mode}
-                      type="button"
-                      className="button mode-option"
-                      disabled={startingQuizId !== null}
-                      onClick={() => handlePlay(quiz, mode)}
-                    >
-                      <strong>{SCORING_MODES[mode].name}</strong>
-                      <span className="muted">{SCORING_MODES[mode].hint}</span>
-                    </button>
-                  ))}
-                </div>
-              )}
-            </li>
-          ))}
-        </ul>
-      )}
-    </main>
+      <div className="mode-dialog-actions">
+        <button type="button" className="button button-teks" onClick={onClose} disabled={starting}>
+          Batal
+        </button>
+        <button type="button" className="button button-tinta" onClick={handleStart} disabled={starting}>
+          {starting ? "Membuka ruang…" : "Buka ruang dan tampilkan PIN"}
+        </button>
+      </div>
+    </dialog>
   );
 }

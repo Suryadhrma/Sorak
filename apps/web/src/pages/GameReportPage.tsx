@@ -3,9 +3,9 @@ import { Link, useLocation, useParams } from "react-router";
 import { REPORT_RETRY_ATTEMPTS, REPORT_RETRY_DELAY_MS, type GameDetail, type GameQuestionResult } from "@sorak/shared";
 import { AnswerTile, answerLetter } from "../AnswerOption.tsx";
 import { ApiRequestError, describeError, getGame } from "../api.ts";
-import { Logo } from "../Logo.tsx";
 import { PodiumNavigationState, correctPercent, needsReview, reportRetryStep, topDistractor } from "../report.ts";
 import { SCORING_MODES } from "../scoring-modes.ts";
+import { TeacherHeader } from "../TeacherHeader.tsx";
 import { useTheme } from "../theme.ts";
 
 type ReportState =
@@ -65,41 +65,39 @@ export function GameReportPage() {
   }
 
   return (
-    <main className="page buku">
-      <header className="page-header">
-        <div>
-          <Logo />
-          <h1>Rapor kelas</h1>
-        </div>
-        <Link className="button" to="/games">
-          Riwayat
-        </Link>
-      </header>
+    <div className="buku">
+      <TeacherHeader />
+      <main className="buku-isi">
+        <p>
+          <Link to="/games">Kembali ke Riwayat</Link>
+        </p>
+        <h1>Rapor kelas</h1>
 
-      {state.kind === "loading" && (
-        <p className="page-status" role="status">
-          Memuat laporan…
+        {state.kind === "loading" && (
+          <p className="page-status" role="status">
+            Memuat laporan…
         </p>
-      )}
-      {state.kind === "saving" && (
-        <p className="page-status" role="status">
-          Laporan sedang disimpan…
+        )}
+        {state.kind === "saving" && (
+          <p className="page-status" role="status">
+            Laporan sedang disimpan…
         </p>
-      )}
-      {state.kind === "error" && (
-        <>
-          <p className="alert" role="alert">
-            {state.message}
-          </p>
-          {state.canRetry && (
-            <button type="button" className="button" onClick={retry}>
-              Coba lagi
-            </button>
-          )}
-        </>
-      )}
-      {state.kind === "ready" && <Report game={state.game} />}
-    </main>
+        )}
+        {state.kind === "error" && (
+          <>
+            <p className="alert" role="alert">
+              {state.message}
+            </p>
+            {state.canRetry && (
+              <button type="button" className="button" onClick={retry}>
+                Coba lagi
+              </button>
+            )}
+          </>
+        )}
+        {state.kind === "ready" && <Report game={state.game} />}
+      </main>
+    </div>
   );
 }
 

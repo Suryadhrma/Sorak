@@ -117,6 +117,33 @@
   /* Kertas bergaris buku (board Guru-2): jarak garis dan posisi garis margin merah. */
   --buku-baris: 2.25rem;
   --buku-margin-x: 5.5rem;
+  /* Halaman guru (board Guru-1 sampai 4). */
+  --kapur-muda: #fff8dc;
+  --space-5: 2.5rem;
+  --buku-isi-max: 67.5rem;
+  --buku-header-tinggi: 4.75rem;
+  --buku-daftar-lebar: 17rem;
+  --tombol-guru: 3rem;
+  --tombol-guru-besar: 3.625rem;
+  --ubin-pilihan: 3.5rem;
+  /* Lebar tetap pil "Tandai benar" / "Jawaban benar", supaya kotak isian setiap pilihan sama panjang. */
+  --tandai-lebar: 8.5rem;
+  --radius-tombol-guru: 12px;
+  --radius-dialog: 24px;
+  --shadow-dialog: 0 8px 0 var(--tinta);
+  --shadow-papan-login: inset 0 0 0 8px var(--papan-garis), 0 6px 0 var(--tinta);
+  --login-papan-miring: 1.5deg;
+  --font-size-guru-judul: clamp(2rem, 4vw, 2.75rem);
+  --font-size-guru-baris: 1.4375rem;
+  --font-size-guru-sub: 1.375rem;
+  --font-size-guru-lead: 1.0625rem;
+  --font-size-tombol-besar: 1.125rem;
+  --font-size-dialog-judul: 2rem;
+  --font-size-editor-nomor: 2.5rem;
+  --font-size-login-judul: clamp(2.25rem, 4.5vw, 3.25rem);
+  --font-size-login-lead: 1.1875rem;
+  --font-size-logo-besar: 3.25rem;
+  --logo-besar: 3.5rem;
 }
 
 /* Tema kertas (bawaan): layar proyektor, login, dan halaman guru. */
@@ -213,14 +240,6 @@ a {
   padding: var(--space-3);
 }
 
-.page-header {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: space-between;
-  align-items: flex-start;
-  gap: var(--space-2);
-}
-
 .muted {
   color: var(--color-muted);
   font-size: var(--font-size-small);
@@ -302,82 +321,12 @@ textarea {
   margin: 0;
 }
 
-.quiz-list,
 .question-list {
   list-style: none;
   margin: 0;
   padding: 0;
   display: grid;
   gap: var(--space-3);
-}
-
-.quiz-item {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: var(--space-2);
-  padding: var(--space-3);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-kecil);
-}
-
-.quiz-title {
-  font-weight: 600;
-  overflow-wrap: anywhere;
-}
-
-.question-card fieldset {
-  margin: 0;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-kecil);
-  padding: var(--space-3);
-  display: grid;
-  gap: var(--space-3);
-}
-
-.question-card legend {
-  font-weight: 600;
-  padding: 0 var(--space-1);
-}
-
-.question-card .options {
-  border-style: dashed;
-}
-
-.option-row {
-  display: grid;
-  grid-template-columns: var(--tap-target) 1fr auto;
-  align-items: center;
-  gap: var(--space-2);
-}
-
-.option-row input[type="radio"] {
-  width: 1.25rem;
-  height: 1.25rem;
-  justify-self: center;
-}
-
-.option-row .field-error {
-  grid-column: 2 / -1;
-}
-
-.question-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-2);
-}
-
-.save-bar {
-  position: sticky;
-  bottom: 0;
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: flex-end;
-  gap: var(--space-2);
-  padding: var(--space-2) 0;
-  background: var(--color-background);
-  border-top: 1px solid var(--color-border);
 }
 
 .visually-hidden {
@@ -388,17 +337,6 @@ textarea {
   overflow: hidden;
   clip: rect(0 0 0 0);
   white-space: nowrap;
-}
-
-@media (max-width: 400px) {
-  .option-row {
-    grid-template-columns: var(--tap-target) 1fr;
-  }
-
-  .option-row .button {
-    grid-column: 2;
-    justify-self: start;
-  }
 }
 
 /* Siswa: halaman PIN, nickname, dan lobby. */
@@ -726,25 +664,6 @@ button.answer-selected:disabled {
   overflow-wrap: anywhere;
 }
 
-/* Pilihan mode di Kuis saya. */
-
-.quiz-item {
-  flex-wrap: wrap;
-}
-
-.mode-choice {
-  flex-basis: 100%;
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
-  gap: var(--space-2);
-}
-
-.mode-option {
-  flex-direction: column;
-  align-items: flex-start;
-  text-align: left;
-}
-
 /* Angka besar dan huruf kartu memakai font angka (hanya bobot 800 yang dimuat). */
 .countdown,
 .score-big,
@@ -783,29 +702,746 @@ button.answer-selected:disabled {
   color: var(--color-text);
 }
 
-/* Riwayat dan laporan guru: kertas bergaris buku (board Guru-2). */
+/*
+ * Halaman guru (board Guru-1 sampai 4, Riwayat, Laporan): kertas bergaris buku. Tombol dan kotak isian di sini
+ * memakai gaya board (bingkai tinta dan alas), terbatas di dalam .buku supaya layar HP dan proyektor tidak berubah.
+ */
 
 .buku {
-  max-width: none;
   min-height: 100vh;
-  padding-inline: max(var(--space-3), calc((100% - var(--page-max-width)) / 2));
   background-color: var(--kertas-putih);
   background-image: repeating-linear-gradient(180deg, transparent 0 calc(var(--buku-baris) - 1px), var(--buku-garis) calc(var(--buku-baris) - 1px) var(--buku-baris));
 }
 
-/* Garis margin merah hanya di layar lebar: di HP akan menabrak isi halaman. */
+.buku h1 {
+  margin: 0;
+  font-size: var(--font-size-guru-judul);
+  font-weight: 800;
+  line-height: 1.05;
+  letter-spacing: -0.015em;
+}
+
+.buku h2,
+.buku p {
+  margin: 0;
+}
+
+.buku-header {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-4);
+  min-height: var(--buku-header-tinggi);
+  padding: var(--space-2) var(--space-3);
+  background: var(--kertas);
+  border-bottom: 2px solid var(--garis);
+}
+
+.buku-header-logo {
+  text-decoration: none;
+}
+
+.buku-nav {
+  display: flex;
+  gap: var(--space-3);
+  font-weight: 700;
+}
+
+.buku-nav a {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--tap-target);
+  color: var(--color-muted);
+  text-decoration: none;
+}
+
+.buku-nav a[aria-current="page"] {
+  color: var(--color-text);
+  text-decoration: underline 3px var(--kapur);
+  text-underline-offset: 0.4em;
+}
+
+.buku-akun {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-weight: 700;
+}
+
+.buku-nama {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.buku-avatar {
+  display: grid;
+  place-items: center;
+  width: var(--tap-target);
+  height: var(--tap-target);
+  border-radius: 50%;
+  background: var(--kapur);
+  font-weight: 800;
+}
+
+.buku-header-alert {
+  flex-basis: 100%;
+}
+
+.buku-isi {
+  display: grid;
+  align-content: start;
+  gap: var(--space-4);
+  max-width: var(--buku-isi-max);
+  padding: var(--space-4) var(--space-3) var(--space-5);
+}
+
+/* Garis margin merah hanya di layar lebar: di HP akan menabrak isi halaman. Isi mulai di kanan garis itu. */
 @media (min-width: 64rem) {
   .buku {
     background-image:
       linear-gradient(90deg, transparent calc(var(--buku-margin-x) - 1px), var(--buku-margin) calc(var(--buku-margin-x) - 1px) calc(var(--buku-margin-x) + 1px), transparent calc(var(--buku-margin-x) + 1px)),
       repeating-linear-gradient(180deg, transparent 0 calc(var(--buku-baris) - 1px), var(--buku-garis) calc(var(--buku-baris) - 1px) var(--buku-baris));
   }
+
+  .buku-header,
+  .buku-isi {
+    padding-left: calc(var(--buku-margin-x) + var(--space-5));
+    padding-right: var(--space-5);
+  }
 }
 
-.header-actions {
+/* Tombol yang berdiri sendiri di kolom isi (Muat lebih banyak, Tambah soal, Coba lagi) tidak melebar. */
+.buku-isi > .button {
+  justify-self: start;
+}
+
+.buku-judul {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: var(--space-3);
+}
+
+.buku-judul > div {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.buku-lead {
+  color: var(--color-muted);
+  font-size: var(--font-size-guru-lead);
+}
+
+.buku-cari {
+  max-width: 26rem;
+}
+
+.muted-strong {
+  color: var(--color-muted);
+  font-weight: 700;
+}
+
+.buku .button {
+  min-height: var(--tombol-guru);
+  padding: 0 calc(var(--space-3) + var(--space-1));
+  border: 0;
+  border-radius: var(--radius-tombol-guru);
+  background: var(--kertas-putih);
+  color: var(--tinta);
+  font-weight: 800;
+  white-space: nowrap;
+  box-shadow: inset 0 0 0 2px var(--tinta), var(--shadow-alas);
+}
+
+.buku .button-primary {
+  background: var(--kapur);
+  box-shadow: var(--shadow-alas);
+}
+
+.buku .button-tinta {
+  background: var(--tinta);
+  color: var(--kapur);
+  box-shadow: var(--shadow-alas-gelap);
+}
+
+.buku .button-teks {
+  padding-inline: var(--space-2);
+  background: none;
+  color: var(--color-muted);
+  font-weight: 700;
+  box-shadow: none;
+}
+
+.buku .button-teks-bahaya {
+  color: var(--color-danger);
+}
+
+.buku .button-besar {
+  min-height: var(--tombol-guru-besar);
+  padding-inline: var(--space-4);
+  font-size: var(--font-size-tombol-besar);
+}
+
+.buku input:not([type="radio"]),
+.buku textarea {
+  min-height: var(--tombol-guru);
+  padding: var(--space-2) var(--space-3);
+  border: 0;
+  border-radius: var(--radius-tombol-guru);
+  background: var(--kertas-putih);
+  box-shadow: inset 0 0 0 2px var(--garis);
+}
+
+.buku [aria-invalid="true"] {
+  box-shadow: inset 0 0 0 2px var(--color-danger);
+}
+
+.buku .field > label {
+  color: var(--color-muted);
+  font-size: var(--font-size-small);
+  font-weight: 700;
+}
+
+/* Guru-2 dan Riwayat: satu baris kertas per kuis atau game. */
+.buku-daftar {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.buku-baris {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+  min-height: calc(var(--buku-baris) * 3);
+  padding: var(--space-3) 0;
+  border-bottom: 2px solid var(--garis);
+}
+
+.buku-baris-isi {
+  flex: 1 1 16rem;
+  min-width: 0;
+  display: grid;
+  gap: var(--space-1);
+}
+
+.buku-baris-judul {
+  font-size: var(--font-size-guru-baris);
+  font-weight: 800;
+  color: var(--color-text);
+  overflow-wrap: anywhere;
+}
+
+a.buku-baris-judul {
+  text-decoration: none;
+}
+
+a.buku-baris-judul:hover {
+  text-decoration: underline;
+}
+
+.buku-peringatan {
+  color: var(--color-danger);
+  font-size: var(--font-size-small);
+  font-weight: 700;
+}
+
+.quiz-actions {
+  align-items: center;
+}
+
+/* Guru-4: dialog pilih mode. Mode yang dipilih = kartu kapur muda berbingkai tinta. */
+.mode-dialog {
+  width: min(42.5rem, 100% - 2 * var(--space-3));
+  max-width: none;
+  padding: var(--space-5) var(--space-4) var(--space-4);
+  border: 0;
+  border-radius: var(--radius-dialog);
+  background: var(--kertas);
+  color: var(--tinta);
+  box-shadow: var(--shadow-dialog);
+}
+
+.mode-dialog[open] {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.mode-dialog::backdrop {
+  background: var(--tinta);
+  opacity: 0.6;
+}
+
+.mode-dialog p,
+.mode-dialog-title {
+  margin: 0;
+}
+
+.mode-dialog-title {
+  font-size: var(--font-size-dialog-judul);
+  font-weight: 800;
+  line-height: 1.1;
+  overflow-wrap: anywhere;
+}
+
+.mode-cards {
+  margin: var(--space-3) 0 0;
+  padding: 0;
+  border: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+  gap: var(--space-3);
+}
+
+.mode-card {
+  display: grid;
+  align-content: start;
+  gap: var(--space-2);
+  padding: calc(var(--space-3) + var(--space-1));
+  border-radius: var(--radius-panel);
+  background: var(--kertas-putih);
+  box-shadow: inset 0 0 0 2px var(--garis);
+  cursor: pointer;
+}
+
+.mode-card:has(:checked) {
+  background: var(--kapur-muda);
+  box-shadow: inset 0 0 0 3px var(--tinta), var(--shadow-alas);
+}
+
+.mode-card:has(:focus-visible) {
+  outline: 3px solid var(--color-focus);
+  outline-offset: 2px;
+}
+
+.mode-card input {
+  width: var(--space-4);
+  height: var(--space-4);
+  margin: 0;
+  accent-color: var(--tinta);
+}
+
+.mode-card-name {
+  font-size: var(--font-size-guru-sub);
+  font-weight: 800;
+}
+
+.mode-card-text {
+  color: var(--color-muted);
+}
+
+.mode-dialog-actions {
+  margin-top: var(--space-4);
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+/* Guru-1: ajakan di kiri, contoh layar depan kelas (papan gelap, sedikit miring) di kanan. */
+.login {
+  min-height: 100vh;
+  align-content: center;
+}
+
+.login-isi {
+  display: grid;
+  justify-items: start;
+  gap: var(--space-3);
+}
+
+.login-isi .logo-mark {
+  width: var(--logo-besar);
+  height: var(--logo-besar);
+}
+
+.login-isi .logo-wordmark {
+  font-size: var(--font-size-logo-besar);
+}
+
+/* .buku h1 lebih spesifik dari .login-judul, jadi ukurannya ditimpa lewat .buku. */
+.buku .login-judul {
+  margin-top: var(--space-3);
+  max-width: 35rem;
+  font-size: var(--font-size-login-judul);
+  line-height: 1.08;
+}
+
+.login .buku-lead {
+  max-width: 32.5rem;
+  font-size: var(--font-size-login-lead);
+  line-height: 1.6;
+}
+
+.buku .login-catatan {
+  margin-top: var(--space-3);
+}
+
+.login-papan {
+  display: none;
+}
+
+@media (min-width: 56rem) {
+  .login {
+    grid-template-columns: minmax(0, 1fr) 26rem;
+    align-items: center;
+    gap: var(--space-5);
+  }
+
+  /* Peran warna ditimpa di dalam panel, supaya FlapDigits dan Tally tampil seperti di papan. */
+  .login-papan {
+    --color-surface: var(--papan-2);
+    --color-text: var(--kapur-putih);
+    display: grid;
+    gap: var(--space-3);
+    padding: var(--space-4);
+    border-radius: var(--radius-dialog);
+    background: var(--papan);
+    color: var(--kapur-putih);
+    box-shadow: var(--shadow-papan-login);
+    transform: rotate(var(--login-papan-miring));
+  }
+}
+
+.login-papan-label,
+.login-papan-hitung {
+  color: var(--kapur-redup);
+  font-size: var(--font-size-small);
+  font-weight: 700;
+}
+
+.login-papan-pin {
+  display: flex;
+  gap: var(--space-3);
+  font-size: var(--font-size-countdown);
+}
+
+.login-papan-hitung {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.login-papan-hitung .tally {
+  height: 1.5em;
+  color: var(--kapur);
+}
+
+.login-papan-skor {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: var(--space-2);
+}
+
+.login-papan-skor li {
+  display: grid;
+  grid-template-columns: 2rem minmax(0, 1fr);
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.login-papan-peringkat,
+.login-papan-poin {
+  font-family: var(--font-angka);
+  font-weight: 800;
+  font-size: var(--font-size-title);
+}
+
+.login-papan-peringkat {
+  color: var(--kapur);
+  text-align: center;
+}
+
+.login-papan-baris {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  min-height: var(--tap-target);
+  padding: 0 var(--space-3);
+  border-radius: var(--radius-kecil);
+  background: var(--papan-2);
+  font-weight: 800;
+}
+
+/* Baris kedua = pemain yang baru naik peringkat (bingkai kapur, seperti papan skor proyektor). */
+.login-papan-skor li:nth-child(2) .login-papan-baris {
+  box-shadow: inset 0 0 0 2px var(--kapur);
+}
+
+/* Guru-3: kepala berisi jejak halaman dan Simpan; di layar lebar daftar soal menempel di kiri. */
+.editor-header {
+  justify-content: space-between;
+}
+
+.editor-jejak {
+  flex: 1 1 16rem;
+  min-width: 0;
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+}
+
+.editor-jejak a {
+  color: var(--color-muted);
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.editor-jejak > span[aria-hidden="true"] {
+  color: var(--garis);
+  font-size: var(--font-size-guru-sub);
+}
+
+.editor-jejak-judul {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: var(--font-size-guru-sub);
+  font-weight: 800;
+}
+
+.editor-simpan {
+  margin-left: auto;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.editor-simpan p {
+  font-weight: 700;
+}
+
+.editor-daftar {
+  display: none;
+}
+
+@media (min-width: 64rem) {
+  .editor-tata {
+    display: grid;
+    grid-template-columns: var(--buku-daftar-lebar) minmax(0, 1fr);
+    gap: var(--space-5);
+    max-width: calc(var(--buku-isi-max) + var(--buku-daftar-lebar));
+    padding-left: calc(var(--buku-margin-x) + var(--space-3));
+  }
+
+  .editor-tata > .editor-isi {
+    grid-column: 2;
+    padding-left: 0;
+  }
+
+  .editor-daftar {
+    position: sticky;
+    top: var(--buku-header-tinggi);
+    align-self: start;
+    display: block;
+    max-height: calc(100vh - var(--buku-header-tinggi));
+    overflow-y: auto;
+    padding-top: var(--space-4);
+  }
+}
+
+.editor-daftar > p {
+  padding: 0 var(--space-3);
+}
+
+.editor-daftar ol {
+  list-style: none;
+  margin: var(--space-2) 0 0;
+  padding: 0;
+  display: grid;
+  gap: var(--space-1);
+}
+
+.editor-daftar a {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-tombol-guru);
+  color: var(--color-muted);
+  text-decoration: none;
+}
+
+.editor-daftar a:hover {
+  background: var(--kapur);
+  color: var(--tinta);
+}
+
+.editor-daftar-nomor {
+  flex: none;
+  width: var(--space-4);
+  color: var(--color-text);
+  font-family: var(--font-angka);
+  font-weight: 800;
+  font-size: var(--font-size-title);
+}
+
+.editor-daftar-teks {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: var(--font-size-small);
+  font-weight: 700;
+}
+
+.question-card {
+  scroll-margin-top: calc(var(--buku-header-tinggi) + var(--space-3));
+}
+
+.question-card > fieldset {
+  margin: 0;
+  padding: 0 0 var(--space-4);
+  border: 0;
+  border-bottom: 2px solid var(--garis);
+  display: grid;
+  gap: var(--space-3);
+}
+
+.question-card > fieldset > legend {
+  padding: 0;
+  margin-bottom: var(--space-3);
+  font-family: var(--font-angka);
+  font-weight: 800;
+  font-size: var(--font-size-editor-nomor);
+  line-height: 1;
+}
+
+.buku .editor-pertanyaan {
+  font-size: var(--font-size-guru-sub);
+  font-weight: 700;
+  line-height: 1.4;
+}
+
+.question-card .options {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  display: grid;
+  gap: var(--space-3);
+}
+
+.question-card .options > legend {
+  padding: 0;
+  margin-bottom: var(--space-2);
+  color: var(--color-muted);
+  font-size: var(--font-size-small);
+  font-weight: 700;
+}
+
+.question-card .options > .button {
+  justify-self: start;
+}
+
+.option-row {
+  display: grid;
+  grid-template-columns: var(--ubin-pilihan) minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: var(--space-2) var(--space-3);
+}
+
+.option-row .answer-tile {
+  display: grid;
+  place-items: center;
+  width: var(--ubin-pilihan);
+  height: var(--ubin-pilihan);
+  border-radius: var(--radius-tombol-guru);
+  box-shadow: inset 0 calc(var(--lipatan) * 0.7) 0 var(--kartu-lipatan);
+  font-size: var(--font-size-countdown);
+}
+
+/* Cincin benar di ubin huruf pilihan yang ditandai benar (board Guru-3). */
+.option-row:has(.tandai-benar :checked) .answer-tile {
+  box-shadow: 0 0 0 3px var(--kertas-putih), 0 0 0 6px var(--benar);
+}
+
+.buku .option-row input:not([type="radio"]) {
+  min-height: var(--ubin-pilihan);
+}
+
+.option-row .field-error {
+  grid-column: 2 / -1;
+}
+
+/* Radio disembunyikan secara visual; pil itu sendiri penandanya, dan teksnya berubah (bukan hanya warnanya). */
+.tandai-benar {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: var(--tandai-lebar);
+  min-height: var(--tap-target);
+  padding: 0 var(--space-3);
+  border-radius: var(--radius-tombol-guru);
+  box-shadow: inset 0 0 0 2px var(--garis);
+  color: var(--color-muted);
+  font-size: var(--font-size-small);
+  font-weight: 700;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.tandai-benar input {
+  position: absolute;
+  opacity: 0;
+  width: 1px;
+  height: 1px;
+  margin: 0;
+}
+
+.tandai-benar:has(:checked) {
+  background: var(--benar);
+  color: var(--kertas-putih);
+  box-shadow: none;
+  font-weight: 800;
+}
+
+.tandai-benar:has(:focus-visible) {
+  outline: 3px solid var(--color-focus);
+  outline-offset: 2px;
+}
+
+@media (max-width: 30rem) {
+  .option-row {
+    grid-template-columns: var(--ubin-pilihan) minmax(0, 1fr);
+  }
+
+  .option-row .tandai-benar {
+    grid-column: 2;
+    grid-row: 2;
+    justify-self: start;
+  }
+
+  .option-row .button-teks {
+    grid-column: 1;
+    grid-row: 2;
+  }
+}
+
+.editor-waktu input {
+  max-width: 8rem;
+}
+
+.question-actions {
   display: flex;
   flex-wrap: wrap;
   gap: var(--space-2);
+}
+
+.question-actions .button-teks-bahaya {
+  margin-left: auto;
 }
 
 .report-head h2,
