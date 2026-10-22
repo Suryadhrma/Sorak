@@ -3,7 +3,8 @@ import { describe, expect, it } from "vitest";
 import { countdownDisplay } from "../src/countdown.ts";
 import { flapDigits } from "../src/motion/flap.ts";
 import { leaderboardMoves } from "../src/motion/flip.ts";
-import { TALLY_GROUP_WIDTH, tallyMarks } from "../src/motion/tally.ts";
+import { MAX_ROW_ORDER, rowOrder } from "../src/motion/row-order.ts";
+import { TALLY_GROUP_WIDTH, tallyDrawOrder, tallyMarks } from "../src/motion/tally.ts";
 
 describe("tallyMarks", () => {
   it.each([
@@ -29,6 +30,16 @@ describe("tallyMarks", () => {
     const after = tallyMarks(6).map((mark) => mark.key);
     expect(after.slice(0, 4)).toEqual(before);
     expect(after.slice(4).filter((key) => before.includes(key))).toEqual([]);
+  });
+});
+
+describe("tallyDrawOrder", () => {
+  it("layar baru: semua garis digambar berurutan dari garis pertama", () => {
+    expect([0, 1, 2, 11].map((index) => tallyDrawOrder(null, index))).toEqual([0, 1, 2, 11]);
+  });
+
+  it("jumlah bertambah dari 4 ke 6: garis baru mulai dari urutan 0, tanpa menunggu garis lama", () => {
+    expect([4, 5].map((index) => tallyDrawOrder(4, index))).toEqual([0, 1]);
   });
 });
 
@@ -107,5 +118,11 @@ describe("countdownDisplay", () => {
 
   it("sisa lebih dari durasi (snapshot setelah resume) tidak membuat batang lebih dari penuh", () => {
     expect(countdownDisplay(25_000, 20_000).fraction).toBe(1);
+  });
+});
+
+describe("rowOrder", () => {
+  it("baris awal berurutan, baris setelah batas memakai jeda yang sama dengan baris terakhir yang dibatasi", () => {
+    expect([0, 1, MAX_ROW_ORDER, MAX_ROW_ORDER + 1, 40].map(rowOrder)).toEqual([0, 1, MAX_ROW_ORDER, MAX_ROW_ORDER, MAX_ROW_ORDER]);
   });
 });

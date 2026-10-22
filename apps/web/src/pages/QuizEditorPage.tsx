@@ -26,6 +26,15 @@ function FieldError({ id, message }: { id: string; message: string | undefined }
   );
 }
 
+/** Centang yang digambar sekali (stroke-dashoffset), dipakai di pil "Jawaban benar" dan "Tersimpan". */
+function CheckMark() {
+  return (
+    <svg className="check-mark" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+      <path d="M4 12.5l5 5L20 6.5" pathLength={1} />
+    </svg>
+  );
+}
+
 /** Atribut untuk kotak isian yang punya pesan error di bawahnya. */
 function invalidProps(errorId: string, message: string | undefined) {
   return message ? { "aria-invalid": true, "aria-describedby": errorId } : {};
@@ -40,6 +49,8 @@ export function QuizEditorPage() {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
   const [notice, setNotice] = useState<{ kind: "success" | "error"; text: string } | null>(null);
+  // Soal yang sedang diedit (fokus terakhir), ditandai kapur di daftar soal kiri.
+  const [activeKey, setActiveKey] = useState<string | null>(null);
 
   useEffect(() => {
     if (!id) return;
@@ -89,7 +100,7 @@ export function QuizEditorPage() {
     try {
       const saved = id ? await updateQuiz(id, validation.input) : await createQuiz(validation.input);
       setDraft(draftFromQuiz(saved));
-      setNotice({ kind: "success", text: "Kuis tersimpan." });
+      setNotice({ kind: "success", text: "Tersimpan" });
       if (!id) navigate(`/quizzes/${saved.id}`, { replace: true });
     } catch (error) {
       if (error instanceof ApiRequestError && error.code === "VALIDATION_FAILED") setErrors(error.fields);
@@ -137,6 +148,7 @@ export function QuizEditorPage() {
         <div className="editor-simpan">
           {notice && (
             <p className={notice.kind === "success" ? "notice" : "alert"} role={notice.kind === "success" ? "status" : "alert"}>
+              {notice.kind === "success" && <CheckMark />}
               {notice.text}
             </p>
           )}
@@ -153,7 +165,11 @@ export function QuizEditorPage() {
             <ol>
               {draft.questions.map((question, index) => (
                 <li key={question.key}>
-                  <a href={`#soal-${index + 1}`}>
+                  <a
+                    href={`#soal-${index + 1}`}
+                    aria-current={activeKey === question.key ? "location" : undefined}
+                    onClick={() => setActiveKey(question.key)}
+                  >
                     <span className="editor-daftar-nomor">{index + 1}</span>
                     <span className="editor-daftar-teks">{question.prompt.trim() || "Soal tanpa teks"}</span>
                   </a>
@@ -193,7 +209,7 @@ export function QuizEditorPage() {
               const path = `questions.${index}`;
               const fieldId = (name: string) => `${question.key}-${name}`;
               return (
-                <li key={question.key} id={`soal-${index + 1}`} className="question-card">
+                <li key={question.key} id={`soal-${index + 1}`} className="question-card" onFocus={() => setActiveKey(question.key)}>
                   <fieldset>
                     <legend>Soal {index + 1}</legend>
 
@@ -241,6 +257,7 @@ export function QuizEditorPage() {
                                 checked={correct}
                                 onChange={() => updateQuestion(index, { correctIndex: optionIndex })}
                               />
+                              {correct && <CheckMark />}
                               {correct ? "Jawaban benar" : "Tandai benar"}
                             </label>
                             <button

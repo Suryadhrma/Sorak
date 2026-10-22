@@ -23,3 +23,11 @@ export function tallyMarks(count: number): TallyMark[] {
     return { key, x1: x, y1: TOP, x2: x, y2: BOTTOM, slash };
   });
 }
+
+/**
+ * Urutan gambar garis ke-`index`: garis yang baru muncul digambar satu per satu (0, 1, 2, …), dihitung dari jumlah
+ * garis sebelumnya. Garis lama tidak dipasang ulang, jadi nilainya tidak dipakai. previous null = layar baru.
+ */
+export function tallyDrawOrder(previous: number | null, index: number): number {
+  return Math.max(0, index - (previous ?? 0));
+}

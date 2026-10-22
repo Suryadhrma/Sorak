@@ -2,6 +2,7 @@ import { useEffect, useId, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router";
 import { CreateRoomInput, type QuizSummary } from "@sorak/shared";
 import { createRoom, deleteQuiz, describeError, listQuizzes } from "../api.ts";
+import { rowOrder } from "../motion/row-order.ts";
 import { SCORING_MODES } from "../scoring-modes.ts";
 import { TeacherHeader } from "../TeacherHeader.tsx";
 import { useTheme } from "../theme.ts";
@@ -99,8 +100,14 @@ export function QuizListPage() {
             </div>
             {shown.length === 0 && <p className="empty">Tidak ada kuis dengan judul itu.</p>}
             <ul className="buku-daftar">
-              {shown.map((quiz) => (
-                <QuizRow key={quiz.id} quiz={quiz} onPlay={() => setPlaying(quiz)} onDelete={() => handleDelete(quiz)} />
+              {shown.map((quiz, index) => (
+                <QuizRow
+                  key={quiz.id}
+                  quiz={quiz}
+                  order={index}
+                  onPlay={() => setPlaying(quiz)}
+                  onDelete={() => handleDelete(quiz)}
+                />
               ))}
             </ul>
           </>
@@ -111,12 +118,13 @@ export function QuizListPage() {
   );
 }
 
-function QuizRow({ quiz, onPlay, onDelete }: { quiz: QuizSummary; onPlay: () => void; onDelete: () => void }) {
+function QuizRow(props: { quiz: QuizSummary; order: number; onPlay: () => void; onDelete: () => void }) {
+  const { quiz, onPlay, onDelete } = props;
   // Room butuh minimal satu soal; server juga menolaknya dengan 409. Soal yang tersimpan selalu lengkap
   // (divalidasi saat simpan), jadi satu-satunya kuis yang belum bisa dimainkan adalah kuis tanpa soal.
   const playable = quiz.questionCount > 0;
   return (
-    <li className="buku-baris">
+    <li className="buku-baris" style={{ "--urutan": rowOrder(props.order) }}>
       <div className="buku-baris-isi">
         <p className="buku-baris-judul">{quiz.title}</p>
         <p className="muted">

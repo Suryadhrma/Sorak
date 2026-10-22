@@ -33,7 +33,7 @@ export function TeacherHeader() {
       </nav>
       <div className="buku-akun">
         <span className="buku-nama">
-          {host.displayName}
+          <span className="buku-nama-teks">{host.displayName}</span>
           <span className="buku-avatar" aria-hidden="true">
             {host.displayName.charAt(0).toUpperCase()}
           </span>

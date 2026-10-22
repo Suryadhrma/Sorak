@@ -44,7 +44,7 @@ export function LoginPage() {
             </a>
             <p className="muted login-catatan">Sorak hanya memakai nama dan email akun Google kamu.</p>
           </div>
-          <p className="muted">
+          <p className="muted login-siswa">
             Kamu siswa? Buka Sorak di HP dan <Link to="/">masukkan PIN dari guru</Link>.
           </p>
         </div>
@@ -54,7 +54,7 @@ export function LoginPage() {
           <p className="login-papan-label">Layar depan kelas</p>
           <p className="login-papan-pin">
             <FlapDigits value="408" />
-            <FlapDigits value="213" />
+            <FlapDigits value="213" delayOffset={3} />
           </p>
           <p className="login-papan-hitung">
             <Tally count={12} label="12 siswa" />

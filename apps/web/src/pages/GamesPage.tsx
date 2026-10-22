@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router";
 import { type GameSummary } from "@sorak/shared";
 import { describeError, listGames } from "../api.ts";
+import { rowOrder } from "../motion/row-order.ts";
 import { SCORING_MODES } from "../scoring-modes.ts";
 import { TeacherHeader } from "../TeacherHeader.tsx";
 import { useTheme } from "../theme.ts";
@@ -68,8 +69,8 @@ export function GamesPage() {
         {state.kind === "ready" && state.games.length > 0 && (
           <>
             <ul className="buku-daftar">
-              {state.games.map((game) => (
-                <li key={game.id} className="buku-baris">
+              {state.games.map((game, index) => (
+                <li key={game.id} className="buku-baris" style={{ "--urutan": rowOrder(index) }}>
                   <div className="buku-baris-isi">
                     <Link className="buku-baris-judul" to={`/games/${game.id}`}>
                       {game.quizTitle}

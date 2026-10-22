@@ -175,7 +175,7 @@ function Lobby(props: { pin: Pin; base: HostBase; onStart: () => void; onCancel:
           </p>
           <p className="lobby-pin" aria-label={`PIN ${pin}`}>
             <FlapDigits value={pin.slice(0, 3)} />
-            <FlapDigits value={pin.slice(3)} />
+            <FlapDigits value={pin.slice(3)} delayOffset={3} />
           </p>
         </div>
         <p className="lobby-quiz">
