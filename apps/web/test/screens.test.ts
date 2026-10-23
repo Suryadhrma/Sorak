@@ -1,7 +1,7 @@
 import { CloseCode, type HostServerMessage, type PlayerServerMessage, type PlayerSnapshot, type RosterEntry } from "@sorak/shared";
 import { describe, expect, it } from "vitest";
 import { remainingMs } from "../src/countdown.ts";
-import { applyRosterMessage, disconnectedCount, hostScreen, pointsDelta, revealStats, type HostView } from "../src/host-screen.ts";
+import { applyCheer, applyRosterMessage, disconnectedCount, emptyHostCheer, hostScreen, pointsDelta, revealStats, type HostView } from "../src/host-screen.ts";
 import { initialPlayerScreen, playerScreen, rankClimb, type PlayerEvent, type PlayerScreen, type PlayerView } from "../src/player-screen.ts";
 
 const room = { pin: "123456", scoringMode: "classic", teamMode: false, questionCount: 3 } as const;
@@ -461,5 +461,33 @@ describe("pointsDelta", () => {
     expect(pointsDelta(630)).toBe("+630");
     expect(pointsDelta(1250)).toBe("+1.250");
     expect(pointsDelta(-120)).toBe("−120");
+  });
+});
+
+describe("sorak di lobby", () => {
+  it("HP: cheer_total memperbarui \"Kelas sudah bersorak N kali\" hanya di lobby", () => {
+    const views = playThrough([
+      { type: "server", message: welcome, at: 0 },
+      { type: "server", message: { t: "cheer_total", total: 12 }, at: 10 },
+    ]);
+    expect(views[1]).toMatchObject({ kind: "lobby", cheerTotal: 12 });
+  });
+
+  it("proyektor: label nama ditambah dari recent, paling banyak 6, id naik terus", () => {
+    let cheer = applyCheer(emptyHostCheer, { t: "cheer", total: 4, recent: ["A", "B", "C", "D"] });
+    cheer = applyCheer(cheer, { t: "cheer", total: 7, recent: ["E", "F", "G"] });
+    expect(cheer.total).toBe(7);
+    expect(cheer.floats.map((float) => float.nickname)).toEqual(["B", "C", "D", "E", "F", "G"]);
+    expect(cheer.floats.map((float) => float.id)).toEqual([1, 2, 3, 4, 5, 6]);
+  });
+
+  it("proyektor: total tidak pernah mundur walau kiriman lama datang belakangan", () => {
+    const cheer = applyCheer(applyCheer(emptyHostCheer, { t: "cheer", total: 9, recent: [] }), { t: "cheer", total: 5, recent: [] });
+    expect(cheer.total).toBe(9);
+  });
+
+  it("proyektor: cheer di luar lobby diabaikan", () => {
+    const view: HostView = { kind: "connecting" };
+    expect(hostScreen(view, { type: "server", message: { t: "cheer", total: 1, recent: ["A"] }, at: 0 })).toBe(view);
   });
 });

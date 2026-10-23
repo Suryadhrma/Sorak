@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router";
 import { MAX_OPTIONS, MAX_QUESTIONS_PER_QUIZ, MIN_OPTIONS, TIME_LIMIT_MAX_SEC, TIME_LIMIT_MIN_SEC } from "@sorak/shared";
 import { AnswerTile, answerLetter } from "../AnswerOption.tsx";
+import { CheckMark } from "../CheckMark.tsx";
 import { ApiRequestError, createQuiz, describeError, getQuiz, updateQuiz } from "../api.ts";
 import {
   draftFromQuiz,
@@ -12,6 +13,7 @@ import {
   validateDraft,
   type QuestionDraft,
   type QuizDraft,
+  type SavedQuizState,
 } from "../quiz-draft.ts";
 import { useTheme } from "../theme.ts";
 
@@ -23,15 +25,6 @@ function FieldError({ id, message }: { id: string; message: string | undefined }
     <p id={id} className="field-error">
       {message}
     </p>
-  );
-}
-
-/** Centang yang digambar sekali (stroke-dashoffset), dipakai di pil "Jawaban benar" dan "Tersimpan". */
-function CheckMark() {
-  return (
-    <svg className="check-mark" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-      <path d="M4 12.5l5 5L20 6.5" pathLength={1} />
-    </svg>
   );
 }
 
@@ -48,7 +41,7 @@ export function QuizEditorPage() {
   const [draft, setDraft] = useState<QuizDraft>(emptyQuizDraft);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
-  const [notice, setNotice] = useState<{ kind: "success" | "error"; text: string } | null>(null);
+  const [saveError, setSaveError] = useState<string | null>(null);
   // Soal yang sedang diedit (fokus terakhir), ditandai kapur di daftar soal kiri.
   const [activeKey, setActiveKey] = useState<string | null>(null);
 
@@ -74,18 +67,11 @@ export function QuizEditorPage() {
     };
   }, [id]);
 
-  // "Tersimpan" di kepala hanya benar sampai guru mengubah sesuatu lagi.
-  function clearSavedNotice() {
-    setNotice((current) => (current?.kind === "success" ? null : current));
-  }
-
   function editDraft(patch: Partial<QuizDraft>) {
     setDraft((current) => ({ ...current, ...patch }));
-    clearSavedNotice();
   }
 
   function updateQuestion(index: number, patch: Partial<QuestionDraft>) {
-    clearSavedNotice();
     setDraft((current) => ({
       ...current,
       questions: current.questions.map((question, i) => (i === index ? { ...question, ...patch } : question)),
@@ -98,30 +84,28 @@ export function QuizEditorPage() {
     setErrors({});
   }
 
+  /** Berhasil: kembali ke Kuis saya, yang menampilkan "tersimpan" dan menyorot baris kuis ini. Gagal: tetap di sini. */
   async function handleSave() {
-    setNotice(null);
+    setSaveError(null);
     const validation = validateDraft(draft);
     if (!validation.ok) {
       setErrors(validation.fields);
-      setNotice({ kind: "error", text: "Periksa kotak yang ditandai merah." });
+      setSaveError("Periksa kotak yang ditandai merah.");
       return;
     }
     setErrors({});
     setSaving(true);
     try {
       const saved = id ? await updateQuiz(id, validation.input) : await createQuiz(validation.input);
-      setDraft(draftFromQuiz(saved));
-      setNotice({ kind: "success", text: "Tersimpan" });
-      if (!id) navigate(`/quizzes/${saved.id}`, { replace: true });
+      navigate("/quizzes", { state: { savedQuizId: saved.id } satisfies SavedQuizState });
     } catch (error) {
+      setSaving(false);
       if (error instanceof ApiRequestError && error.code === "VALIDATION_FAILED") setErrors(error.fields);
       if (error instanceof ApiRequestError && error.code === "UNAUTHENTICATED") {
-        setNotice({ kind: "error", text: "Sesi berakhir. Buka halaman masuk di tab baru, lalu simpan ulang." });
+        setSaveError("Sesi berakhir. Buka halaman masuk di tab baru, lalu simpan ulang.");
         return;
       }
-      setNotice({ kind: "error", text: describeError(error) });
-    } finally {
-      setSaving(false);
+      setSaveError(describeError(error));
     }
   }
 
@@ -157,10 +141,9 @@ export function QuizEditorPage() {
           </span>
         </nav>
         <div className="editor-simpan">
-          {notice && (
-            <p className={notice.kind === "success" ? "notice" : "alert"} role={notice.kind === "success" ? "status" : "alert"}>
-              {notice.kind === "success" && <CheckMark />}
-              {notice.text}
+          {saveError && (
+            <p className="alert" role="alert">
+              {saveError}
             </p>
           )}
           <button type="button" className="button button-tinta" disabled={saving} onClick={handleSave}>

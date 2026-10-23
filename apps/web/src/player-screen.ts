@@ -20,7 +20,8 @@ export type PlayerView =
   | { kind: "connecting" }
   /** Tersambung lagi saat reveal/ended: menunggu result/final yang dikirim ulang server. */
   | { kind: "syncing"; me: Me }
-  | { kind: "lobby"; me: Me; playerCount: number }
+  /** cheerTotal: "Kelas sudah bersorak N kali" (cheer_total); 0 sampai kiriman pertama datang. */
+  | { kind: "lobby"; me: Me; playerCount: number; cheerTotal: number }
   /**
    * startedAt = performance.now() saat soal (atau snapshot) diterima, durationMs = sisa waktu saat itu.
    * choice terisi begitu tombol ditekan; confirmed setelah answer_received atau snapshot answered.
@@ -105,6 +106,8 @@ function onMessage(screen: PlayerScreen, message: PlayerServerMessage, at: numbe
       return fromWelcome(screen, message, at);
     case "lobby":
       return view.kind === "lobby" ? { ...screen, view: { ...view, playerCount: message.playerCount }, lastPhase: "lobby" } : screen;
+    case "cheer_total":
+      return view.kind === "lobby" ? { ...screen, view: { ...view, cheerTotal: message.total } } : screen;
     case "question": {
       if (!me) return screen;
       const { t: _type, ...question } = message;
@@ -172,7 +175,7 @@ function fromWelcome(screen: PlayerScreen, message: Extract<PlayerServerMessage,
   };
   switch (snapshot.phase) {
     case "lobby":
-      return { ...base, view: { kind: "lobby", me, playerCount: snapshot.playerCount } };
+      return { ...base, view: { kind: "lobby", me, playerCount: snapshot.playerCount, cheerTotal: 0 } };
     case "question": {
       if (!snapshot.question) return { ...base, view: { kind: "syncing", me } };
       // Soal yang sama dengan sebelum putus: pilihan yang sudah ditekan di HP ini tetap diingat.

@@ -1,4 +1,5 @@
-import { DEFAULT_TIME_LIMIT_SEC, MIN_OPTIONS, QuizInput, fieldErrors, type QuizDetail } from "@sorak/shared";
+import { DEFAULT_TIME_LIMIT_SEC, MIN_OPTIONS, QuizId, QuizInput, fieldErrors, type QuizDetail } from "@sorak/shared";
+import { z } from "zod";
 
 /**
  * Bentuk form editor. Berbeda dari QuizInput karena form butuh `key` stabil untuk React
@@ -87,3 +88,7 @@ export function removeOption(question: QuestionDraft, optionIndex: number): Ques
   const correctIndex = question.correctIndex > optionIndex ? question.correctIndex - 1 : question.correctIndex;
   return { ...question, options, correctIndex };
 }
+
+/** State navigasi editor -> Kuis saya setelah Simpan: kuis mana yang baru disimpan (untuk pesan dan sorotan baris). */
+export const SavedQuizState = z.object({ savedQuizId: QuizId });
+export type SavedQuizState = z.infer<typeof SavedQuizState>;

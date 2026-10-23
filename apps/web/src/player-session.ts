@@ -29,6 +29,8 @@ export type PlayerSession = {
   retryNow(): void;
   /** "Keluar dari ruang" di lobby: HP melupakan sesi ini; server membuang pemain lobby saat socket-nya tertutup. */
   leave(): void;
+  /** Tombol Sorak di lobby. Tidak diantrekan saat offline: sorak yang terlambat tidak ada artinya. */
+  cheer(): void;
   stop(): void;
 };
 
@@ -184,6 +186,9 @@ export function createPlayerSession(
     },
     retryNow() {
       connection?.retryNow();
+    },
+    cheer() {
+      connection?.send({ t: "react", reaction: "sorak" });
     },
     leave() {
       forgetToken(pin);

@@ -2,9 +2,9 @@ import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router";
 import { Pin, type LeaderboardEntry, type RosterEntry } from "@sorak/shared";
 import { AnswerRow, AnswerTile, answerLetter } from "../AnswerOption.tsx";
-import { disconnectedCount, pointsDelta, revealStats, type HostBase } from "../host-screen.ts";
+import { disconnectedCount, pointsDelta, revealStats, type HostBase, type HostCheer } from "../host-screen.ts";
 import { createHostSession, type HostSession, type HostView } from "../host-session.ts";
-import { Logo } from "../Logo.tsx";
+import { HandIcon, Logo } from "../Logo.tsx";
 import { Countdown } from "../motion/Countdown.tsx";
 import { FlapDigits } from "../motion/FlapDigits.tsx";
 import { Leaderboard } from "../motion/Leaderboard.tsx";
@@ -102,7 +102,16 @@ function HostStage(props: {
         </p>
       );
     case "lobby":
-      return <Lobby pin={props.pin} base={view.base} onStart={() => session?.startGame()} onCancel={props.onCancel} onKick={props.onKick} />;
+      return (
+        <Lobby
+          pin={props.pin}
+          base={view.base}
+          cheer={view.cheer}
+          onStart={() => session?.startGame()}
+          onCancel={props.onCancel}
+          onKick={props.onKick}
+        />
+      );
     case "question":
       return <QuestionScreen view={view} onEndGame={props.onEndGame} />;
     case "grace":
@@ -158,9 +167,18 @@ function EndGameButton({ onEndGame }: { onEndGame: () => void }) {
   );
 }
 
-/** Proyektor-1: panel kapur dengan PIN, panel kertas dengan pemain yang sudah masuk. */
-function Lobby(props: { pin: Pin; base: HostBase; onStart: () => void; onCancel: () => void; onKick: (target: KickTarget) => void }) {
-  const { pin, base } = props;
+/** Proyektor-1: panel kapur dengan PIN, panel kertas dengan pemain yang sudah masuk, dan aliran sorak. */
+function Lobby(props: {
+  pin: Pin;
+  base: HostBase;
+  cheer: HostCheer;
+  onStart: () => void;
+  onCancel: () => void;
+  onKick: (target: KickTarget) => void;
+}) {
+  const { pin, base, cheer } = props;
+  // Saklar hanya di layar ini, tanpa pesan ke server: guru bisa menyembunyikan sorak saat sedang menjelaskan.
+  const [showCheers, setShowCheers] = useState(true);
   const players = base.players;
   const mode = SCORING_MODES[base.room.scoringMode];
   return (
@@ -216,6 +234,37 @@ function Lobby(props: { pin: Pin; base: HostBase; onStart: () => void; onCancel:
             ))}
           </ul>
         )}
+        {showCheers && (
+          <div className="cheer-stream" aria-hidden="true">
+            {cheer.floats.map((float) => (
+              <span key={float.id} className="cheer-tag" style={{ "--lajur": float.lane, "--urutan": float.order }}>
+                <HandIcon className="cheer-tag-hand" />
+                {float.nickname}
+              </span>
+            ))}
+          </div>
+        )}
+        <div className="lobby-cheer">
+          <p className="lobby-cheer-total">
+            <HandIcon className="lobby-cheer-hand" />
+            <span key={cheer.total} className="lobby-cheer-number">
+              {cheer.total}
+            </span>
+            <span>sorak</span>
+          </p>
+          <button
+            type="button"
+            role="switch"
+            aria-checked={showCheers}
+            className="cheer-switch"
+            onClick={() => setShowCheers((current) => !current)}
+          >
+            <span className="cheer-switch-track" aria-hidden="true">
+              <span className="cheer-switch-knob" />
+            </span>
+            Sorak tampil di layar
+          </button>
+        </div>
         <div className="lobby-actions">
           <button type="button" className="link-button" onClick={props.onCancel}>
             Batalkan room

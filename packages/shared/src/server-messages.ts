@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { LEADERBOARD_SIZE, MAX_PLAYERS_PER_ROOM, PODIUM_SIZE, PROTOCOL_VERSION, QUIZ_TITLE_MAX_LENGTH, REACTIONS } from "./constants.ts";
+import { CHEER_RECENT_MAX, LEADERBOARD_SIZE, MAX_PLAYERS_PER_ROOM, PODIUM_SIZE, PROTOCOL_VERSION, QUIZ_TITLE_MAX_LENGTH } from "./constants.ts";
 import {
   ChoiceIndex,
   GameId,
@@ -174,6 +174,12 @@ export const FinalMessage = z.object({
   questionCount: Count.optional(),
 });
 
+/** Jumlah sorak seluruh kelas di lobby ("Kelas sudah bersorak N kali"), paling sering tiap 2 detik. */
+export const CheerTotalMessage = z.object({
+  t: z.literal("cheer_total"),
+  total: z.number().int().min(0),
+});
+
 export const ErrorMessage = z.object({
   t: z.literal("error"),
   code: ErrorCode,
@@ -188,6 +194,7 @@ export const PlayerServerMessage = z.discriminatedUnion("t", [
   GraceMessage,
   ResultMessage,
   FinalMessage,
+  CheerTotalMessage,
   ErrorMessage,
 ]);
 export type PlayerServerMessage = z.infer<typeof PlayerServerMessage>;
@@ -247,9 +254,11 @@ export const PodiumMessage = z.object({
   playerCount: Count,
 });
 
-export const ReactionMessage = z.object({
-  t: z.literal("reaction"),
-  reaction: z.enum(REACTIONS),
+/** Aliran sorak di proyektor: total dan nama penyorak terakhir (paling banyak 5), paling sering tiap 300 ms. */
+export const CheerMessage = z.object({
+  t: z.literal("cheer"),
+  total: z.number().int().min(0),
+  recent: z.array(Nickname).max(CHEER_RECENT_MAX),
 });
 
 export const HostServerMessage = z.discriminatedUnion("t", [
@@ -261,7 +270,7 @@ export const HostServerMessage = z.discriminatedUnion("t", [
   GraceMessage,
   RevealMessage,
   PodiumMessage,
-  ReactionMessage,
+  CheerMessage,
   ErrorMessage,
 ]);
 export type HostServerMessage = z.infer<typeof HostServerMessage>;

@@ -158,6 +158,9 @@ describe("aturan tahap", () => {
     ["next", "reveal", true],
     ["next", "question", false],
     ["resume", "ended", true],
+    ["react", "lobby", true],
+    ["react", "question", false],
+    ["react", "ended", false],
   ] as const)("%s di tahap %s -> %s", (type, phase, allowed) => {
     expect(isAllowedInPhase(type, phase)).toBe(allowed);
   });
@@ -221,6 +224,7 @@ describe("pesan server sesuai skema", () => {
       correctCount: 8,
       questionCount: 10,
     },
+    { t: "cheer_total", total: 42 },
     { t: "error", code: "NICKNAME_TAKEN", message: "Nickname sudah dipakai" },
   ];
   const hostSamples: ServerMessage[] = [
@@ -239,7 +243,7 @@ describe("pesan server sesuai skema", () => {
     { t: "answer_count", q: 0, answered: 27, total: 36 },
     { t: "reveal", q: 0, correctIndex: 1, counts: [3, 20, 11, 2], answered: 36, total: 36, leaderboard: [leader], isLastQuestion: false },
     { t: "podium", gameId: "7c9e6679-7425-40de-944b-e07fc1f90ae7", top: [leader], playerCount: 36 },
-    { t: "reaction", reaction: "fire" },
+    { t: "cheer", total: 42, recent: ["Rara", "Dimas"] },
   ];
 
   it.each(samples.map((message) => [message.t, message] as const))("pesan pemain %s lolos skema", (_t, message) => {
@@ -480,5 +484,23 @@ describe("close code", () => {
     [CloseCode.ROOM_CLOSED, false],
   ])("kode %i -> reconnect: %s", (code, expected) => {
     expect(shouldReconnect(code)).toBe(expected);
+  });
+});
+
+describe("sorak (Hari 5, B5)", () => {
+  it("pemain boleh mengirim react sorak; pesan kompatibel karena hanya menambah nilai yang diterima", () => {
+    expect(decodePlayerMessage(JSON.stringify({ t: "react", reaction: "sorak" })).ok).toBe(true);
+    expect(decodePlayerMessage(JSON.stringify({ t: "react", reaction: "clap" })).ok).toBe(true);
+  });
+
+  it("cheer ke host membawa paling banyak 5 nama penyorak terakhir", () => {
+    const six = ["A1", "B2", "C3", "D4", "E5", "F6"];
+    expect(HostServerMessage.safeParse({ t: "cheer", total: 6, recent: six }).success).toBe(false);
+    expect(HostServerMessage.safeParse({ t: "cheer", total: 6, recent: six.slice(1) }).success).toBe(true);
+  });
+
+  it("cheer_total hanya untuk pemain, cheer hanya untuk host", () => {
+    expect(PlayerServerMessage.safeParse({ t: "cheer", total: 1, recent: [] }).success).toBe(false);
+    expect(HostServerMessage.safeParse({ t: "cheer_total", total: 1 }).success).toBe(false);
   });
 });

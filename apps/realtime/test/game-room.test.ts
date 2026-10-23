@@ -379,3 +379,49 @@ describe("hibernasi", () => {
     expect(await player.client.next()).toMatchObject({ t: "error", code: "NOT_ALLOWED_NOW" });
   });
 });
+
+describe("sorak di lobby", () => {
+  async function lobby() {
+    const pin = uniquePin();
+    await initRoom(pin);
+    const host = (await connectedHost(pin)).client;
+    const player = (await joinedPlayer(pin, "Rara")).client;
+    await expectNext(host, { t: "player_joined" });
+    await expectNext(player, { t: "lobby" });
+    return { pin, host, player };
+  }
+
+  // Jam asli, bukan fake Date: dengan Date palsu urutan pesan WebSocket di test harness bisa tertukar.
+  // Hitungan jeda yang presisi diuji di pure.test.ts (addCheer dan ember sorak).
+  const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+  it("6 sorak cepat -> 5 diterima, socket tetap terbuka", async () => {
+    const { host, player } = await lobby();
+    for (let i = 0; i < 6; i++) player.send({ t: "react", reaction: "sorak" });
+    await expectNext(host, { t: "cheer", total: 1, recent: ["Rara"] });
+    await expectNext(player, { t: "cheer_total", total: 1 });
+    // 600 ms kemudian ember sorak terisi satu: total 6 berarti tepat satu dari enam sorak pertama dibuang.
+    await wait(600);
+    player.send({ t: "react", reaction: "sorak" });
+    await expectNext(host, { t: "cheer", total: 6 });
+    expect(await Promise.race([player.closed, wait(50).then(() => "terbuka")])).toBe("terbuka");
+  });
+
+  it("beberapa sorak dalam 300 ms -> satu cheer ke host, kiriman berikutnya membawa total yang benar", async () => {
+    const { host, player } = await lobby();
+    for (let i = 0; i < 3; i++) player.send({ t: "react", reaction: "sorak" });
+    await expectNext(host, { t: "cheer", total: 1 });
+    await wait(350);
+    player.send({ t: "react", reaction: "sorak" });
+    await expectNext(host, { t: "cheer", total: 4, recent: ["Rara", "Rara", "Rara"] });
+  });
+
+  it("react di luar lobby diabaikan", async () => {
+    const game = await startedGame(["Rara"]);
+    const [rara] = game.players as [Player];
+    rara.client.send({ t: "react", reaction: "sorak" });
+    // Pesan berikutnya untuk host adalah answer_count, bukan cheer.
+    answer(rara, 0, 1);
+    await expectNext(game.host, { t: "answer_count", answered: 1 });
+  });
+});

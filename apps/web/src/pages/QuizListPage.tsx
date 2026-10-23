@@ -1,8 +1,10 @@
 import { useEffect, useId, useRef, useState } from "react";
-import { Link, useNavigate } from "react-router";
+import { Link, useLocation, useNavigate } from "react-router";
 import { CreateRoomInput, type QuizSummary } from "@sorak/shared";
 import { createRoom, deleteQuiz, describeError, listQuizzes } from "../api.ts";
+import { CheckMark } from "../CheckMark.tsx";
 import { rowOrder } from "../motion/row-order.ts";
+import { SavedQuizState } from "../quiz-draft.ts";
 import { SCORING_MODES } from "../scoring-modes.ts";
 import { TeacherHeader } from "../TeacherHeader.tsx";
 import { useTheme } from "../theme.ts";
@@ -14,6 +16,12 @@ type ListState = { kind: "loading" } | { kind: "ready"; quizzes: QuizSummary[] }
 
 const updatedAtFormat = new Intl.DateTimeFormat("id-ID", { dateStyle: "long" });
 
+/** Lama pesan "tersimpan" tampil, dan lama baris yang dihapus memudar sebelum dibuang dari daftar. */
+const SAVED_TOAST_MS = 4_500;
+const ROW_EXIT_MS = 250;
+
+const reducedMotion = () => window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
 /** Guru-2: daftar kuis di kertas bergaris. Mainkan membuka dialog pilih mode (Guru-4). */
 export function QuizListPage() {
   useTheme("kertas");
@@ -21,6 +29,23 @@ export function QuizListPage() {
   const [actionError, setActionError] = useState<string | null>(null);
   const [query, setQuery] = useState("");
   const [playing, setPlaying] = useState<QuizSummary | null>(null);
+  const [removingId, setRemovingId] = useState<string | null>(null);
+  const location = useLocation();
+  const navigate = useNavigate();
+  // Datang dari Simpan di editor: kuis ini disorot dan pesan "tersimpan" tampil sebentar.
+  const [savedId] = useState(() => {
+    const parsed = SavedQuizState.safeParse(location.state);
+    return parsed.success ? parsed.data.savedQuizId : null;
+  });
+  const [showSaved, setShowSaved] = useState(savedId !== null);
+
+  useEffect(() => {
+    if (!savedId) return;
+    // State navigasi dibuang, supaya memuat ulang halaman tidak memunculkan pesan yang sama lagi.
+    navigate(location.pathname, { replace: true, state: null });
+    const timer = setTimeout(() => setShowSaved(false), SAVED_TOAST_MS);
+    return () => clearTimeout(timer);
+  }, [savedId, navigate, location.pathname]);
 
   useEffect(() => {
     let active = true;
@@ -41,8 +66,16 @@ export function QuizListPage() {
     setActionError(null);
     try {
       await deleteQuiz(quiz.id);
-      setState((current) =>
-        current.kind === "ready" ? { kind: "ready", quizzes: current.quizzes.filter((q) => q.id !== quiz.id) } : current,
+      // Baris memudar dulu, baru dibuang; tanpa gerak langsung dibuang.
+      setRemovingId(quiz.id);
+      setTimeout(
+        () => {
+          setRemovingId(null);
+          setState((current) =>
+            current.kind === "ready" ? { kind: "ready", quizzes: current.quizzes.filter((q) => q.id !== quiz.id) } : current,
+          );
+        },
+        reducedMotion() ? 0 : ROW_EXIT_MS,
       );
     } catch (error) {
       setActionError(describeError(error));
@@ -105,6 +138,8 @@ export function QuizListPage() {
                   key={quiz.id}
                   quiz={quiz}
                   order={index}
+                  highlighted={quiz.id === savedId}
+                  leaving={quiz.id === removingId}
                   onPlay={() => setPlaying(quiz)}
                   onDelete={() => handleDelete(quiz)}
                 />
@@ -113,18 +148,40 @@ export function QuizListPage() {
           </>
         )}
       </main>
+      {/* Di luar main: main ikut animasi masuk halaman, dan pesan ini menempel di bawah layar. */}
+      {showSaved && state.kind === "ready" && (
+        <p className="toast" role="status">
+          <CheckMark />
+          {savedTitle(state.quizzes, savedId)}
+        </p>
+      )}
       {playing && <PlayDialog quiz={playing} onClose={() => setPlaying(null)} />}
     </div>
   );
 }
 
-function QuizRow(props: { quiz: QuizSummary; order: number; onPlay: () => void; onDelete: () => void }) {
+function savedTitle(quizzes: QuizSummary[], savedId: string | null): string {
+  const quiz = quizzes.find((q) => q.id === savedId);
+  return quiz ? `"${quiz.title}" tersimpan.` : "Kuis tersimpan.";
+}
+
+function QuizRow(props: {
+  quiz: QuizSummary;
+  order: number;
+  highlighted: boolean;
+  leaving: boolean;
+  onPlay: () => void;
+  onDelete: () => void;
+}) {
   const { quiz, onPlay, onDelete } = props;
   // Room butuh minimal satu soal; server juga menolaknya dengan 409. Soal yang tersimpan selalu lengkap
   // (divalidasi saat simpan), jadi satu-satunya kuis yang belum bisa dimainkan adalah kuis tanpa soal.
   const playable = quiz.questionCount > 0;
   return (
-    <li className="buku-baris" style={{ "--urutan": rowOrder(props.order) }}>
+    <li
+      className={["buku-baris", props.highlighted && "is-tersimpan", props.leaving && "is-keluar"].filter(Boolean).join(" ")}
+      style={{ "--urutan": rowOrder(props.order) }}
+    >
       <div className="buku-baris-isi">
         <p className="buku-baris-judul">{quiz.title}</p>
         <p className="muted">

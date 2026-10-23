@@ -133,7 +133,27 @@ export const RATE_LIMIT = {
 /** Pesan tidak valid beruntun sebelum socket ditutup. */
 export const MAX_CONSECUTIVE_INVALID_MESSAGES = 3;
 
-export const REACTIONS = ["clap", "fire", "laugh", "wow", "heart"] as const;
+export const REACTIONS = ["clap", "fire", "laugh", "wow", "heart", "sorak"] as const;
+
+/*
+ * Tombol Sorak di lobby (B5). Sorak hanya dekorasi, jadi tidak pernah menutup socket dan tidak ditulis ke storage.
+ * Ember kedua per socket, khusus sorak: penuh 5, terisi 2 per detik; kelebihannya dibuang diam-diam.
+ */
+export const CHEER_LIMIT = {
+  capacity: 5,
+  refillPerSecond: 2,
+} as const;
+/** Leading-edge throttle tanpa timer: cheer ke host paling cepat tiap 300 ms, cheer_total ke pemain tiap 2 detik. */
+export const CHEER_HOST_THROTTLE_MS = 300;
+export const CHEER_PLAYER_THROTTLE_MS = 2_000;
+/** Nama penyorak terakhir yang dikirim ke proyektor. */
+export const CHEER_RECENT_MAX = 5;
+/** HP: "tenaga sorak" 5 garis turus; satu tekan memakai satu garis, terisi lagi satu setiap 0,6 detik. */
+export const CHEER_ENERGY_MAX = 5;
+export const CHEER_ENERGY_REFILL_MS = 600;
+export const CHEER_VIBRATE_MS = 15;
+/** Proyektor: label nama penyorak yang tampil bersamaan; yang lebih dibuang. */
+export const CHEER_FLOATS_MAX = 6;
 
 /* Batas REST kuis dan akun host; harus sama dengan CHECK di apps/api/migrations/0001_init.sql. */
 export const QUIZ_TITLE_MAX_LENGTH = 120;

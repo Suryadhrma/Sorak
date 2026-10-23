@@ -10,13 +10,7 @@ export function Logo({ animate = false }: { animate?: boolean }) {
       <svg className="logo-mark" viewBox="0 0 120 120" aria-hidden="true" focusable="false">
         <g transform="rotate(-8 64 64)">
           <g className="logo-hand" fill="currentColor">
-            <rect x="36" y="22" width="13" height="50" rx="6.5" />
-            <rect x="52" y="10" width="13" height="62" rx="6.5" />
-            <rect x="68" y="14" width="13" height="58" rx="6.5" />
-            <rect x="84" y="26" width="13" height="46" rx="6.5" />
-            <path d="M36 56 H97 V80 C97 92 89 99 78 99 H55 C44 99 36 92 36 81 Z" />
-            <line x1="42" y1="80" x2="23" y2="58" stroke="currentColor" strokeWidth="13" strokeLinecap="round" />
-            <rect className="logo-manset" x="47" y="103" width="40" height="15" rx="4" />
+            <HandShape />
           </g>
         </g>
         {animate && (
@@ -29,5 +23,31 @@ export function Logo({ animate = false }: { animate?: boolean }) {
       </svg>
       <span className="logo-wordmark">sorak</span>
     </span>
+  );
+}
+
+/** Tangan bersorak (jari, telapak, ibu jari, manset). Satuan viewBox 0 0 120 120, sama dengan logo. */
+function HandShape() {
+  return (
+    <>
+      <rect x="36" y="22" width="13" height="50" rx="6.5" />
+      <rect x="52" y="10" width="13" height="62" rx="6.5" />
+      <rect x="68" y="14" width="13" height="58" rx="6.5" />
+      <rect x="84" y="26" width="13" height="46" rx="6.5" />
+      <path d="M36 56 H97 V80 C97 92 89 99 78 99 H55 C44 99 36 92 36 81 Z" />
+      <line x1="42" y1="80" x2="23" y2="58" stroke="currentColor" strokeWidth="13" strokeLinecap="round" />
+      <rect className="logo-manset" x="47" y="103" width="40" height="15" rx="4" />
+    </>
+  );
+}
+
+/** Tangan saja, tanpa tulisan: tombol Sorak, tangan yang terbang, dan label penyorak di proyektor. */
+export function HandIcon({ className }: { className: string }) {
+  return (
+    <svg className={className} viewBox="0 0 120 120" aria-hidden="true" focusable="false">
+      <g transform="rotate(-8 64 64)" fill="currentColor">
+        <HandShape />
+      </g>
+    </svg>
   );
 }

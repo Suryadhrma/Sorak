@@ -112,6 +112,8 @@
   --font-size-host-pilihan: clamp(1.75rem, 2.4vw, 3rem);
   /* Label kecil di proyektor (judul statistik, catatan): 17 px di 1280, ikut membesar di 1080p. */
   --font-size-host-label: clamp(1rem, 1.35vw, 1.625rem);
+  /* Total sorak di lobby proyektor (48 px di 1280 pada board). */
+  --font-size-host-sorak: clamp(2.25rem, 3.75vw, 4rem);
   --konfeti-jeda: 400ms;
   --podium-tinggi-1: 34vh;
   --podium-tinggi-2: 25vh;
@@ -130,6 +132,25 @@
   --buku-margin-x: 5.5rem;
   /* Halaman guru (board Guru-1 sampai 4). */
   --kapur-muda: #fff8dc;
+  /* Tombol Sorak (board HP-3): tinggi tombol, ukuran tulisan, dan lipatan bawah kapur. */
+  --sorak-tinggi: clamp(11rem, 34dvh, 17.5rem);
+  --font-size-sorak: clamp(3.5rem, 18vw, 4.75rem);
+  --sorak-tangan: 4rem;
+  --shadow-sorak: inset 0 -7px 0 var(--kapur-tekan), 0 6px 0 #08120e;
+  --shadow-sorak-tekan: inset 0 -2px 0 var(--kapur-tekan), 0 1px 0 #08120e;
+  --gerak-sorak-terbang: 1100ms cubic-bezier(0.2, 0.7, 0.3, 1);
+  --gerak-label-sorak: 2800ms cubic-bezier(0.2, 0.7, 0.3, 1);
+  --gerak-denyut: 450ms ease-out;
+  /* Penghalusan umum: tekan tombol, dialog muncul, layar berganti, pesan singkat, dan baris yang dibuang. */
+  --gerak-tekan: 90ms ease-out;
+  --gerak-dialog: 280ms cubic-bezier(0.3, 1.3, 0.6, 1);
+  --gerak-layar: 240ms cubic-bezier(0.2, 0.8, 0.2, 1);
+  /* Sama dengan SAVED_TOAST_MS dan ROW_EXIT_MS di QuizListPage.tsx. */
+  --gerak-toast: 4500ms;
+  --gerak-keluar: 250ms ease-in;
+  --gerak-sorot: 2400ms ease-out;
+  --shadow-alas-tekan: 0 1px 0 var(--tinta);
+  --shadow-alas-gelap-tekan: 0 1px 0 #000;
   /* Chip poin di papan skor proyektor: kapur tipis di atas papan gelap. */
   --kapur-latar: rgb(242 183 5 / 0.16);
   --space-5: 2.5rem;
@@ -2065,6 +2086,11 @@ a.buku-baris-judul:hover {
   margin-top: auto;
 }
 
+/* Lobby: tombol Sorak yang didorong ke bawah, "Keluar dari ruang" langsung di bawahnya. */
+.hp-screen > .cheer-pad + .hp-bottom {
+  margin-top: 0;
+}
+
 .hp-center {
   display: grid;
   justify-items: center;
@@ -2654,6 +2680,527 @@ input.name-input {
   justify-content: space-between;
   align-items: center;
   gap: var(--space-3);
+}
+
+/*
+ * Sorak (B5). HP-3: tombol kapur besar, tangan kecil terbang dari tombol, 5 garis tenaga, total kelas.
+ * Proyektor-1: label nama naik lalu memudar di kanan bawah, total di samping tangan, dan saklar tampil.
+ * Tanpa gerak (prefers-reduced-motion) label dan tangan terbang tidak ditampilkan; angka tetap diperbarui.
+ */
+.cheer-pad {
+  position: relative;
+  margin-top: auto;
+  display: grid;
+  gap: var(--space-3);
+}
+
+.cheer-button {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-1);
+  width: 100%;
+  min-height: var(--sorak-tinggi);
+  border: 0;
+  border-radius: var(--radius-sorak);
+  background: var(--kapur);
+  color: var(--tinta);
+  box-shadow: var(--shadow-sorak);
+  font: inherit;
+  cursor: pointer;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.cheer-button:active {
+  transform: translateY(4px) scale(0.97);
+  box-shadow: var(--shadow-sorak-tekan);
+}
+
+.cheer-button-hand {
+  width: var(--sorak-tangan);
+  height: var(--sorak-tangan);
+  overflow: visible;
+}
+
+.cheer-button-hand .logo-manset {
+  fill: var(--kapur-putih);
+}
+
+.cheer-button-text {
+  font-family: var(--font-angka);
+  font-weight: 800;
+  font-size: var(--font-size-sorak);
+  line-height: 0.85;
+}
+
+.cheer-flies {
+  position: absolute;
+  inset: 0 0 auto;
+  height: 0;
+  pointer-events: none;
+}
+
+.cheer-fly {
+  position: absolute;
+  bottom: 0;
+  left: calc(15% + 14% * var(--urutan, 0));
+  color: var(--kapur);
+  opacity: 0;
+}
+
+.cheer-fly-hand {
+  width: 2.125rem;
+  height: 2.125rem;
+  overflow: visible;
+}
+
+.cheer-energy {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--color-muted);
+  font-size: var(--font-size-small);
+  line-height: 1.35;
+}
+
+.cheer-energy,
+.cheer-total {
+  white-space: nowrap;
+}
+
+.cheer-pad .hp-row {
+  flex-wrap: wrap;
+}
+
+.cheer-total {
+  margin-left: auto;
+}
+
+/* HP sempit (di bawah 384 px): cukup "tenaga sorak", supaya baris ini tidak pecah jadi tiga. */
+@media (max-width: 24rem) {
+  .cheer-energy-hint {
+    display: none;
+  }
+}
+
+.cheer-energy-lines {
+  flex: none;
+  width: 4.5rem;
+  height: 1.625rem;
+  stroke-width: 5;
+  stroke-linecap: round;
+}
+
+.cheer-energy-empty {
+  stroke: var(--papan-garis);
+}
+
+.cheer-energy-full,
+.cheer-energy-refill {
+  stroke: var(--kapur);
+}
+
+/* Garis yang sedang terisi tumbuh dari bawah (scaleY), bukan dengan mengubah panjang garis. */
+.cheer-energy-refill {
+  transform-box: fill-box;
+  transform-origin: 50% 100%;
+}
+
+.cheer-total {
+  text-align: right;
+  color: var(--color-muted);
+  font-size: var(--font-size-small);
+  line-height: 1.35;
+}
+
+.cheer-total-number {
+  display: inline-block;
+  color: var(--color-text);
+  font-family: var(--font-angka);
+  font-weight: 800;
+  font-size: var(--font-size-title);
+}
+
+.lobby-players {
+  position: relative;
+}
+
+.cheer-stream {
+  position: absolute;
+  right: var(--projector-pad);
+  bottom: calc(var(--projector-pad) + 9rem);
+  width: min(26rem, 60%);
+  height: 0;
+  pointer-events: none;
+}
+
+.cheer-tag {
+  position: absolute;
+  bottom: 0;
+  left: calc((100% - 9rem) * var(--lajur, 0) / 5);
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3) var(--space-2) var(--space-2);
+  border-radius: var(--radius-kartu);
+  background: var(--tinta);
+  color: var(--kapur-putih);
+  font-size: var(--font-size-host-label);
+  font-weight: 800;
+  white-space: nowrap;
+  box-shadow: var(--shadow-alas-gelap);
+  opacity: 0;
+}
+
+.cheer-tag-hand,
+.lobby-cheer-hand {
+  width: 1.6em;
+  height: 1.6em;
+  color: var(--kapur);
+  overflow: visible;
+}
+
+.lobby-cheer {
+  margin-top: auto;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.lobby-cheer + .lobby-actions {
+  margin-top: 0;
+}
+
+.lobby-cheer-total {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0;
+  color: var(--color-muted);
+  font-size: var(--font-size-host-label);
+  font-weight: 700;
+}
+
+.lobby-cheer-hand {
+  color: var(--tinta);
+}
+
+.lobby-cheer-number {
+  display: inline-block;
+  color: var(--color-text);
+  font-family: var(--font-angka);
+  font-weight: 800;
+  font-size: var(--font-size-host-sorak);
+  line-height: 1;
+}
+
+.cheer-switch {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: var(--tap-target);
+  padding: 0 0 0 var(--space-3);
+  border: 0;
+  border-left: 2px solid var(--garis);
+  background: none;
+  color: var(--color-muted);
+  font: inherit;
+  font-size: var(--font-size-host-label);
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.cheer-switch-track {
+  position: relative;
+  flex: none;
+  width: 2.75rem;
+  height: 1.625rem;
+  border-radius: 1rem;
+  background: var(--garis);
+}
+
+.cheer-switch-knob {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 1.25rem;
+  height: 1.25rem;
+  border-radius: 50%;
+  background: var(--kertas-putih);
+}
+
+.cheer-switch[aria-checked="true"] .cheer-switch-track {
+  background: var(--tinta);
+}
+
+.cheer-switch[aria-checked="true"] .cheer-switch-knob {
+  background: var(--kapur);
+  transform: translateX(1.125rem);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cheer-flies,
+  .cheer-stream {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .cheer-button {
+    transition: transform 80ms ease-out;
+  }
+
+  .cheer-fly {
+    animation: sorak-terbang var(--gerak-sorak-terbang) both;
+  }
+
+  .cheer-tag {
+    animation: label-sorak var(--gerak-label-sorak) both;
+    animation-delay: calc(var(--urutan, 0) * 180ms);
+  }
+
+  .cheer-total-number,
+  .lobby-cheer-number {
+    animation: denyut var(--gerak-denyut) both;
+  }
+
+  .cheer-switch-knob {
+    transition: transform 200ms ease-out;
+  }
+}
+
+@keyframes sorak-terbang {
+  0% {
+    opacity: 0;
+    transform: translateY(0) scale(0.5);
+  }
+  15% {
+    opacity: 1;
+    transform: translateY(-2rem) scale(1) rotate(calc(-10deg + 5deg * var(--urutan, 0)));
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-9rem) scale(0.9) rotate(calc(10deg - 5deg * var(--urutan, 0)));
+  }
+}
+
+@keyframes label-sorak {
+  0% {
+    opacity: 0;
+    transform: translateY(1.25rem) scale(0.6);
+  }
+  10% {
+    opacity: 1;
+    transform: none;
+  }
+  55% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-8rem) scale(0.95);
+  }
+}
+
+/* Angka total berdenyut sekali setiap berubah (elemennya dipasang ulang lewat key). */
+@keyframes denyut {
+  20% {
+    transform: scale(1.18);
+  }
+}
+
+/*
+ * Penghalusan umum. Tombol "turun" ke alasnya saat ditekan (translateY; bayangan alas mengecil tanpa animasi).
+ * Hanya transform dan opacity yang dianimasikan; tanpa gerak, keadaan akhirnya langsung tampil.
+ */
+.button:not(:disabled):active,
+.keypad-key:active {
+  transform: translateY(2px);
+}
+
+.buku .button:not(:disabled):active,
+.button-hp:not(:disabled):active,
+.button-tinta:not(:disabled):active {
+  transform: translateY(3px);
+}
+
+.buku .button:not(:disabled):active {
+  box-shadow: inset 0 0 0 2px var(--tinta), var(--shadow-alas-tekan);
+}
+
+.buku .button-primary:not(:disabled):active,
+.button-hp:not(:disabled):active {
+  box-shadow: var(--shadow-alas-tekan);
+}
+
+.buku .button-tinta:not(:disabled):active,
+.button-tinta:not(:disabled):active {
+  box-shadow: var(--shadow-alas-gelap-tekan);
+}
+
+.buku .button-teks:not(:disabled):active {
+  transform: none;
+  box-shadow: none;
+  opacity: 0.7;
+}
+
+button.answer:not(:disabled):active {
+  transform: scale(0.97);
+}
+
+/* Mouse: tombol sedikit terangkat saat disorot (tidak di HP, supaya tidak "lengket" setelah disentuh). */
+@media (hover: hover) {
+  .buku .button:not(:disabled):not(.button-teks):hover,
+  .button-tinta:not(:disabled):hover {
+    transform: translateY(-1px);
+  }
+
+  .buku .button:not(:disabled):not(.button-teks):active,
+  .button-tinta:not(:disabled):active {
+    transform: translateY(3px);
+  }
+}
+
+/* Pesan singkat di bawah layar ("Kuis tersimpan"): muncul, diam, lalu memudar sendiri. */
+.toast {
+  position: fixed;
+  left: 50%;
+  bottom: var(--space-4);
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  max-width: calc(100% - 2 * var(--space-3));
+  margin: 0;
+  padding: var(--space-2) var(--space-4) var(--space-2) var(--space-3);
+  border-radius: var(--radius-tombol-guru);
+  background: var(--tinta);
+  color: var(--kertas-putih);
+  font-weight: 700;
+  box-shadow: var(--shadow-alas-gelap);
+  transform: translateX(-50%);
+}
+
+.toast .check-mark {
+  color: var(--kapur);
+}
+
+/* Baris kuis yang baru disimpan: latar kapur muda yang memudar pelan (lapisan terpisah, jadi hanya opacity). */
+.buku-baris.is-tersimpan {
+  position: relative;
+  isolation: isolate;
+}
+
+.buku-baris.is-tersimpan::before {
+  content: "";
+  position: absolute;
+  inset: 0 calc(-1 * var(--space-3));
+  z-index: -1;
+  border-radius: var(--radius-tombol-guru);
+  background: var(--kapur-muda);
+  opacity: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .buku-baris.is-tersimpan::before {
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .button,
+  .keypad-key,
+  button.answer {
+    transition: transform var(--gerak-tekan);
+  }
+
+  .toast {
+    animation: toast var(--gerak-toast) both;
+  }
+
+  .buku-baris.is-tersimpan::before {
+    animation: sorot var(--gerak-sorot) both;
+  }
+
+  .buku-baris.is-keluar {
+    animation: baris-keluar var(--gerak-keluar) both;
+  }
+
+  .mode-dialog[open],
+  .kick-dialog[open] {
+    animation: dialog-masuk var(--gerak-dialog) both;
+  }
+
+  .mode-dialog[open]::backdrop,
+  .kick-dialog[open]::backdrop {
+    animation: tirai-masuk var(--gerak-layar) both;
+  }
+
+  /* backwards, bukan both: setelah selesai tidak ada transform yang tertinggal, karena transform pada pembungkus
+     membuat elemen position: fixed di dalamnya (batang waktu proyektor) ikut bergeser. */
+  .buku-isi,
+  .hp-screen,
+  .projector,
+  .projector-lobby {
+    animation: layar-masuk var(--gerak-layar) backwards;
+  }
+}
+
+@keyframes toast {
+  0% {
+    opacity: 0;
+    transform: translateX(-50%) translateY(1rem);
+  }
+  6%,
+  88% {
+    opacity: 1;
+    transform: translateX(-50%);
+  }
+  100% {
+    opacity: 0;
+    transform: translateX(-50%);
+  }
+}
+
+@keyframes sorot {
+  0%,
+  50% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+@keyframes baris-keluar {
+  to {
+    opacity: 0;
+    transform: translateX(1rem);
+  }
+}
+
+@keyframes dialog-masuk {
+  from {
+    opacity: 0;
+    transform: translateY(0.75rem) scale(0.97);
+  }
+}
+
+@keyframes tirai-masuk {
+  from {
+    opacity: 0;
+  }
+}
+
+/* Layar baru (halaman guru, layar HP, layar proyektor): muncul halus, tidak "meloncat". */
+@keyframes layar-masuk {
+  from {
+    opacity: 0;
+    transform: translateY(0.5rem);
+  }
 }
 
 /* Proyektor-3: sebaran dengan teks pilihan di atas batang. */

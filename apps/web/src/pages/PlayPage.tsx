@@ -1,9 +1,18 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { Link, useNavigate, useParams } from "react-router";
-import { NICKNAME_MAX_LENGTH, Nickname, Pin, type PlayerServerMessage, type RoomLookup } from "@sorak/shared";
+import {
+  CHEER_ENERGY_MAX,
+  CHEER_VIBRATE_MS,
+  NICKNAME_MAX_LENGTH,
+  Nickname,
+  Pin,
+  type PlayerServerMessage,
+  type RoomLookup,
+} from "@sorak/shared";
 import { AnswerButton, AnswerCard, AnswerTile, answerLetter, answersClass } from "../AnswerOption.tsx";
 import { ApiRequestError, describeError, lookupRoom } from "../api.ts";
-import { Logo } from "../Logo.tsx";
+import { energyLevel, fullEnergy, spendCheer } from "../cheer-energy.ts";
+import { HandIcon, Logo } from "../Logo.tsx";
 import { Countdown } from "../motion/Countdown.tsx";
 import { FlapDigits } from "../motion/FlapDigits.tsx";
 import { RaiseIn } from "../motion/RaiseIn.tsx";
@@ -109,6 +118,8 @@ export function PlayPage() {
           pin={pin}
           nickname={view.me.nickname}
           playerCount={view.playerCount}
+          cheerTotal={view.cheerTotal}
+          onCheer={() => session.current?.cheer()}
           onLeave={() => {
             session.current?.leave();
             navigate("/");
@@ -224,8 +235,15 @@ function NicknameForm(props: {
   );
 }
 
-/** HP-3: lobby. Tombol Sorak menyusul di B5. */
-function Lobby(props: { pin: Pin; nickname: string; playerCount: number; onLeave: () => void }) {
+/** HP-3: lobby dengan tombol Sorak. */
+function Lobby(props: {
+  pin: Pin;
+  nickname: string;
+  playerCount: number;
+  cheerTotal: number;
+  onCheer: () => void;
+  onLeave: () => void;
+}) {
   return (
     <main className="hp-screen">
       <div className="hp-topbar">
@@ -241,12 +259,109 @@ function Lobby(props: { pin: Pin; nickname: string; playerCount: number; onLeave
         <span>{props.playerCount} teman di ruang ini</span>
       </p>
       <p className="hp-pill">Tunggu guru memulai</p>
+      <CheerPad total={props.cheerTotal} onCheer={props.onCheer} />
       <div className="hp-bottom">
         <button type="button" className="link-button" onClick={props.onLeave}>
           Keluar dari ruang
         </button>
       </div>
     </main>
+  );
+}
+
+const reducedMotion = () => window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+/**
+ * Tombol Sorak (B5): setiap tekan memakai satu garis tenaga dan menerbangkan tangan kecil. Tenaga habis: tombol
+ * tetap bisa ditekan, tidak mengirim apa pun, dan bergetar kecil. Getar HP hanya kalau didukung (Safari iPhone tidak).
+ */
+function CheerPad({ total, onCheer }: { total: number; onCheer: () => void }) {
+  const button = useRef<HTMLButtonElement | null>(null);
+  const [energy, setEnergy] = useState(() => fullEnergy(performance.now()));
+  const [now, setNow] = useState(() => performance.now());
+  // Tangan yang sedang terbang; id naik terus supaya setiap tangan dipasang baru dan animasinya diputar sekali.
+  const [flies, setFlies] = useState<number[]>([]);
+  const level = energyLevel(energy, now);
+  const full = level >= CHEER_ENERGY_MAX;
+
+  // Garis tenaga terisi pelan: render ulang tiap 100 ms, hanya selama belum penuh.
+  useEffect(() => {
+    if (full) return;
+    const timer = setInterval(() => setNow(performance.now()), 100);
+    return () => clearInterval(timer);
+  }, [full]);
+
+  function press() {
+    const at = performance.now();
+    const spent = spendCheer(energy, at);
+    setEnergy(spent.energy);
+    setNow(at);
+    if (!spent.sent) {
+      if (!reducedMotion()) {
+        button.current?.animate(
+          [{ transform: "translateX(0)" }, { transform: "translateX(-6px)" }, { transform: "translateX(6px)" }, { transform: "translateX(0)" }],
+          { duration: 240, easing: "ease-in-out" },
+        );
+      }
+      return;
+    }
+    onCheer();
+    if ("vibrate" in navigator) navigator.vibrate(CHEER_VIBRATE_MS);
+    setFlies((current) => [...current, (current.at(-1) ?? 0) + 1].slice(-CHEER_ENERGY_MAX));
+  }
+
+  const whole = Math.floor(level);
+  return (
+    <section className="cheer-pad" aria-label="Sorak">
+      <div className="cheer-flies" aria-hidden="true">
+        {flies.map((id) => (
+          <span key={id} className="cheer-fly" style={{ "--urutan": id % CHEER_ENERGY_MAX }}>
+            <HandIcon className="cheer-fly-hand" />
+          </span>
+        ))}
+      </div>
+      <button ref={button} type="button" className="cheer-button" onClick={press}>
+        <HandIcon className="cheer-button-hand" />
+        <span className="cheer-button-text">Sorak!</span>
+      </button>
+      <div className="hp-row">
+        <p className="cheer-energy">
+          <svg className="cheer-energy-lines" viewBox="0 0 84 30" role="img" aria-label={`Tenaga sorak ${whole} dari ${CHEER_ENERGY_MAX}`}>
+            {Array.from({ length: CHEER_ENERGY_MAX }, (_, i) => (
+              <g key={i}>
+                <line className="cheer-energy-empty" x1={6 + i * 18} y1="4" x2={6 + i * 18} y2="26" />
+                {i < whole && <line className="cheer-energy-full" x1={6 + i * 18} y1="4" x2={6 + i * 18} y2="26" />}
+                {i === whole && !full && (
+                  <line
+                    className="cheer-energy-refill"
+                    x1={6 + i * 18}
+                    y1="4"
+                    x2={6 + i * 18}
+                    y2="26"
+                    style={{ transform: `scaleY(${level - whole})` }}
+                  />
+                )}
+              </g>
+            ))}
+          </svg>
+          <span>
+            tenaga sorak
+            <span className="cheer-energy-hint">
+              <br />
+              terisi lagi sendiri
+            </span>
+          </span>
+        </p>
+        <p className="cheer-total">
+          Kelas sudah bersorak
+          <br />
+          <span key={total} className="cheer-total-number">
+            {numberFormat.format(total)}
+          </span>{" "}
+          kali
+        </p>
+      </div>
+    </section>
   );
 }
 

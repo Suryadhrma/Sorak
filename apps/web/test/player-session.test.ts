@@ -78,7 +78,7 @@ describe("player session", () => {
     expect(ws.sentMessages()).toEqual([{ t: "join", v: 1, nickname: "Dimas" }]);
     ws.serverSend(welcome({}, { sessionToken: TOKEN }));
     expect(fakes.storage.get(TOKEN_KEY)).toBe(TOKEN);
-    expect(view()).toEqual({ kind: "lobby", me: { playerId: "p1", nickname: "Dimas" }, playerCount: 4 });
+    expect(view()).toEqual({ kind: "lobby", me: { playerId: "p1", nickname: "Dimas" }, playerCount: 4, cheerTotal: 0 });
   });
 
   it("NICKNAME_TAKEN tampil di form, nama berikutnya dikirim lewat socket yang sama", () => {

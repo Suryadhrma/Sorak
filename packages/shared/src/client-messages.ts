@@ -57,7 +57,7 @@ export const AnswerMessage = z.strictObject({
   confidence: Confidence.optional(),
 });
 
-/** Tombol Sorak (F-16). */
+/** Tombol Sorak (F-16). Hari 5 hanya "sorak" di lobby yang diproses; nilai lain diterima skema tapi diabaikan. */
 export const ReactMessage = z.strictObject({
   t: z.literal("react"),
   reaction: z.enum(REACTIONS),
@@ -107,7 +107,8 @@ export const ALLOWED_PHASES: Record<ClientMessageType, readonly Phase[]> = {
   resume: ["lobby", "question", "grace", "reveal", "ended"],
   ack: ["question", "grace"],
   answer: ["question", "grace"],
-  react: ["lobby", "question", "grace", "reveal", "ended"],
+  // Hari 5: tombol Sorak hanya ada di lobby; reaksi di tahap lain diabaikan sampai UI-nya ada.
+  react: ["lobby"],
   host_hello: ["lobby", "question", "grace", "reveal", "ended"],
   start: ["lobby"],
   next: ["reveal"],

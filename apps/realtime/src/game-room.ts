@@ -1,5 +1,6 @@
 import { DurableObject } from "cloudflare:workers";
 import {
+  CHEER_LIMIT,
   CloseCode,
   ENDED_RETENTION_MS,
   GAME_EVENT_GIVE_UP_MS,
@@ -45,6 +46,7 @@ import {
   type ScoringMode,
   type ServerMessage,
 } from "@sorak/shared";
+import { addCheer, emptyCheer, type CheerState } from "./cheer.ts";
 import { buildGameEndedEvent, fitGameEvent, gameEventRetryDelay } from "./game-event.ts";
 import { compensateAnswerTime, updateLatency } from "./latency.ts";
 import { log } from "./log.ts";
@@ -85,6 +87,9 @@ export class GameRoom extends DurableObject<Env> {
   // Batas pesan per socket cukup di memori: setelah hibernasi ember kembali penuh, tidak merugikan siapa pun.
   private readonly buckets = new WeakMap<WebSocket, TokenBucket>();
   private readonly invalidStreaks = new WeakMap<WebSocket, number>();
+  // Sorak (lobby) di memori saja: ember kedua per socket, plus total dan penyorak terakhir.
+  private readonly cheerBuckets = new WeakMap<WebSocket, TokenBucket>();
+  private cheer: CheerState = emptyCheer;
 
   constructor(ctx: DurableObjectState, env: Env) {
     super(ctx, env);
@@ -286,11 +291,26 @@ export class GameRoom extends DurableObject<Env> {
         if (attachment.role !== "player") return;
         return this.ack(ws, attachment, message.q, now);
       case "react":
-        // Tombol Sorak dikerjakan Hari 5.
-        return log.info("player_message_ignored", { t: message.t, phase });
+        // Reaksi lain belum punya UI; hanya Sorak di lobby (ALLOWED_PHASES) yang diproses.
+        if (attachment.role !== "player" || message.reaction !== "sorak") return;
+        return this.sorak(ws, attachment, now);
       default:
         return message satisfies never;
     }
+  }
+
+  /**
+   * Sorak dari HP. Ember sorak (5, isi ulang 2/detik) membuang kelebihannya diam-diam tanpa menutup socket;
+   * ember umum (10/detik) tetap berlaku. Kiriman ke host dan pemain diatur leading-edge throttle di cheer.ts.
+   */
+  private sorak(ws: WebSocket, player: PlayerAttachment, now: number): void {
+    const taken = takeToken(this.cheerBuckets.get(ws), now, CHEER_LIMIT);
+    this.cheerBuckets.set(ws, taken.bucket);
+    if (!taken.allowed) return;
+    const outcome = addCheer(this.cheer, player.nickname, now);
+    this.cheer = outcome.state;
+    if (outcome.toHost) this.broadcast("host", { t: "cheer", ...outcome.toHost });
+    if (outcome.toPlayers) this.broadcast("player", { t: "cheer_total", ...outcome.toPlayers });
   }
 
   /** Pemain baru hanya bisa join di lobby; pemain lama kembali lewat resume. */

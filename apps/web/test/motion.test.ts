@@ -1,5 +1,6 @@
-import { COUNTDOWN_URGENT_SEC, type LeaderboardEntry } from "@sorak/shared";
+import { CHEER_ENERGY_MAX, CHEER_ENERGY_REFILL_MS, COUNTDOWN_URGENT_SEC, type LeaderboardEntry } from "@sorak/shared";
 import { describe, expect, it } from "vitest";
+import { energyLevel, fullEnergy, spendCheer } from "../src/cheer-energy.ts";
 import { countdownDisplay } from "../src/countdown.ts";
 import { flapDigits } from "../src/motion/flap.ts";
 import { leaderboardMoves } from "../src/motion/flip.ts";
@@ -124,5 +125,26 @@ describe("countdownDisplay", () => {
 describe("rowOrder", () => {
   it("baris awal berurutan, baris setelah batas memakai jeda yang sama dengan baris terakhir yang dibatasi", () => {
     expect([0, 1, MAX_ROW_ORDER, MAX_ROW_ORDER + 1, 40].map(rowOrder)).toEqual([0, 1, MAX_ROW_ORDER, MAX_ROW_ORDER, MAX_ROW_ORDER]);
+  });
+});
+
+describe("tenaga sorak", () => {
+  it(`${CHEER_ENERGY_MAX} tekan cepat terkirim, tekan berikutnya tidak mengirim apa pun`, () => {
+    let energy = fullEnergy(0);
+    const sent: boolean[] = [];
+    for (let i = 0; i < CHEER_ENERGY_MAX + 1; i++) {
+      const spent = spendCheer(energy, 0);
+      energy = spent.energy;
+      sent.push(spent.sent);
+    }
+    expect(sent).toEqual([true, true, true, true, true, false]);
+  });
+
+  it(`satu garis terisi lagi setiap ${CHEER_ENERGY_REFILL_MS} ms, tidak melebihi ${CHEER_ENERGY_MAX}`, () => {
+    const empty = { level: 0, at: 0 };
+    expect(energyLevel(empty, CHEER_ENERGY_REFILL_MS)).toBe(1);
+    expect(energyLevel(empty, CHEER_ENERGY_REFILL_MS * 2.5)).toBe(2.5);
+    expect(energyLevel(empty, 60_000)).toBe(CHEER_ENERGY_MAX);
+    expect(spendCheer(empty, CHEER_ENERGY_REFILL_MS).sent).toBe(true);
   });
 });

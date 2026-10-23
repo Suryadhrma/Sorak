@@ -1,4 +1,4 @@
-import { CloseCode, type HostServerMessage, type LeaderboardEntry, type PublicQuestion, type RoomInfo, type RosterEntry } from "@sorak/shared";
+import { CHEER_FLOATS_MAX, CloseCode, type HostServerMessage, type LeaderboardEntry, type PublicQuestion, type RoomInfo, type RosterEntry } from "@sorak/shared";
 import { closeMessage } from "./socket.ts";
 
 /**
@@ -9,6 +9,32 @@ import { closeMessage } from "./socket.ts";
 type HostWelcomeMessage = Extract<HostServerMessage, { t: "host_welcome" }>;
 type RevealMessage = Extract<HostServerMessage, { t: "reveal" }>;
 type PodiumMessage = Extract<HostServerMessage, { t: "podium" }>;
+type CheerMessage = Extract<HostServerMessage, { t: "cheer" }>;
+
+/**
+ * Aliran sorak di lobby proyektor: total, dan label nama yang naik lalu memudar (paling banyak 6 sekaligus).
+ * id naik terus supaya setiap label dipasang baru dan animasinya diputar sekali.
+ */
+/** lane: posisi mendatar (0..5), acak semu dari id supaya label tidak bertumpuk; order: urutan di kiriman yang sama. */
+export type CheerFloat = { id: number; nickname: string; lane: number; order: number };
+export type HostCheer = { total: number; floats: CheerFloat[]; nextId: number };
+export const emptyHostCheer: HostCheer = { total: 0, floats: [], nextId: 0 };
+
+// Urutan lajur diacak tetap (bukan 0..5 berurutan), supaya label berturut-turut tidak membentuk tangga.
+const CHEER_LANES = [2, 5, 0, 3, 1, 4] as const;
+
+export function applyCheer(cheer: HostCheer, message: CheerMessage): HostCheer {
+  const added = message.recent.map((nickname, index) => {
+    const id = cheer.nextId + index;
+    return { id, nickname, lane: CHEER_LANES[id % CHEER_LANES.length] ?? 0, order: index };
+  });
+  return {
+    // Kiriman bisa datang tidak berurutan setelah reconnect; total tidak pernah mundur.
+    total: Math.max(cheer.total, message.total),
+    floats: [...cheer.floats, ...added].slice(-CHEER_FLOATS_MAX),
+    nextId: cheer.nextId + added.length,
+  };
+}
 
 /**
  * Bagian yang ada di semua tahap: info room, daftar pemain, pesan dari server (misalnya "Belum ada pemain"), dan
@@ -20,7 +46,7 @@ export type HostView =
   | { kind: "connecting" }
   /** Setelah refresh di reveal/ended: menunggu pesan reveal/podium yang dikirim ulang server. */
   | { kind: "syncing"; base: HostBase; question: PublicQuestion | null }
-  | { kind: "lobby"; base: HostBase }
+  | { kind: "lobby"; base: HostBase; cheer: HostCheer }
   | { kind: "question"; base: HostBase; question: PublicQuestion; startedAt: number; durationMs: number; answered: number; total: number }
   | { kind: "grace"; base: HostBase; question: PublicQuestion; answered: number; total: number }
   /** previous: papan skor reveal sebelumnya, untuk FLIP dan "naik paling jauh"; null di reveal pertama atau setelah refresh. */
@@ -95,6 +121,8 @@ export function hostScreen(view: HostView, event: HostEvent): HostView {
       };
     case "podium":
       return { kind: "ended", base: { ...next, notice: null }, podium: message };
+    case "cheer":
+      return view.kind === "lobby" ? { ...view, cheer: applyCheer(view.cheer, message) } : view;
     case "error":
       return withBase(view, { ...next, notice: message.message });
     default:
@@ -107,7 +135,7 @@ function fromWelcome(message: HostWelcomeMessage, at: number): HostView {
   const total = message.players.length;
   switch (message.phase) {
     case "lobby":
-      return { kind: "lobby", base };
+      return { kind: "lobby", base, cheer: emptyHostCheer };
     case "question":
       if (!message.question) return { kind: "syncing", base, question: null };
       return {
