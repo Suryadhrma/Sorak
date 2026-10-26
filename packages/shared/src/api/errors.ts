@@ -12,6 +12,11 @@ export const ApiErrorCode = z.enum([
   "ROOM_FULL",
   "GAME_ALREADY_STARTED",
   "INTERNAL",
+  // Draf soal AI (Hari 6). Editor manual tidak pernah terblokir oleh kode-kode ini.
+  "AI_UNAVAILABLE",
+  "AI_QUOTA_EXCEEDED",
+  "AI_RATE_LIMITED",
+  "AI_INVALID_OUTPUT",
 ]);
 export type ApiErrorCode = z.infer<typeof ApiErrorCode>;
 
@@ -21,6 +26,8 @@ export const ApiError = z.object({
     message: z.string(),
     /** Hanya untuk VALIDATION_FAILED: path Zod (`questions.3.correctIndex`) ke pesan, untuk menandai kotak di editor. */
     fields: z.record(z.string(), z.string()).optional(),
+    /** Hanya untuk AI_RATE_LIMITED: detik sampai boleh mencoba lagi (dari header retry-after Groq). */
+    retryAfterSec: z.number().int().positive().optional(),
   }),
 });
 export type ApiError = z.infer<typeof ApiError>;

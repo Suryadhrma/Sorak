@@ -1,4 +1,4 @@
-import { DEFAULT_TIME_LIMIT_SEC, MIN_OPTIONS, QuizId, QuizInput, fieldErrors, type QuizDetail } from "@sorak/shared";
+import { DEFAULT_TIME_LIMIT_SEC, MIN_OPTIONS, QuizId, QuizInput, fieldErrors, type QuestionOrigin, type QuizDetail } from "@sorak/shared";
 import { z } from "zod";
 
 /**
@@ -13,6 +13,7 @@ export type QuestionDraft = {
   correctIndex: number;
   timeLimitSec: number;
   explanation: string;
+  origin: QuestionOrigin;
 };
 
 export type QuizDraft = { title: string; description: string; questions: QuestionDraft[] };
@@ -31,6 +32,7 @@ export function newQuestionDraft(): QuestionDraft {
     correctIndex: 0,
     timeLimitSec: DEFAULT_TIME_LIMIT_SEC,
     explanation: "",
+    origin: "manual",
   };
 }
 
@@ -46,6 +48,7 @@ export function draftFromQuiz(quiz: QuizDetail): QuizDraft {
       correctIndex: question.correctIndex,
       timeLimitSec: question.timeLimitSec,
       explanation: question.explanation ?? "",
+      origin: question.origin,
     })),
   };
 }
@@ -64,6 +67,7 @@ export function validateDraft(draft: QuizDraft): DraftValidation {
       correctIndex: question.correctIndex,
       timeLimitSec: question.timeLimitSec,
       explanation: nullIfBlank(question.explanation),
+      origin: question.origin,
     })),
   });
   if (result.success) return { ok: true, input: result.data };

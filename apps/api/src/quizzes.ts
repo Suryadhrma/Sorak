@@ -2,6 +2,7 @@ import { z } from "zod";
 import {
   Options,
   QuestionDetail,
+  QuestionOrigin,
   QUIZ_LIST_LIMIT,
   QuizSummary,
   type QuizDetail,
@@ -19,7 +20,7 @@ export const LIST_QUIZZES_SQL = `
   LIMIT ?`;
 
 export const QUESTIONS_OF_QUIZ_SQL = `
-  SELECT id, prompt, options, correct_index, time_limit_sec, explanation
+  SELECT id, prompt, options, correct_index, time_limit_sec, explanation, origin
   FROM questions
   WHERE quiz_id = (SELECT id FROM quizzes WHERE id = ? AND host_id = ?)
   ORDER BY position`;
@@ -64,6 +65,7 @@ const QuestionDetailRow = z
     correct_index: z.number(),
     time_limit_sec: z.number(),
     explanation: z.string().nullable(),
+    origin: QuestionOrigin,
   })
   .transform((row) => ({
     id: row.id,
@@ -72,6 +74,7 @@ const QuestionDetailRow = z
     correctIndex: row.correct_index,
     timeLimitSec: row.time_limit_sec,
     explanation: row.explanation,
+    origin: row.origin,
   }))
   .pipe(QuestionDetail);
 
@@ -89,7 +92,6 @@ const QuizRow = z.object({
 const ExistingQuestionRow = z.object({
   id: z.string(),
   created_at: z.number(),
-  origin: z.enum(["manual", "ai", "ai_edited"]),
 });
 
 export async function listQuizzes(db: D1Database, hostId: string): Promise<QuizSummary[]> {
@@ -114,14 +116,14 @@ export async function findQuiz(db: D1Database, hostId: string, quizId: string): 
   };
 }
 
-type StoredQuestion = { id: string; createdAt: number; origin: z.infer<typeof ExistingQuestionRow>["origin"] };
+type StoredQuestion = { id: string; createdAt: number };
 
 function insertQuestions(db: D1Database, quizId: string, input: QuizInput, existing: Map<string, StoredQuestion>, now: number) {
   const used = new Set<string>();
   return input.questions.map((question, position) => {
     // Id dari klien hanya dipakai kalau memang milik kuis ini dan belum dipakai soal lain di body yang sama.
     const kept = question.id && !used.has(question.id) ? existing.get(question.id) : undefined;
-    const stored = kept ?? { id: crypto.randomUUID(), createdAt: now, origin: "manual" as const };
+    const stored = kept ?? { id: crypto.randomUUID(), createdAt: now };
     used.add(stored.id);
     return db
       .prepare(INSERT_QUESTION_SQL)
@@ -134,7 +136,7 @@ function insertQuestions(db: D1Database, quizId: string, input: QuizInput, exist
         question.correctIndex,
         question.timeLimitSec,
         question.explanation,
-        stored.origin,
+        question.origin,
         stored.createdAt,
         now,
       );
@@ -162,7 +164,7 @@ export async function replaceQuiz(db: D1Database, hostId: string, quizId: string
   const [ownership, existingResult] = await db.batch([
     db.prepare("SELECT 1 FROM quizzes WHERE id = ? AND host_id = ?").bind(quizId, hostId),
     db
-      .prepare("SELECT id, created_at, origin FROM questions WHERE quiz_id = (SELECT id FROM quizzes WHERE id = ? AND host_id = ?)")
+      .prepare("SELECT id, created_at FROM questions WHERE quiz_id = (SELECT id FROM quizzes WHERE id = ? AND host_id = ?)")
       .bind(quizId, hostId),
   ]);
   if (!ownership?.results.length) return false;
@@ -170,7 +172,7 @@ export async function replaceQuiz(db: D1Database, hostId: string, quizId: string
   const existing = new Map<string, StoredQuestion>();
   for (const row of existingResult?.results ?? []) {
     const question = ExistingQuestionRow.parse(row);
-    existing.set(question.id, { id: question.id, createdAt: question.created_at, origin: question.origin });
+    existing.set(question.id, { id: question.id, createdAt: question.created_at });
   }
 
   // Hapus lalu tulis ulang dalam satu batch: UNIQUE (quiz_id, position) membuat tukar urutan

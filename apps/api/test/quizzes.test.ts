@@ -17,6 +17,7 @@ const question = (prompt: string, extra: Partial<QuestionInput> = {}): QuestionI
   correctIndex: 0,
   timeLimitSec: 20,
   explanation: null,
+  origin: "manual",
   ...extra,
 });
 
@@ -234,6 +235,36 @@ describe("PUT mengganti seluruh isi kuis", () => {
 
     expect(res.status).toBe(200);
     expect(QuizDetail.parse(await res.json()).questions.map((q) => q.id)).toEqual([second.id, first.id]);
+  });
+});
+
+describe("origin soal (Hari 6)", () => {
+  it("origin dari klien disimpan dan dikembalikan apa adanya, bersama penjelasan", async () => {
+    const host = await signedInHost();
+    const quiz = await createQuiz(
+      host,
+      quizInput({
+        questions: [
+          question("Soal manual"),
+          question("Soal dari AI", { origin: "ai", explanation: "Ada di materi." }),
+          question("Soal AI yang disunting", { origin: "ai_edited" }),
+        ],
+      }),
+    );
+    expect(quiz.questions.map((q) => q.origin)).toEqual(["manual", "ai", "ai_edited"]);
+    expect(quiz.questions[1]?.explanation).toBe("Ada di materi.");
+
+    const fetched = QuizDetail.parse(await (await host.send(`/api/quizzes/${quiz.id}`)).json());
+    expect(fetched.questions.map((q) => q.origin)).toEqual(["manual", "ai", "ai_edited"]);
+  });
+
+  it("body tanpa origin (web versi lama) tetap tersimpan sebagai manual", async () => {
+    const host = await signedInHost();
+    const { questions, ...rest } = quizInput();
+    const legacy = { ...rest, questions: questions.map(({ origin: _origin, ...q }) => q) };
+    const res = await host.send("/api/quizzes", { method: "POST", json: legacy });
+    expect(res.status).toBe(201);
+    expect(QuizDetail.parse(await res.json()).questions.every((q) => q.origin === "manual")).toBe(true);
   });
 });
 

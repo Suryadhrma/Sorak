@@ -25,6 +25,7 @@ const question = (extra: Partial<QuestionInputType> = {}): QuestionInputType => 
   correctIndex: 0,
   timeLimitSec: 20,
   explanation: null,
+  origin: "manual",
   ...extra,
 });
 

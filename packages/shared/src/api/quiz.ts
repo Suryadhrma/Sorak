@@ -33,10 +33,18 @@ const answerKeyInOptions = (question: { options: string[]; correctIndex: number 
   question.correctIndex < question.options.length;
 const answerKeyIssue = { message: "Jawaban benar harus salah satu opsi", path: ["correctIndex"] };
 
-export const QuestionInput = QuestionFields.extend({ id: QuestionId.optional() }).refine(answerKeyInOptions, answerKeyIssue);
+/** Asal soal (kolom questions.origin): ditulis guru, dari AI apa adanya, atau dari AI lalu disunting. */
+export const QuestionOrigin = z.enum(["manual", "ai", "ai_edited"]);
+export type QuestionOrigin = z.infer<typeof QuestionOrigin>;
+
+/** origin boleh tidak dikirim: web versi lama (sebelum Hari 6) tetap bisa menyimpan, dan soalnya dianggap manual. */
+export const QuestionInput = QuestionFields.extend({ id: QuestionId.optional(), origin: QuestionOrigin.default("manual") }).refine(
+  answerKeyInOptions,
+  answerKeyIssue,
+);
 export type QuestionInput = z.infer<typeof QuestionInput>;
 
-export const QuestionDetail = QuestionFields.extend({ id: QuestionId }).refine(answerKeyInOptions, answerKeyIssue);
+export const QuestionDetail = QuestionFields.extend({ id: QuestionId, origin: QuestionOrigin }).refine(answerKeyInOptions, answerKeyIssue);
 export type QuestionDetail = z.infer<typeof QuestionDetail>;
 
 const QuizTitle = z.string().trim().min(1, "Judul tidak boleh kosong").max(QUIZ_TITLE_MAX_LENGTH);

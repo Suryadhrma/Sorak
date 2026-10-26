@@ -15,6 +15,7 @@ const savedQuiz: QuizDetail = {
       correctIndex: 1,
       timeLimitSec: 10,
       explanation: null,
+      origin: "manual",
     },
     {
       id: "1c8f5b2d-3e4a-4b6c-9d7e-8f9a0b1c2d3e",
@@ -23,6 +24,7 @@ const savedQuiz: QuizDetail = {
       correctIndex: 1,
       timeLimitSec: 20,
       explanation: "Jupiter",
+      origin: "ai",
     },
   ],
 };
@@ -32,6 +34,7 @@ describe("draf kosong", () => {
     const first = newQuestionDraft();
     expect(first.options).toEqual(Array.from({ length: MIN_OPTIONS }, () => ""));
     expect(first.key).not.toBe(newQuestionDraft().key);
+    expect(first.origin).toBe("manual");
     expect(emptyQuizDraft().questions).toHaveLength(1);
   });
 });

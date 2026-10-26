@@ -162,6 +162,25 @@ export const EXPLANATION_MAX_LENGTH = 500;
 export const DISPLAY_NAME_MAX_LENGTH = 60;
 export const DEFAULT_TIME_LIMIT_SEC = 20;
 
+/*
+ * Draf soal AI dari teks materi (Hari 6, F-10). Batas Groq Free per organisasi: 30 request/menit, 1.000/hari,
+ * 8.000 token/menit (satu generate sekitar 4.000-5.000 token). Kuota per guru dihitung dari tabel ai_generations.
+ */
+export const AI_DAILY_LIMIT_PER_HOST = 20;
+export const AI_SOURCE_MIN_CHARS = 200;
+export const AI_SOURCE_MAX_CHARS = 8_000;
+export const AI_QUESTION_COUNTS = [5, 10] as const;
+/** Draf AI selalu 4 pilihan (editor manual tetap boleh 2-4). */
+export const AI_OPTION_COUNT = 4;
+export const AI_EXPLANATION_MAX_CHARS = 300;
+/** Kutipan bukti dari materi; bukti yang lebih panjang dipotong saat divalidasi. */
+export const AI_EVIDENCE_MAX_CHARS = 200;
+/** Kutipan sependek ini hampir pasti ada di materi mana pun, jadi tidak dianggap bukti. */
+export const AI_GROUNDING_MIN_CHARS = 20;
+export const AI_REQUEST_TIMEOUT_MS = 25_000;
+/** Naikkan setiap kali prompt berubah, lalu jalankan ulang evaluasi (tools/ai-eval). */
+export const AI_PROMPT_VERSION = "gen-text-v1";
+
 /** Batas baris halaman "Kuis saya". */
 export const QUIZ_LIST_LIMIT = 100;
 
