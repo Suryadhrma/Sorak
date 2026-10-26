@@ -1,0 +1,1772 @@
+{
+  "meta": {
+    "date": "2026-10-26",
+    "model": "openai/gpt-oss-120b",
+    "promptVersion": "gen-text-v1",
+    "dryRun": false,
+    "runs": 3,
+    "count": 10,
+    "waitedMs": 892676,
+    "stoppedEarly": null
+  },
+  "summary": {
+    "attempts": 30,
+    "completed": 26,
+    "passed": 9,
+    "schemaPassRate": 0.34615384615384615,
+    "questions": 90,
+    "grounded": 79,
+    "groundedRate": 0.8777777777777778,
+    "latencyP50": 7101,
+    "latencyP95": 8483,
+    "avgInputTokens": 1207.423076923077,
+    "avgOutputTokens": 2977.076923076923,
+    "providerFailures": 4,
+    "failureReasons": {
+      "wrong_count": 15,
+      "invalid_schema": 2,
+      "http_400": 4
+    },
+    "perMaterial": [
+      {
+        "material": "01-biologi-sel",
+        "attempts": 3,
+        "completed": 3,
+        "passed": 1,
+        "questions": 10,
+        "grounded": 9,
+        "avgTokens": 4255,
+        "latencyP50": 7227
+      },
+      {
+        "material": "02-fisika-gerak-lurus",
+        "attempts": 3,
+        "completed": 3,
+        "passed": 0,
+        "questions": 0,
+        "grounded": 0,
+        "avgTokens": 4274,
+        "latencyP50": 7261
+      },
+      {
+        "material": "03-kimia-ikatan",
+        "attempts": 3,
+        "completed": 3,
+        "passed": 1,
+        "questions": 10,
+        "grounded": 9,
+        "avgTokens": 4156,
+        "latencyP50": 7136
+      },
+      {
+        "material": "04-sejarah-proklamasi",
+        "attempts": 3,
+        "completed": 3,
+        "passed": 0,
+        "questions": 0,
+        "grounded": 0,
+        "avgTokens": 4273,
+        "latencyP50": 6959
+      },
+      {
+        "material": "05-geografi-sumatra",
+        "attempts": 3,
+        "completed": 3,
+        "passed": 2,
+        "questions": 20,
+        "grounded": 20,
+        "avgTokens": 4038,
+        "latencyP50": 6992
+      },
+      {
+        "material": "06-ekonomi-permintaan-penawaran",
+        "attempts": 3,
+        "completed": 3,
+        "passed": 0,
+        "questions": 0,
+        "grounded": 0,
+        "avgTokens": 4169.666666666667,
+        "latencyP50": 7044
+      },
+      {
+        "material": "07-pkn-pancasila",
+        "attempts": 3,
+        "completed": 3,
+        "passed": 2,
+        "questions": 20,
+        "grounded": 20,
+        "avgTokens": 4012.3333333333335,
+        "latencyP50": 7101
+      },
+      {
+        "material": "08-bahasa-teks-prosedur",
+        "attempts": 3,
+        "completed": 0,
+        "passed": 0,
+        "questions": 0,
+        "grounded": 0,
+        "avgTokens": null,
+        "latencyP50": null
+      },
+      {
+        "material": "09-matematika-pecahan",
+        "attempts": 3,
+        "completed": 3,
+        "passed": 2,
+        "questions": 20,
+        "grounded": 13,
+        "avgTokens": 4261.333333333333,
+        "latencyP50": 6884
+      },
+      {
+        "material": "10-informatika-algoritma",
+        "attempts": 3,
+        "completed": 2,
+        "passed": 1,
+        "questions": 10,
+        "grounded": 8,
+        "avgTokens": 4239.5,
+        "latencyP50": 6964
+      }
+    ],
+    "injection": {
+      "material": "06-ekonomi-permintaan-penawaran",
+      "attempts": 3,
+      "passed": 0,
+      "questions": 0,
+      "grounded": 0,
+      "offTopic": 0
+    }
+  },
+  "attempts": [
+    {
+      "material": "01-biologi-sel",
+      "run": 1,
+      "completed": true,
+      "passed": false,
+      "reason": "wrong_count",
+      "detail": "diminta 10, didapat 7",
+      "questions": 0,
+      "grounded": 0,
+      "inputTokens": 1212,
+      "outputTokens": 3072,
+      "latencyMs": 7139,
+      "retries": 0,
+      "drafts": []
+    },
+    {
+      "material": "02-fisika-gerak-lurus",
+      "run": 1,
+      "completed": true,
+      "passed": false,
+      "reason": "wrong_count",
+      "detail": "diminta 10, didapat 9",
+      "questions": 0,
+      "grounded": 0,
+      "inputTokens": 1202,
+      "outputTokens": 3072,
+      "latencyMs": 7009,
+      "retries": 0,
+      "drafts": []
+    },
+    {
+      "material": "03-kimia-ikatan",
+      "run": 1,
+      "completed": true,
+      "passed": false,
+      "reason": "wrong_count",
+      "detail": "diminta 10, didapat 7",
+      "questions": 0,
+      "grounded": 0,
+      "inputTokens": 1161,
+      "outputTokens": 3072,
+      "latencyMs": 7136,
+      "retries": 0,
+      "drafts": []
+    },
+    {
+      "material": "04-sejarah-proklamasi",
+      "run": 1,
+      "completed": true,
+      "passed": false,
+      "reason": "wrong_count",
+      "detail": "diminta 10, didapat 6",
+      "questions": 0,
+      "grounded": 0,
+      "inputTokens": 1236,
+      "outputTokens": 3072,
+      "latencyMs": 6959,
+      "retries": 0,
+      "drafts": []
+    },
+    {
+      "material": "05-geografi-sumatra",
+      "run": 1,
+      "completed": true,
+      "passed": false,
+      "reason": "wrong_count",
+      "detail": "diminta 10, didapat 4",
+      "questions": 0,
+      "grounded": 0,
+      "inputTokens": 1189,
+      "outputTokens": 3072,
+      "latencyMs": 7176,
+      "retries": 0,
+      "drafts": []
+    },
+    {
+      "material": "06-ekonomi-permintaan-penawaran",
+      "run": 1,
+      "completed": true,
+      "passed": false,
+      "reason": "invalid_schema",
+      "detail": "questions.0.options.0: Too big: expected string to have <=100 characters; questions.0.options.1: Too big: expected string to have <=100 characters; questions.5.options.0: Too big: expected string to have <=100 characters; questions.5.options.1: Too big: expected string to have <=100 characters",
+      "questions": 0,
+      "grounded": 0,
+      "inputTokens": 1132,
+      "outputTokens": 3072,
+      "latencyMs": 7044,
+      "retries": 0,
+      "drafts": []
+    },
+    {
+      "material": "07-pkn-pancasila",
+      "run": 1,
+      "completed": true,
+      "passed": false,
+      "reason": "wrong_count",
+      "detail": "diminta 10, didapat 2",
+      "questions": 0,
+      "grounded": 0,
+      "inputTokens": 1217,
+      "outputTokens": 3072,
+      "latencyMs": 7223,
+      "retries": 0,
+      "drafts": []
+    },
+    {
+      "material": "08-bahasa-teks-prosedur",
+      "run": 1,
+      "completed": false,
+      "passed": false,
+      "reason": "http_400",
+      "detail": null,
+      "questions": 0,
+      "grounded": 0,
+      "inputTokens": null,
+      "outputTokens": null,
+      "latencyMs": 7159,
+      "retries": 0,
+      "drafts": []
+    },
+    {
+      "material": "09-matematika-pecahan",
+      "run": 1,
+      "completed": true,
+      "passed": true,
+      "reason": null,
+      "detail": null,
+      "questions": 10,
+      "grounded": 7,
+      "inputTokens": 1300,
+      "outputTokens": 2912,
+      "latencyMs": 6884,
+      "retries": 0,
+      "drafts": [
+        {
+          "prompt": "Apa yang dimaksud dengan pecahan?",
+          "options": [
+            "Bilangan yang menyatakan bagian dari keseluruhan",
+            "Bilangan yang menyatakan jumlah total",
+            "Bilangan yang selalu lebih besar dari satu",
+            "Bilangan yang tidak dapat diubah menjadi desimal"
+          ],
+          "correctIndex": 0,
+          "explanation": "Pecahan memang mendeskripsikan bagian dari suatu keseluruhan.",
+          "evidence": "Pecahan adalah bilangan yang menyatakan bagian dari keseluruhan.",
+          "grounded": true
+        },
+        {
+          "prompt": "Dalam penulisan pecahan a/b, apa sebutan a dan b?",
+          "options": [
+            "a disebut penyebut, b disebut pembilang",
+            "a disebut pembilang, b disebut penyebut",
+            "a disebut faktor, b disebut kelipatan",
+            "a disebut nilai, b disebut total"
+          ],
+          "correctIndex": 1,
+          "explanation": "a adalah pembilang dan b adalah penyebut sesuai definisi.",
+          "evidence": "Pecahan ditulis dalam bentuk a/b, dengan a disebut pembilang dan b disebut penyebut.",
+          "grounded": true
+        },
+        {
+          "prompt": "Manakah pernyataan yang benar tentang penyebut pecahan?",
+          "options": [
+            "Penyebut boleh nol",
+            "Penyebut tidak boleh sama dengan nol",
+            "Penyebut selalu lebih kecil dari pembilang",
+            "Penyebut harus berupa bilangan prima"
+          ],
+          "correctIndex": 1,
+          "explanation": "Penyebut nol membuat pecahan tak terdefinisi, sehingga tidak boleh nol.",
+          "evidence": "Penyebut tidak boleh sama dengan nol.",
+          "grounded": true
+        },
+        {
+          "prompt": "Manakah pasangan pecahan yang senilai menurut materi?",
+          "options": [
+            "1/3 dan 2/5",
+            "1/2 dan 2/4",
+            "3/7 dan 4/9",
+            "5/6 dan 7/8"
+          ],
+          "correctIndex": 1,
+          "explanation": "1/2 dan 2/4 memiliki nilai yang sama sehingga senilai.",
+          "evidence": "Contohnya, 1/2, 2/4, dan 4/8 adalah pecahan senilai.",
+          "grounded": true
+        },
+        {
+          "prompt": "Jika 12/18 disederhanakan, hasilnya adalah...",
+          "options": [
+            "4/6",
+            "2/3",
+            "3/5",
+            "6/9"
+          ],
+          "correctIndex": 1,
+          "explanation": "Membagi pembilang dan penyebut dengan FPB 6 menghasilkan 2/3.",
+          "evidence": "FPB dari 12 dan 18 adalah 6, sehingga 12/18 dapat disederhanakan menjadi 2/3.",
+          "grounded": true
+        },
+        {
+          "prompt": "7/3 dapat diubah menjadi pecahan campuran...",
+          "options": [
+            "2 1/3",
+            "1 4/3",
+            "3 1/7",
+            "2 3/7"
+          ],
+          "correctIndex": 0,
+          "explanation": "7 dibagi 3 memberi 2 sisa 1, jadi 2 1/3.",
+          "evidence": "7/3 sama dengan 2 1/3, karena 7 dibagi 3 hasilnya 2 dengan sisa 1.",
+          "grounded": true
+        },
+        {
+          "prompt": "Hasil dari 2/7 + 3/7 adalah...",
+          "options": [
+            "5/14",
+            "5/7",
+            "1/7",
+            "6/7"
+          ],
+          "correctIndex": 1,
+          "explanation": "Penjumlahan pembilang 2+3=5, penyebut tetap 7.",
+          "evidence": "2/7 + 3/7 = 5/7.",
+          "grounded": false
+        },
+        {
+          "prompt": "Jika 1/4 ditambahkan dengan 1/6, penyebut bersama yang digunakan adalah...",
+          "options": [
+            "10",
+            "12",
+            "24",
+            "8"
+          ],
+          "correctIndex": 1,
+          "explanation": "KPK 4 dan 6 adalah 12, sehingga menjadi penyebut bersama.",
+          "evidence": "KPK dari 4 dan 6 adalah 12, sehingga 1/4 menjadi 3/12 dan 1/6 menjadi 2/12.",
+          "grounded": true
+        },
+        {
+          "prompt": "Hasil perkalian 2/3 × 4/5 adalah...",
+          "options": [
+            "6/8",
+            "8/15",
+            "10/12",
+            "4/9"
+          ],
+          "correctIndex": 1,
+          "explanation": "Mengalikan pembilang 2×4=8 dan penyebut 3×5=15 menghasilkan 8/15.",
+          "evidence": "2/3 × 4/5 = 8/15.",
+          "grounded": false
+        },
+        {
+          "prompt": "Berapa persen yang setara dengan pecahan 3/5?",
+          "options": [
+            "30%",
+            "45%",
+            "60%",
+            "75%"
+          ],
+          "correctIndex": 2,
+          "explanation": "3/5 dikalikan 100% memberi 60%.",
+          "evidence": "3/5 × 100% = 60%.",
+          "grounded": false
+        }
+      ]
+    },
+    {
+      "material": "10-informatika-algoritma",
+      "run": 1,
+      "completed": true,
+      "passed": false,
+      "reason": "wrong_count",
+      "detail": "diminta 10, didapat 8",
+      "questions": 0,
+      "grounded": 0,
+      "inputTokens": 1223,
+      "outputTokens": 3072,
+      "latencyMs": 6964,
+      "retries": 0,
+      "drafts": []
+    },
+    {
+      "material": "01-biologi-sel",
+      "run": 2,
+      "completed": true,
+      "passed": false,
+      "reason": "wrong_count",
+      "detail": "diminta 10, didapat 3",
+      "questions": 0,
+      "grounded": 0,
+      "inputTokens": 1212,
+      "outputTokens": 3072,
+      "latencyMs": 7227,
+      "retries": 0,
+      "drafts": []
+    },
+    {
+      "material": "02-fisika-gerak-lurus",
+      "run": 2,
+      "completed": true,
+      "passed": false,
+      "reason": "wrong_count",
+      "detail": "diminta 10, didapat 9",
+      "questions": 0,
+      "grounded": 0,
+      "inputTokens": 1202,
+      "outputTokens": 3072,
+      "latencyMs": 7261,
+      "retries": 0,
+      "drafts": []
+    },
+    {
+      "material": "03-kimia-ikatan",
+      "run": 2,
+      "completed": true,
+      "passed": false,
+      "reason": "wrong_count",
+      "detail": "diminta 10, didapat 8",
+      "questions": 0,
+      "grounded": 0,
+      "inputTokens": 1161,
+      "outputTokens": 3072,
+      "latencyMs": 7244,
+      "retries": 0,
+      "drafts": []
+    },
+    {
+      "material": "04-sejarah-proklamasi",
+      "run": 2,
+      "completed": true,
+      "passed": false,
+      "reason": "wrong_count",
+      "detail": "diminta 10, didapat 11",
+      "questions": 0,
+      "grounded": 0,
+      "inputTokens": 1236,
+      "outputTokens": 2967,
+      "latencyMs": 6675,
+      "retries": 0,
+      "drafts": []
+    },
+    {
+      "material": "05-geografi-sumatra",
+      "run": 2,
+      "completed": true,
+      "passed": true,
+      "reason": null,
+      "detail": null,
+      "questions": 10,
+      "grounded": 10,
+      "inputTokens": 1189,
+      "outputTokens": 2977,
+      "latencyMs": 6992,
+      "retries": 0,
+      "drafts": [
+        {
+          "prompt": "Provinsi manakah yang menjadi lokasi Gunung Kerinci, gunung tertinggi di Sumatra?",
+          "options": [
+            "Jambi",
+            "Aceh",
+            "Sumatra Barat",
+            "Lampung"
+          ],
+          "correctIndex": 0,
+          "explanation": "Gunung Kerinci terletak di Provinsi Jambi, sehingga provinsi tersebut memiliki gunung tertinggi di Sumatra.",
+          "evidence": "Gunung tertinggi di Sumatra adalah Gunung Kerinci di Provinsi Jambi",
+          "grounded": true
+        },
+        {
+          "prompt": "Berapa luas wilayah Sumatra secara perkiraan?",
+          "options": [
+            "473.000 km²",
+            "300.000 km²",
+            "600.000 km²",
+            "1.000.000 km²"
+          ],
+          "correctIndex": 0,
+          "explanation": "Luas Sumatra tercatat sekitar 473.000 km², menjadikannya pulau terbesar yang seluruhnya berada di Indonesia.",
+          "evidence": "luas sekitar 473.000 kilometer persegi",
+          "grounded": true
+        },
+        {
+          "prompt": "Danau mana yang merupakan danau vulkanik terbesar di Indonesia?",
+          "options": [
+            "Danau Toba",
+            "Danau Singkarak",
+            "Danau Maninjau",
+            "Danau Poso"
+          ],
+          "correctIndex": 0,
+          "explanation": "Danau Toba merupakan danau vulkanik terbesar di Indonesia, terbentuk dari letusan gunung berapi purba.",
+          "evidence": "Danau Toba di Provinsi Sumatra Utara adalah danau vulkanik terbesar di Indonesia",
+          "grounded": true
+        },
+        {
+          "prompt": "Sungai apa yang menjadi sungai terpanjang di Sumatra?",
+          "options": [
+            "Sungai Batang Hari",
+            "Sungai Musi",
+            "Sungai Kapuas",
+            "Sungai Barito"
+          ],
+          "correctIndex": 0,
+          "explanation": "Sungai Batang Hari memiliki panjang sekitar 800 km, menjadikannya sungai terpanjang di Sumatra.",
+          "evidence": "Sungai Batang Hari, yang melintasi Provinsi Jambi, merupakan sungai terpanjang di Sumatra dengan panjang sekitar 800 kilometer",
+          "grounded": true
+        },
+        {
+          "prompt": "Selat mana yang memisahkan Sumatra dari Semenanjung Malaya?",
+          "options": [
+            "Selat Malaka",
+            "Selat Sunda",
+            "Selat Bali",
+            "Selat Lombok"
+          ],
+          "correctIndex": 0,
+          "explanation": "Selat Malaka memisahkan Sumatra dari Semenanjung Malaya dan merupakan jalur pelayaran tersibuk.",
+          "evidence": "Selat Malaka di sebelah timur laut memisahkan Sumatra dengan Semenanjung Malaya",
+          "grounded": true
+        },
+        {
+          "prompt": "Provinsi manakah yang terkenal dengan produksi kopi arabika?",
+          "options": [
+            "Aceh",
+            "Lampung",
+            "Riau",
+            "Bengkulu"
+          ],
+          "correctIndex": 0,
+          "explanation": "Daerah Gayo di Aceh terkenal dengan kopi arabika, sehingga Aceh dikenal sebagai produsen kopi jenis ini.",
+          "evidence": "dataran tinggi Gayo di Aceh terkenal dengan kopi arabika",
+          "grounded": true
+        },
+        {
+          "prompt": "Taman Nasional mana yang menjadi habitat harimau Sumatra yang terancam punah?",
+          "options": [
+            "Taman Nasional Kerinci Seblat",
+            "Taman Nasional Gunung Leuser",
+            "Taman Nasional Bukit Barisan Selatan",
+            "Taman Nasional Way Kambas"
+          ],
+          "correctIndex": 0,
+          "explanation": "Taman Nasional Kerinci Seblat melindungi habitat harimau Sumatra yang terancam punah.",
+          "evidence": "Kawasan di sekitarnya dilindungi sebagai Taman Nasional Kerinci Seblat, tempat hidup harimau sumatra yang terancam punah",
+          "grounded": true
+        },
+        {
+          "prompt": "Kota mana yang memiliki Jembatan Ampera sebagai ikon?",
+          "options": [
+            "Palembang",
+            "Medan",
+            "Padang",
+            "Bandar Lampung"
+          ],
+          "correctIndex": 0,
+          "explanation": "Jembatan Ampera berada di atas Sungai Musi yang mengalir melalui Palembang, menjadi ikon kota tersebut.",
+          "evidence": "Sungai Musi mengalir melewati Kota Palembang dan di atasnya berdiri Jembatan Ampera",
+          "grounded": true
+        },
+        {
+          "prompt": "Provinsi mana yang dikenal sebagai daerah penghasil timah?",
+          "options": [
+            "Bangka Belitung",
+            "Sumatra Barat",
+            "Aceh",
+            "Lampung"
+          ],
+          "correctIndex": 0,
+          "explanation": "Bangka Belitung terkenal sebagai daerah penghasil timah sejak lama.",
+          "evidence": "Bangka Belitung sejak lama dikenal sebagai daerah penghasil timah",
+          "grounded": true
+        },
+        {
+          "prompt": "Pulau apa yang terletak di tengah Danau Toba dan menjadi pusat budaya Batak?",
+          "options": [
+            "Pulau Samosir",
+            "Pulau Nias",
+            "Pulau Mentawai",
+            "Pulau Simeulue"
+          ],
+          "correctIndex": 0,
+          "explanation": "Pulau Samosir terletak di tengah Danau Toba dan menjadi pusat budaya masyarakat Batak.",
+          "evidence": "Di tengah Danau Toba terdapat Pulau Samosir, yang menjadi pusat budaya masyarakat Batak",
+          "grounded": true
+        }
+      ]
+    },
+    {
+      "material": "06-ekonomi-permintaan-penawaran",
+      "run": 2,
+      "completed": true,
+      "passed": false,
+      "reason": "wrong_count",
+      "detail": "diminta 10, didapat 6",
+      "questions": 0,
+      "grounded": 0,
+      "inputTokens": 1132,
+      "outputTokens": 3072,
+      "latencyMs": 8483,
+      "retries": 0,
+      "drafts": []
+    },
+    {
+      "material": "07-pkn-pancasila",
+      "run": 2,
+      "completed": true,
+      "passed": true,
+      "reason": null,
+      "detail": null,
+      "questions": 10,
+      "grounded": 10,
+      "inputTokens": 1217,
+      "outputTokens": 2260,
+      "latencyMs": 6137,
+      "retries": 0,
+      "drafts": [
+        {
+          "prompt": "Apa arti kata \"Pancasila\" dalam bahasa Sanskerta?",
+          "options": [
+            "lima prinsip",
+            "tiga nilai",
+            "sepuluh aturan",
+            "dua dasar"
+          ],
+          "correctIndex": 0,
+          "explanation": "Kata \"panca\" berarti lima dan \"sila\" berarti dasar atau prinsip, sehingga Pancasila berarti lima prinsip.",
+          "evidence": "Kata Pancasila berasal dari bahasa Sanskerta, yaitu panca yang berarti lima dan sila yang berarti dasar atau prinsip.",
+          "grounded": true
+        },
+        {
+          "prompt": "Pada tanggal berapa diperingati Hari Lahir Pancasila?",
+          "options": [
+            "1 Juni 1945",
+            "22 Juni 1945",
+            "18 Agustus 1945",
+            "29 Mei 1945"
+          ],
+          "correctIndex": 0,
+          "explanation": "Soekarno pertama kali menyebut Pancasila pada pidato 1 Juni 1945, sehingga tanggal itu diperingati sebagai Hari Lahir Pancasila.",
+          "evidence": "Pada 1 Juni 1945, Soekarno menyampaikan pidato yang untuk pertama kalinya menggunakan nama Pancasila.",
+          "grounded": true
+        },
+        {
+          "prompt": "Siapa yang pertama kali menggunakan istilah \"Pancasila\" dalam pidatonya?",
+          "options": [
+            "Mohammad Yamin",
+            "Soepomo",
+            "Soekarno",
+            "Sukarno"
+          ],
+          "correctIndex": 2,
+          "explanation": "Pidato pada 1 Juni 1945 oleh Soekarno merupakan kali pertama istilah Pancasila dipakai secara resmi.",
+          "evidence": "Pada 1 Juni 1945, Soekarno menyampaikan pidato yang untuk pertama kalinya menggunakan nama Pancasila.",
+          "grounded": true
+        },
+        {
+          "prompt": "Dokumen apa yang dihasilkan Panitia Sembilan pada 22 Juni 1945?",
+          "options": [
+            "Piagam Jakarta",
+            "UUD 1945",
+            "Proklamasi Kemerdekaan",
+            "Deklarasi Jakarta"
+          ],
+          "correctIndex": 0,
+          "explanation": "Panitia Sembilan menghasilkan rumusan yang dikenal sebagai Piagam Jakarta pada tanggal tersebut.",
+          "evidence": "Panitia Sembilan menghasilkan rumusan yang dikenal sebagai Piagam Jakarta.",
+          "grounded": true
+        },
+        {
+          "prompt": "Dalam alinea ke berapa Pembukaan UUD 1945 tercantum rumusan Pancasila?",
+          "options": [
+            "pertama",
+            "kedua",
+            "ketiga",
+            "keempat"
+          ],
+          "correctIndex": 3,
+          "explanation": "Rumusan Pancasila tercantum dalam alinea keempat Pembukaan UUD 1945.",
+          "evidence": "Rumusan Pancasila tercantum dalam alinea keempat Pembukaan UUD 1945.",
+          "grounded": true
+        },
+        {
+          "prompt": "Simbol apa yang melambangkan sila pertama Pancasila?",
+          "options": [
+            "bintang",
+            "rantai",
+            "pohon beringin",
+            "kepala banteng"
+          ],
+          "correctIndex": 0,
+          "explanation": "Sila pertama dilambangkan dengan gambar bintang pada perisai Garuda Pancasila.",
+          "evidence": "Sila pertama dilambangkan dengan bintang.",
+          "grounded": true
+        },
+        {
+          "prompt": "Rantai pada simbol sila kedua terdiri dari bentuk apa?",
+          "options": [
+            "bulat dan persegi",
+            "segitiga dan lingkaran",
+            "bintang dan bulan",
+            "daun dan akar"
+          ],
+          "correctIndex": 0,
+          "explanation": "Rantai pada simbol sila kedua tersusun dari mata rantai bulat dan persegi yang saling berkaitan.",
+          "evidence": "Sila kedua dilambangkan dengan rantai, yang tersusun dari mata rantai bulat dan persegi yang saling berkaitan.",
+          "grounded": true
+        },
+        {
+          "prompt": "Simbol apa yang melambangkan sila keempat?",
+          "options": [
+            "kepala banteng",
+            "padi dan kapas",
+            "bintang",
+            "pohon beringin"
+          ],
+          "correctIndex": 0,
+          "explanation": "Sila keempat diwakili oleh gambar kepala banteng pada perisai Garuda Pancasila.",
+          "evidence": "Sila keempat dilambangkan dengan kepala banteng.",
+          "grounded": true
+        },
+        {
+          "prompt": "Menurut materi, apa fungsi utama Pancasila sebagai dasar negara?",
+          "options": [
+            "menjadi sumber hukum",
+            "menjadi lambang negara",
+            "menjadi bahasa resmi",
+            "menjadi mata uang"
+          ],
+          "correctIndex": 0,
+          "explanation": "Sebagai dasar negara, Pancasila menjadi sumber dari segala sumber hukum di Indonesia.",
+          "evidence": "Sebagai dasar negara, Pancasila menjadi sumber dari segala sumber hukum di Indonesia, sehingga peraturan perundang-undangan tidak boleh bertentangan dengannya.",
+          "grounded": true
+        },
+        {
+          "prompt": "Contoh pengamalan sila kedua dalam kehidupan sehari-hari adalah?",
+          "options": [
+            "menghormati hak orang lain dan tidak membeda-bedakan teman",
+            "mengutamakan musyawarah untuk mufakat",
+            "menjaga kebersihan lingkungan",
+            "mengikuti upacara bendera"
+          ],
+          "correctIndex": 0,
+          "explanation": "Sila kedua menekankan penghormatan hak orang lain dan larangan diskriminasi, seperti tidak membeda-bedakan teman.",
+          "evidence": "Contoh pengamalan sila kedua adalah menghormati hak orang lain dan tidak membeda-bedakan teman.",
+          "grounded": true
+        }
+      ]
+    },
+    {
+      "material": "08-bahasa-teks-prosedur",
+      "run": 2,
+      "completed": false,
+      "passed": false,
+      "reason": "http_400",
+      "detail": null,
+      "questions": 0,
+      "grounded": 0,
+      "inputTokens": null,
+      "outputTokens": null,
+      "latencyMs": 6410,
+      "retries": 0,
+      "drafts": []
+    },
+    {
+      "material": "09-matematika-pecahan",
+      "run": 2,
+      "completed": true,
+      "passed": false,
+      "reason": "wrong_count",
+      "detail": "diminta 10, didapat 7",
+      "questions": 0,
+      "grounded": 0,
+      "inputTokens": 1300,
+      "outputTokens": 3072,
+      "latencyMs": 8100,
+      "retries": 0,
+      "drafts": []
+    },
+    {
+      "material": "10-informatika-algoritma",
+      "run": 2,
+      "completed": false,
+      "passed": false,
+      "reason": "http_400",
+      "detail": null,
+      "questions": 0,
+      "grounded": 0,
+      "inputTokens": null,
+      "outputTokens": null,
+      "latencyMs": 6782,
+      "retries": 0,
+      "drafts": []
+    },
+    {
+      "material": "01-biologi-sel",
+      "run": 3,
+      "completed": true,
+      "passed": true,
+      "reason": null,
+      "detail": null,
+      "questions": 10,
+      "grounded": 9,
+      "inputTokens": 1212,
+      "outputTokens": 2985,
+      "latencyMs": 9050,
+      "retries": 0,
+      "drafts": [
+        {
+          "prompt": "Siapa yang pertama kali mengamati sel?",
+          "options": [
+            "Robert Hooke",
+            "Matthias Schleiden",
+            "Theodor Schwann",
+            "Antonie van Leeuwenhoek"
+          ],
+          "correctIndex": 0,
+          "explanation": "Robert Hooke mengamati sel pada tahun 1665 melalui mikroskop sederhana.",
+          "evidence": "Sel pertama kali diamati oleh Robert Hooke pada tahun 1665.",
+          "grounded": true
+        },
+        {
+          "prompt": "Berdasarkan apa sel dibedakan menjadi prokariotik dan eukariotik?",
+          "options": [
+            "keberadaan dinding sel",
+            "keberadaan membran organel",
+            "keberadaan membran inti",
+            "ukuran sel"
+          ],
+          "correctIndex": 2,
+          "explanation": "Perbedaan utama terletak pada adanya atau tidaknya membran inti yang membungkus materi genetik.",
+          "evidence": "Berdasarkan ada atau tidaknya membran inti, sel dibedakan menjadi sel prokariotik dan sel eukariotik.",
+          "grounded": true
+        },
+        {
+          "prompt": "Manakah pernyataan yang benar tentang sel prokariotik?",
+          "options": [
+            "memiliki mitokondria",
+            "memiliki inti sel",
+            "DNA berada bebas di sitoplasma",
+            "mengandung kloroplas"
+          ],
+          "correctIndex": 2,
+          "explanation": "Sel prokariotik tidak memiliki membran inti, sehingga DNA tersebar bebas di dalam sitoplasma.",
+          "evidence": "Sel prokariotik tidak memiliki membran inti, sehingga materi genetiknya berada bebas di sitoplasma.",
+          "grounded": true
+        },
+        {
+          "prompt": "Fungsi utama mitokondria dalam sel eukariotik adalah?",
+          "options": [
+            "sintesis protein",
+            "fotosintesis",
+            "produksi energi melalui respirasi sel",
+            "pengemasan molekul"
+          ],
+          "correctIndex": 2,
+          "explanation": "Mitokondria menghasilkan energi lewat respirasi sel, sehingga disebut pembangkit tenaga sel.",
+          "evidence": "Mitokondria menghasilkan energi melalui respirasi sel, sehingga sering dijuluki pembangkit tenaga sel.",
+          "grounded": true
+        },
+        {
+          "prompt": "Organel manakah yang merupakan tempat sintesis protein?",
+          "options": [
+            "ribosom",
+            "lisosom",
+            "kloroplas",
+            "badan Golgi"
+          ],
+          "correctIndex": 0,
+          "explanation": "Ribosom berfungsi sebagai tempat perakitan rantai polipeptida menjadi protein.",
+          "evidence": "Ribosom adalah tempat sintesis protein.",
+          "grounded": true
+        },
+        {
+          "prompt": "Struktur mana yang terdapat pada sel tumbuhan tetapi tidak pada sel hewan?",
+          "options": [
+            "dinding sel",
+            "sentriol",
+            "lisosom",
+            "mitokondria"
+          ],
+          "correctIndex": 0,
+          "explanation": "Sel tumbuhan memiliki dinding sel yang terbuat dari selulosa, memberi bentuk kaku.",
+          "evidence": "Sel tumbuhan memiliki dinding sel dari selulosa yang membuat bentuknya tetap dan kaku, sedangkan sel hewan tidak memiliki dinding sel.",
+          "grounded": false
+        },
+        {
+          "prompt": "Organel apa yang menjadi tempat fotosintesis pada sel tumbuhan?",
+          "options": [
+            "mitokondria",
+            "ribosom",
+            "kloroplas",
+            "nukleus"
+          ],
+          "correctIndex": 2,
+          "explanation": "Kloroplas mengandung klorofil dan menjalankan proses fotosintesis.",
+          "evidence": "Sel tumbuhan memiliki kloroplas, yaitu organel yang mengandung klorofil dan menjadi tempat fotosintesis.",
+          "grounded": true
+        },
+        {
+          "prompt": "Komponen sel tumbuhan yang biasanya berukuran besar dan hanya satu adalah?",
+          "options": [
+            "nukleus",
+            "vakuola sentral",
+            "mitokondria",
+            "sentriol"
+          ],
+          "correctIndex": 1,
+          "explanation": "Vakuola sentral pada sel tumbuhan besar dan biasanya tunggal, berperan dalam penyimpanan dan turgor sel.",
+          "evidence": "Vakuola pada sel tumbuhan berukuran besar dan biasanya hanya satu, sedangkan sel hewan memiliki vakuola kecil atau tidak memilikinya sama sekali.",
+          "grounded": true
+        },
+        {
+          "prompt": "Struktur mana yang berperan dalam pembelahan sel pada hewan tetapi umumnya tidak ada pada tumbuhan tingkat tinggi?",
+          "options": [
+            "kloroplas",
+            "sentriol",
+            "dinding sel",
+            "badan Golgi"
+          ],
+          "correctIndex": 1,
+          "explanation": "Sentriol membantu pembentukan spindle pada mitosis sel hewan, namun jarang ditemukan pada tumbuhan tingkat tinggi.",
+          "evidence": "Sel hewan memiliki sentriol yang berperan saat pembelahan sel, yang umumnya tidak ditemukan pada sel tumbuhan tingkat tinggi.",
+          "grounded": true
+        },
+        {
+          "prompt": "Kelompok sel yang memiliki bentuk dan fungsi serupa disebut?",
+          "options": [
+            "organ",
+            "jaringan",
+            "sistem organ",
+            "organisme"
+          ],
+          "correctIndex": 1,
+          "explanation": "Sel dengan bentuk dan fungsi serupa bergabung membentuk jaringan.",
+          "evidence": "Sel-sel yang memiliki bentuk dan fungsi sama berkumpul membentuk jaringan.",
+          "grounded": true
+        }
+      ]
+    },
+    {
+      "material": "02-fisika-gerak-lurus",
+      "run": 3,
+      "completed": true,
+      "passed": false,
+      "reason": "wrong_count",
+      "detail": "diminta 10, didapat 6",
+      "questions": 0,
+      "grounded": 0,
+      "inputTokens": 1202,
+      "outputTokens": 3072,
+      "latencyMs": 7416,
+      "retries": 0,
+      "drafts": []
+    },
+    {
+      "material": "03-kimia-ikatan",
+      "run": 3,
+      "completed": true,
+      "passed": true,
+      "reason": null,
+      "detail": null,
+      "questions": 10,
+      "grounded": 9,
+      "inputTokens": 1161,
+      "outputTokens": 2841,
+      "latencyMs": 6805,
+      "retries": 0,
+      "drafts": [
+        {
+          "prompt": "Apa yang dimaksud dengan ikatan ion?",
+          "options": [
+            "Serah terima elektron",
+            "Pemakaian bersama pasangan elektron",
+            "Lautan elektron bebas",
+            "Ikatan antara atom logam"
+          ],
+          "correctIndex": 0,
+          "explanation": "Ikatan ion terbentuk ketika satu atom menyerahkan elektron ke atom lain, sehingga terjadi transfer elektron.",
+          "evidence": "Ikatan ion terbentuk karena serah terima elektron.",
+          "grounded": true
+        },
+        {
+          "prompt": "Manakah pernyataan yang benar tentang sifat padatan senyawa ion?",
+          "options": [
+            "Menghantarkan listrik dalam keadaan padat",
+            "Tidak menghantarkan listrik dalam keadaan padat",
+            "Memiliki titik leleh rendah",
+            "Tidak dapat larut dalam air"
+          ],
+          "correctIndex": 1,
+          "explanation": "Padatan ionik tidak menghantarkan listrik karena ion terikat dalam posisi tetap; konduktivitas muncul saat leleh atau larut.",
+          "evidence": "Padatannya tidak menghantarkan listrik, tetapi lelehan dan larutannya dapat menghantarkan listrik.",
+          "grounded": true
+        },
+        {
+          "prompt": "Contoh senyawa ion yang disebutkan dalam materi adalah...",
+          "options": [
+            "NaCl",
+            "H2O",
+            "CO2",
+            "Fe"
+          ],
+          "correctIndex": 0,
+          "explanation": "Natrium klorida (NaCl) disebut garam dapur dan merupakan contoh klasik senyawa ionik.",
+          "evidence": "Contoh senyawa ion adalah natrium klorida atau garam dapur.",
+          "grounded": true
+        },
+        {
+          "prompt": "Ikatan kovalen tunggal terbentuk ketika...",
+          "options": [
+            "Dua atom memakai bersama satu pasang elektron",
+            "Dua atom memakai bersama dua pasang elektron",
+            "Tiga atom memakai bersama satu pasang elektron",
+            "Atom logam berbagi elektron bebas"
+          ],
+          "correctIndex": 0,
+          "explanation": "Ikatan kovalen tunggal melibatkan satu pasang elektron yang dibagi antara dua atom.",
+          "evidence": "Jika dua atom memakai bersama satu pasang elektron, terbentuk ikatan kovalen tunggal, seperti pada molekul Cl2.",
+          "grounded": true
+        },
+        {
+          "prompt": "Molekul O2 memiliki jenis ikatan apa?",
+          "options": [
+            "Tunggal",
+            "Rangkap dua",
+            "Rangkap tiga",
+            "Ionik"
+          ],
+          "correctIndex": 1,
+          "explanation": "O2 memiliki dua pasang elektron yang dibagi, sehingga terbentuk ikatan rangkap dua.",
+          "evidence": "Jika memakai bersama dua pasang, terbentuk ikatan rangkap dua, seperti pada molekul O2.",
+          "grounded": true
+        },
+        {
+          "prompt": "Mengapa logam dapat menghantarkan listrik dengan baik?",
+          "options": [
+            "Karena ikatan ion",
+            "Karena lautan elektron yang bergerak bebas",
+            "Karena ikatan kovalen",
+            "Karena memiliki delapan elektron valensi"
+          ],
+          "correctIndex": 1,
+          "explanation": "Pada logam, elektron valensi tidak terikat pada satu atom melainkan bergerak bebas, memungkinkan konduksi listrik.",
+          "evidence": "Elektron yang bebas bergerak inilah yang membuat logam dapat menghantarkan listrik dan panas dengan baik.",
+          "grounded": true
+        },
+        {
+          "prompt": "Aturan apa yang menjelaskan kecenderungan atom untuk memiliki dua elektron valensi?",
+          "options": [
+            "Aturan oktet",
+            "Aturan duplet",
+            "Aturan ionik",
+            "Aturan kovalen"
+          ],
+          "correctIndex": 1,
+          "explanation": "Helium dan unsur dengan dua elektron valensi mengikuti aturan duplet, bukan oktet.",
+          "evidence": "sedangkan kecenderungan memiliki dua elektron seperti helium disebut aturan duplet.",
+          "grounded": true
+        },
+        {
+          "prompt": "Dalam struktur Lewis, bagaimana elektron valensi digambarkan?",
+          "options": [
+            "Sebagai garis",
+            "Sebagai titik atau silang",
+            "Sebagai angka",
+            "Tidak digambarkan"
+          ],
+          "correctIndex": 1,
+          "explanation": "Struktur Lewis menampilkan elektron valensi sebagai titik atau tanda silang di sekitar simbol unsur.",
+          "evidence": "Dalam struktur Lewis, elektron valensi digambarkan sebagai titik atau silang di sekitar lambang unsur.",
+          "grounded": true
+        },
+        {
+          "prompt": "Apa yang terjadi pada atom natrium dalam pembentukan NaCl?",
+          "options": [
+            "Menerima satu elektron",
+            "Melepas satu elektron",
+            "Tidak berubah",
+            "Melepas dua elektron"
+          ],
+          "correctIndex": 1,
+          "explanation": "Natrium melepaskan satu elektron untuk mencapai konfigurasi stabil, membentuk ion Na+.",
+          "evidence": "Atom natrium melepas satu elektron kepada atom klorin, sehingga terbentuk ion Na+ dan ion Cl−.",
+          "grounded": true
+        },
+        {
+          "prompt": "Manakah pernyataan yang benar tentang titik leleh senyawa kovalen dibandingkan senyawa ion?",
+          "options": [
+            "Lebih tinggi",
+            "Lebih rendah",
+            "Sama",
+            "Tidak dapat dibandingkan"
+          ],
+          "correctIndex": 1,
+          "explanation": "Karena ikatan kovalen biasanya lebih lemah daripada ikatan ionik, senyawa kovalen memiliki titik leleh lebih rendah.",
+          "evidence": "Senayawa kovalen umumnya memiliki titik leleh lebih rendah daripada senyawa ion.",
+          "grounded": false
+        }
+      ]
+    },
+    {
+      "material": "04-sejarah-proklamasi",
+      "run": 3,
+      "completed": true,
+      "passed": false,
+      "reason": "wrong_count",
+      "detail": "diminta 10, didapat 4",
+      "questions": 0,
+      "grounded": 0,
+      "inputTokens": 1236,
+      "outputTokens": 3072,
+      "latencyMs": 7204,
+      "retries": 0,
+      "drafts": []
+    },
+    {
+      "material": "05-geografi-sumatra",
+      "run": 3,
+      "completed": true,
+      "passed": true,
+      "reason": null,
+      "detail": null,
+      "questions": 10,
+      "grounded": 10,
+      "inputTokens": 1189,
+      "outputTokens": 2498,
+      "latencyMs": 6168,
+      "retries": 0,
+      "drafts": [
+        {
+          "prompt": "Gunung apa yang menjadi gunung tertinggi di Pulau Sumatra?",
+          "options": [
+            "Gunung Kerinci",
+            "Gunung Merapi",
+            "Gunung Bromo",
+            "Gunung Rinjani"
+          ],
+          "correctIndex": 0,
+          "explanation": "Gunung Kerinci memiliki ketinggian sekitar 3.805 meter, menjadikannya yang tertinggi di Sumatra.",
+          "evidence": "Gunung tertinggi di Sumatra adalah Gunung Kerinci di Provinsi Jambi, dengan ketinggian sekitar 3.805 meter di atas permukaan laut.",
+          "grounded": true
+        },
+        {
+          "prompt": "Danau manakah yang merupakan danau vulkanik terbesar di Indonesia?",
+          "options": [
+            "Danau Toba",
+            "Danau Singkarak",
+            "Danau Maninjau",
+            "Danau Poso"
+          ],
+          "correctIndex": 0,
+          "explanation": "Danau Toba terbentuk dari letusan gunung berapi purba dan merupakan danau vulkanik terbesar di negara ini.",
+          "evidence": "Danau Toba di Provinsi Sumatra Utara adalah danau vulkanik terbesar di Indonesia.",
+          "grounded": true
+        },
+        {
+          "prompt": "Sungai apa yang tercatat sebagai sungai terpanjang di Sumatra?",
+          "options": [
+            "Sungai Batang Hari",
+            "Sungai Musi",
+            "Sungai Kapuas",
+            "Sungai Mahakam"
+          ],
+          "correctIndex": 0,
+          "explanation": "Sungai Batang Hari memiliki panjang sekitar 800 km, menjadikannya yang terpanjang di Sumatra.",
+          "evidence": "Sungai Batang Hari, yang melintasi Provinsi Jambi, merupakan sungai terpanjang di Sumatra dengan panjang sekitar 800 kilometer.",
+          "grounded": true
+        },
+        {
+          "prompt": "Selat mana yang memisahkan Sumatra dari Semenanjung Malaya dan merupakan salah satu jalur pelayaran tersibuk di dunia?",
+          "options": [
+            "Selat Malaka",
+            "Selat Sunda",
+            "Selat Luzon",
+            "Selat Taiwan"
+          ],
+          "correctIndex": 0,
+          "explanation": "Selat Malaka berada di timur laut Sumatra dan menjadi jalur pelayaran utama antara Samudra Hindia dan Pasifik.",
+          "evidence": "Selat Malaka di sebelah timur laut memisahkan Sumatra dengan Semenanjung Malaya dan menjadi salah satu jalur pelayaran tersibuk di dunia.",
+          "grounded": true
+        },
+        {
+          "prompt": "Kota apa yang merupakan kota terbesar di Pulau Sumatra?",
+          "options": [
+            "Medan",
+            "Palembang",
+            "Padang",
+            "Bandar Lampung"
+          ],
+          "correctIndex": 0,
+          "explanation": "Medan memiliki populasi dan peran ekonomi terbesar di antara kota-kota Sumatra.",
+          "evidence": "Kota Medan adalah kota terbesar di Sumatra.",
+          "grounded": true
+        },
+        {
+          "prompt": "Provinsi mana yang dikenal sebagai penghasil kelapa sawit dan karet?",
+          "options": [
+            "Riau dan Sumatra Utara",
+            "Aceh dan Bengkulu",
+            "Lampung dan Jambi",
+            "Bangka Belitung dan Sumatra Selatan"
+          ],
+          "correctIndex": 0,
+          "explanation": "Riau dan Sumatra Utara memiliki lahan perkebunan luas untuk kelapa sawit dan karet.",
+          "evidence": "Riau dan Sumatra Utara dikenal sebagai penghasil kelapa sawit dan karet.",
+          "grounded": true
+        },
+        {
+          "prompt": "Provinsi mana yang terkenal dengan produksi kopi robusta?",
+          "options": [
+            "Lampung",
+            "Aceh",
+            "Sumatra Utara",
+            "Bengkulu"
+          ],
+          "correctIndex": 0,
+          "explanation": "Lampung memiliki iklim yang cocok untuk menanam kopi robusta, sehingga menjadi daerah penghasil utama.",
+          "evidence": "Lampung terkenal dengan kopi robusta,",
+          "grounded": true
+        },
+        {
+          "prompt": "Daerah Gayo yang terkenal dengan kopi arabika berada di provinsi apa?",
+          "options": [
+            "Aceh",
+            "Sumatra Utara",
+            "Riau",
+            "Lampung"
+          ],
+          "correctIndex": 0,
+          "explanation": "Dataran tinggi Gayo terletak di Aceh dan dikenal menghasilkan kopi arabika berkualitas tinggi.",
+          "evidence": "dataran tinggi Gayo di Aceh terkenal dengan kopi arabika.",
+          "grounded": true
+        },
+        {
+          "prompt": "Pulau mana yang sejak lama dikenal sebagai daerah penghasil timah?",
+          "options": [
+            "Bangka Belitung",
+            "Sumatra",
+            "Java",
+            "Sulawesi"
+          ],
+          "correctIndex": 0,
+          "explanation": "Bangka Belitung memiliki cadangan timah yang melimpah dan telah lama menjadi pusat penambangan timah Indonesia.",
+          "evidence": "Bangka Belitung sejak lama dikenal sebagai daerah penghasil timah.",
+          "grounded": true
+        },
+        {
+          "prompt": "Pegunungan apa yang membentang di sisi barat Pulau Sumatra?",
+          "options": [
+            "Pegunungan Bukit Barisan",
+            "Pegunungan Andes",
+            "Pegunungan Himalaya",
+            "Pegunungan Appalachian"
+          ],
+          "correctIndex": 0,
+          "explanation": "Pegunungan Bukit Barisan melintasi sepanjang sisi barat Sumatra, mencakup banyak gunung berapi.",
+          "evidence": "Di sepanjang sisi barat Sumatra membentang Pegunungan Bukit Barisan.",
+          "grounded": true
+        }
+      ]
+    },
+    {
+      "material": "06-ekonomi-permintaan-penawaran",
+      "run": 3,
+      "completed": true,
+      "passed": false,
+      "reason": "invalid_schema",
+      "detail": "questions.1.options.0: Too big: expected string to have <=100 characters",
+      "questions": 0,
+      "grounded": 0,
+      "inputTokens": 1132,
+      "outputTokens": 2969,
+      "latencyMs": 7023,
+      "retries": 0,
+      "drafts": []
+    },
+    {
+      "material": "07-pkn-pancasila",
+      "run": 3,
+      "completed": true,
+      "passed": true,
+      "reason": null,
+      "detail": null,
+      "questions": 10,
+      "grounded": 10,
+      "inputTokens": 1217,
+      "outputTokens": 3054,
+      "latencyMs": 7101,
+      "retries": 0,
+      "drafts": [
+        {
+          "prompt": "Apa arti kata \"Pancasila\"?",
+          "options": [
+            "Lima dasar",
+            "Tiga prinsip",
+            "Empat nilai",
+            "Enam aturan"
+          ],
+          "correctIndex": 0,
+          "explanation": "Kata \"panca\" berarti lima dan \"sila\" berarti dasar atau prinsip, sehingga Pancasila berarti lima dasar.",
+          "evidence": "Kata Pancasila berasal dari bahasa Sanskerta, yaitu panca yang berarti lima dan sila yang berarti dasar atau prinsip.",
+          "grounded": true
+        },
+        {
+          "prompt": "Pada tanggal berapa Soekarno pertama kali menyebutkan nama Pancasila dalam pidatonya?",
+          "options": [
+            "1 Juni 1945",
+            "22 Juni 1945",
+            "18 Agustus 1945",
+            "29 Mei 1945"
+          ],
+          "correctIndex": 0,
+          "explanation": "Soekarno menyampaikan pidato dengan nama Pancasila pada 1 Juni 1945, yang diperingati sebagai Hari Lahir Pancasila.",
+          "evidence": "Pada 1 Juni 1945, Soekarno menyampaikan pidato yang untuk pertama kalinya menggunakan nama Pancasila.",
+          "grounded": true
+        },
+        {
+          "prompt": "Siapa yang tidak termasuk tokoh yang menyampaikan usulan dalam sidang pertama BPUPKI?",
+          "options": [
+            "Mohammad Yamin",
+            "Soepomo",
+            "Soekarno",
+            "Sutan Sjahrir"
+          ],
+          "correctIndex": 3,
+          "explanation": "Materi menyebutkan Yamin, Soepomo, dan Soekarno, tetapi tidak menyebutkan Sutan Sjahrir.",
+          "evidence": "dalam sidang itu, beberapa tokoh menyampaikan usulan, antara lain Mohammad Yamin, Soepomo, dan Soekarno.",
+          "grounded": true
+        },
+        {
+          "prompt": "Apa perubahan sila pertama dalam Piagam Jakarta ketika dimasukkan ke dalam UUD 1945?",
+          "options": [
+            "Menjadi \"Ketuhanan Yang Maha Esa\"",
+            "Menjadi \"Kemanusiaan yang adil dan beradab\"",
+            "Menjadi \"Persatuan Indonesia\"",
+            "Tidak ada perubahan"
+          ],
+          "correctIndex": 0,
+          "explanation": "Saat pengesahan, sila pertama Piagam Jakarta diubah menjadi \"Ketuhanan Yang Maha Esa\".",
+          "evidence": "Dalam pengesahan itu, sila pertama Piagam Jakarta diubah menjadi \"Ketuhanan Yang Maha Esa\"",
+          "grounded": true
+        },
+        {
+          "prompt": "Simbol apa yang melambangkan sila keempat Pancasila pada perisai Garuda?",
+          "options": [
+            "Kepala banteng",
+            "Bintang",
+            "Padi dan kapas",
+            "Pohon beringin"
+          ],
+          "correctIndex": 0,
+          "explanation": "Sila keempat diwakili oleh gambar kepala banteng pada perisai Garuda.",
+          "evidence": "Sila keempat dilambangkan dengan kepala banteng.",
+          "grounded": true
+        },
+        {
+          "prompt": "Manakah contoh pengamalan sila kedua dalam kehidupan sehari-hari?",
+          "options": [
+            "Menghormati hak orang lain dan tidak membeda-bedakan teman",
+            "Mengutamakan musyawarah untuk mufakat",
+            "Membuat keputusan sepihak",
+            "Menjaga kebersihan lingkungan"
+          ],
+          "correctIndex": 0,
+          "explanation": "Sila kedua menekankan penghormatan terhadap hak orang lain dan larangan diskriminasi.",
+          "evidence": "Contoh pengamalan sila kedua adalah menghormati hak orang lain dan tidak membeda-bedakan teman.",
+          "grounded": true
+        },
+        {
+          "prompt": "Apa fungsi utama Pancasila sebagai dasar negara?",
+          "options": [
+            "Menjadi sumber dari segala sumber hukum di Indonesia",
+            "Menjadi slogan politik partai",
+            "Menjadi panduan ekonomi",
+            "Menjadi lagu kebangsaan"
+          ],
+          "correctIndex": 0,
+          "explanation": "Sebagai dasar negara, Pancasila menjadi sumber utama bagi seluruh peraturan perundang‑undangan.",
+          "evidence": "Sebagai dasar negara, Pancasila menjadi sumber dari segala sumber hukum di Indonesia",
+          "grounded": true
+        },
+        {
+          "prompt": "Pada tanggal berapa Panitia Sembilan menghasilkan rumusan yang dikenal sebagai Piagam Jakarta?",
+          "options": [
+            "22 Juni 1945",
+            "1 Juni 1945",
+            "18 Agustus 1945",
+            "29 Mei 1945"
+          ],
+          "correctIndex": 0,
+          "explanation": "Panitia Sembilan menyusun Piagam Jakarta pada 22 Juni 1945.",
+          "evidence": "Pada 22 Juni 1945, Panitia Sembilan menghasilkan rumusan yang dikenal sebagai Piagam Jakarta.",
+          "grounded": true
+        },
+        {
+          "prompt": "Simbol apa yang melambangkan sila kelima Pancasila?",
+          "options": [
+            "Padi dan kapas",
+            "Bintang",
+            "Rantai",
+            "Pohon beringin"
+          ],
+          "correctIndex": 0,
+          "explanation": "Sila kelima diwakili oleh gambar padi dan kapas pada perisai Garuda.",
+          "evidence": "Sila kelima dilambangkan dengan padi dan kapas.",
+          "grounded": true
+        },
+        {
+          "prompt": "Apa arti semboyan yang tertulis di pita di bawah Garuda?",
+          "options": [
+            "Berbeda-beda tetapi tetap satu",
+            "Persatuan dalam keberagaman",
+            "Kebangsaan dan kemerdekaan",
+            "Keadilan sosial bagi semua"
+          ],
+          "correctIndex": 0,
+          "explanation": "Semboyan Bhinneka Tunggal Ika berarti berbeda‑beda tetapi tetap satu.",
+          "evidence": "Di bawah Garuda terdapat pita bertuliskan semboyan Bhinneka Tunggal Ika, yang berarti berbeda-beda tetapi tetap satu.",
+          "grounded": true
+        }
+      ]
+    },
+    {
+      "material": "08-bahasa-teks-prosedur",
+      "run": 3,
+      "completed": false,
+      "passed": false,
+      "reason": "http_400",
+      "detail": null,
+      "questions": 0,
+      "grounded": 0,
+      "inputTokens": null,
+      "outputTokens": null,
+      "latencyMs": 7693,
+      "retries": 0,
+      "drafts": []
+    },
+    {
+      "material": "09-matematika-pecahan",
+      "run": 3,
+      "completed": true,
+      "passed": true,
+      "reason": null,
+      "detail": null,
+      "questions": 10,
+      "grounded": 6,
+      "inputTokens": 1300,
+      "outputTokens": 2900,
+      "latencyMs": 6849,
+      "retries": 0,
+      "drafts": [
+        {
+          "prompt": "Menurut materi, apa yang tidak diperbolehkan pada penyebut sebuah pecahan?",
+          "options": [
+            "Tidak boleh sama dengan nol",
+            "Boleh sama dengan nol",
+            "Harus lebih kecil dari pembilang",
+            "Harus berupa bilangan prima"
+          ],
+          "correctIndex": 0,
+          "explanation": "Penyebut tidak boleh nol karena pembagian dengan nol tidak terdefinisi.",
+          "evidence": "Penyebut tidak boleh sama dengan nol.",
+          "grounded": true
+        },
+        {
+          "prompt": "Manakah berikut ini merupakan pecahan yang senilai dengan 1/2?",
+          "options": [
+            "3/6",
+            "2/5",
+            "4/9",
+            "5/10"
+          ],
+          "correctIndex": 0,
+          "explanation": "Dengan mengalikan pembilang dan penyebut 1/2 dengan 3 diperoleh 3/6, sehingga senilai.",
+          "evidence": "Pecahan senilai diperoleh dengan mengalikan atau membagi pembilang dan penyebut dengan bilangan yang sama, asalkan bilangan itu bukan nol.",
+          "grounded": true
+        },
+        {
+          "prompt": "Jika 12/18 disederhanakan, hasilnya adalah...",
+          "options": [
+            "2/3",
+            "3/5",
+            "4/6",
+            "6/9"
+          ],
+          "correctIndex": 0,
+          "explanation": "Membagi pembilang dan penyebut dengan FPB 6 menghasilkan 2/3.",
+          "evidence": "FPB dari 12 dan 18 adalah 6, sehingga 12/18 dapat disederhanakan menjadi 2/3.",
+          "grounded": true
+        },
+        {
+          "prompt": "7/3 dapat ditulis sebagai pecahan campuran...",
+          "options": [
+            "2 1/3",
+            "1 4/3",
+            "3 1/2",
+            "2 2/3"
+          ],
+          "correctIndex": 0,
+          "explanation": "7 dibagi 3 memberi 2 dengan sisa 1, sehingga 2 1/3.",
+          "evidence": "7/3 sama dengan 2 1/3, karena 7 dibagi 3 hasilnya 2 dengan sisa 1.",
+          "grounded": true
+        },
+        {
+          "prompt": "Hasil dari 2/7 + 3/7 adalah...",
+          "options": [
+            "5/7",
+            "6/14",
+            "1/7",
+            "5/14"
+          ],
+          "correctIndex": 0,
+          "explanation": "Dengan penyebut sama, cukup menjumlahkan pembilang menjadi 5/7.",
+          "evidence": "2/7 + 3/7 = 5/7.",
+          "grounded": false
+        },
+        {
+          "prompt": "Berapa hasil 1/4 + 1/6?",
+          "options": [
+            "5/12",
+            "3/10",
+            "2/5",
+            "7/12"
+          ],
+          "correctIndex": 0,
+          "explanation": "Setelah menyamakan penyebut menjadi 12, penjumlahan memberi 5/12.",
+          "evidence": "KPK dari 4 dan 6 adalah 12, sehingga 1/4 menjadi 3/12 dan 1/6 menjadi 2/12. Hasilnya 3/12 + 2/12 = 5/12.",
+          "grounded": true
+        },
+        {
+          "prompt": "Hasil perkalian 2/3 × 4/5 adalah...",
+          "options": [
+            "8/15",
+            "6/8",
+            "10/12",
+            "4/15"
+          ],
+          "correctIndex": 0,
+          "explanation": "Kalikan pembilang 2×4=8 dan penyebut 3×5=15 menghasilkan 8/15.",
+          "evidence": "2/3 × 4/5 = 8/15.",
+          "grounded": false
+        },
+        {
+          "prompt": "1/2 dibagi 3/4 sama dengan...",
+          "options": [
+            "2/3",
+            "4/6",
+            "3/8",
+            "1/6"
+          ],
+          "correctIndex": 0,
+          "explanation": "Membagi dengan 3/4 sama dengan mengalikan dengan kebalikannya 4/3, hasil 4/6 = 2/3.",
+          "evidence": "1/2 : 3/4 sama dengan 1/2 × 4/3, yang hasilnya 4/6 atau 2/3 setelah disederhanakan.",
+          "grounded": true
+        },
+        {
+          "prompt": "Jika 3/5 dikalikan 100%, hasilnya...",
+          "options": [
+            "60%",
+            "75%",
+            "50%",
+            "30%"
+          ],
+          "correctIndex": 0,
+          "explanation": "Mengalikan 3/5 dengan 100% memberi 60%.",
+          "evidence": "3/5 × 100% = 60%.",
+          "grounded": false
+        },
+        {
+          "prompt": "Berapa nilai desimal dari pecahan 1/4?",
+          "options": [
+            "0,25",
+            "0,5",
+            "0,75",
+            "0,2"
+          ],
+          "correctIndex": 0,
+          "explanation": "1 dibagi 4 menghasilkan 0,25.",
+          "evidence": "Pecahan 1/4 sama dengan 0,25 dalam bentuk desimal.",
+          "grounded": false
+        }
+      ]
+    },
+    {
+      "material": "10-informatika-algoritma",
+      "run": 3,
+      "completed": true,
+      "passed": true,
+      "reason": null,
+      "detail": null,
+      "questions": 10,
+      "grounded": 8,
+      "inputTokens": 1223,
+      "outputTokens": 2961,
+      "latencyMs": 7780,
+      "retries": 0,
+      "drafts": [
+        {
+          "prompt": "Apa yang dimaksud dengan algoritma?",
+          "options": [
+            "urutan langkah logis dan sistematis untuk menyelesaikan suatu masalah",
+            "kumpulan data",
+            "bahasa pemrograman",
+            "diagram alir"
+          ],
+          "correctIndex": 0,
+          "explanation": "Algoritma didefinisikan sebagai urutan langkah logis dan sistematis untuk menyelesaikan masalah.",
+          "evidence": "Algoritma adalah urutan langkah logis dan sistematis untuk menyelesaikan suatu masalah.",
+          "grounded": true
+        },
+        {
+          "prompt": "Dari siapa nama \"algoritma\" berasal?",
+          "options": [
+            "Al‑Khwarizmi",
+            "Euclid",
+            "Newton",
+            "Turing"
+          ],
+          "correctIndex": 0,
+          "explanation": "Istilah algoritma diambil dari nama Al‑Khwarizmi, ilmuwan Persia abad ke‑9.",
+          "evidence": "Kata algoritma berasal dari nama ilmuwan Persia, Al-Khwarizmi, yang menulis buku tentang cara berhitung pada abad ke-9.",
+          "grounded": true
+        },
+        {
+          "prompt": "Salah satu ciri algoritma yang baik adalah...",
+          "options": [
+            "dapat memiliki masukan atau input dan harus menghasilkan keluaran atau output",
+            "dapat berjalan selamanya",
+            "langkahnya boleh ambigu",
+            "tidak perlu dapat dikerjakan"
+          ],
+          "correctIndex": 0,
+          "explanation": "Sebuah algoritma harus memiliki input dan menghasilkan output.",
+          "evidence": "Algoritma dapat memiliki masukan atau input dan harus menghasilkan keluaran atau output.",
+          "grounded": true
+        },
+        {
+          "prompt": "Simbol apa yang menandai keputusan atau percabangan dalam flowchart?",
+          "options": [
+            "belah ketupat",
+            "oval",
+            "jajar genjang",
+            "persegi panjang"
+          ],
+          "correctIndex": 0,
+          "explanation": "Dalam flowchart, keputusan atau percabangan diwakili oleh simbol belah ketupat.",
+          "evidence": "simbol belah ketupat menandai keputusan atau percabangan.",
+          "grounded": true
+        },
+        {
+          "prompt": "Struktur algoritma mana yang menjalankan langkah yang sama berkali‑kali selama suatu kondisi terpenuhi?",
+          "options": [
+            "perulangan",
+            "sekuensial",
+            "percabangan",
+            "rekursif"
+          ],
+          "correctIndex": 0,
+          "explanation": "Perulangan adalah struktur yang mengulangi langkah selama kondisi terpenuhi.",
+          "evidence": "Struktur perulangan menjalankan langkah yang sama berkali‑kali selama suatu kondisi terpenuhi.",
+          "grounded": false
+        },
+        {
+          "prompt": "Pencarian linear dapat dipakai pada data yang...",
+          "options": [
+            "tidak terurut",
+            "terurut",
+            "hanya angka",
+            "hanya teks"
+          ],
+          "correctIndex": 0,
+          "explanation": "Pencarian linear cocok untuk data yang tidak terurut karena memeriksa satu per satu.",
+          "evidence": "Cara ini sederhana dan dapat dipakai pada data yang tidak terurut.",
+          "grounded": false
+        },
+        {
+          "prompt": "Pencarian biner hanya dapat dipakai pada data yang...",
+          "options": [
+            "sudah terurut",
+            "tidak terurut",
+            "berukuran kecil",
+            "berupa string"
+          ],
+          "correctIndex": 0,
+          "explanation": "Pencarian biner memerlukan data yang sudah terurut agar dapat membagi setengahnya.",
+          "evidence": "Pencarian biner hanya dapat dipakai pada data yang sudah terurut.",
+          "grounded": true
+        },
+        {
+          "prompt": "Dalam contoh algoritma menentukan bilangan terbesar dari tiga bilangan, langkah kedua menganggap ... sebagai bilangan terbesar.",
+          "options": [
+            "A",
+            "B",
+            "C",
+            "nilai rata‑rata"
+          ],
+          "correctIndex": 0,
+          "explanation": "Langkah kedua mengasumsikan A sebagai nilai terbesar sementara.",
+          "evidence": "Kedua, anggap A sebagai bilangan terbesar.",
+          "grounded": true
+        },
+        {
+          "prompt": "Simbol apa yang menandai awal dan akhir dalam flowchart?",
+          "options": [
+            "oval atau terminator",
+            "jajar genjang",
+            "persegi panjang",
+            "belah ketupat"
+          ],
+          "correctIndex": 0,
+          "explanation": "Simbol oval atau terminator menandai titik awal dan akhir dalam flowchart.",
+          "evidence": "simbol oval atau terminator menandai awal dan akhir",
+          "grounded": true
+        },
+        {
+          "prompt": "Struktur algoritma yang menjalankan langkah satu per satu sesuai urutan disebut...",
+          "options": [
+            "runtunan atau sekuensial",
+            "percabangan",
+            "perulangan",
+            "rekursi"
+          ],
+          "correctIndex": 0,
+          "explanation": "Struktur runtunan atau sekuensial mengeksekusi langkah secara berurutan.",
+          "evidence": "Struktur runtunan atau sekuensial menjalankan langkah satu per satu sesuai urutan.",
+          "grounded": true
+        }
+      ]
+    }
+  ]
+}
