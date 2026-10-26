@@ -1,8 +1,9 @@
 # Hari 6: ringkasan AI draf soal dari teks materi (F-10)
 
 - Tanggal: 2026-10-26
-- Status: kode selesai dan teruji otomatis (661 test). Belum di-deploy. Evaluasi dengan Groq sungguhan dan uji end-to-end production menunggu Surya (`docs/testing/mvp-e2e.md`).
-- Commit: `843b3e7` (shared, migrasi, logika murni) → `2578a95` (endpoint) → `723503a` (web) → `3a843c1` (evaluasi) → Fase 5 (dokumen).
+- Status: kode selesai dan teruji otomatis (671 test). Belum di-deploy. Evaluasi `gen-text-v1` gagal target (34,6% lolos skema); perbaikan `gen-text-v2` menunggu evaluasi ulang. Uji end-to-end production menunggu Surya (`docs/testing/mvp-e2e.md`).
+- Commit: `843b3e7` (shared, migrasi, logika murni) → `2578a95` (endpoint) → `723503a` (web) → `3a843c1` (evaluasi) → Fase 5 (dokumen) → perbaikan bug kritis `gen-text-v2`.
+- **Deploy hanya setelah evaluasi `gen-text-v2` mencapai ≥ 90% lolos skema.**
 
 ## 1. Urutan deploy
 
@@ -40,15 +41,15 @@ pnpm exec wrangler d1 execute sorak-db --remote -c apps/api/wrangler.jsonc --com
 ## 2. Yang dibuat
 
 **Shared (`packages/shared`)**
-- Konstanta `AI_*`: kuota 20 per guru per hari, materi 200–8.000 huruf, 5 atau 10 soal, batas waktu 25 detik, dan versi prompt `gen-text-v1`.
+- Konstanta `AI_*`: kuota 20 per guru per hari, materi 200–8.000 huruf, 5 atau 10 soal, batas waktu 25 detik, dan versi prompt `gen-text-v2`.
 - Skema `AiGenerateFromTextInput`, `AiDraftQuestion` (4 pilihan tanpa kembar, penjelasan ≤ 300, bukti ≤ 200 huruf), dan `AiDraftResponse`; fungsi `normalizeText`.
 - `QuestionOrigin` (`manual`, `ai`, `ai_edited`) di input dan detail soal; 4 kode error AI dan `retryAfterSec`.
 - `"sideEffects": false`, supaya kode shared yang tidak dipakai halaman siswa (termasuk skema AI) tidak ikut terunduh di HP. Bundle siswa turun dari 123.240 ke 121.335 byte gzip.
 
 **API (`apps/api`)**
 - Migrasi `0002`: kolom `grounded_count` dan `prompt_version` di `ai_generations`.
-- `src/ai/prompt.ts`: system prompt Bahasa Indonesia, materi dibungkus `<materi>`, dan JSON Schema mode strict.
-- `src/ai/grounding.ts`: grounding check (kutipan minimal 20 huruf yang sudah dinormalisasi harus ada di materi).
+- `src/ai/prompt.ts`: system prompt Bahasa Indonesia, materi dibungkus `<materi>`, dan JSON Schema mode strict. Soal ditaruh di objek berkunci `soal_1..soal_N` yang semuanya wajib, bukan array, supaya jumlahnya dipaksa Groq (lihat bagian 4).
+- `src/ai/grounding.ts`: grounding check (kutipan minimal 20 huruf yang sudah dinormalisasi harus ada di materi; tanda baca di ujung diabaikan; kutipan berelipsis diterima kalau setiap potongan, minimal 10 huruf, ada di materi secara berurutan).
 - `src/ai/validate.ts`: `parseDrafts`, dengan alasan gagal `invalid_json`, `invalid_schema`, `wrong_count`, atau `duplicate_prompt`.
 - `src/ai/groq.ts`: request ke Groq (satu sumber untuk Worker dan evaluasi).
 - `src/ai/quota.ts`: kuota harian per guru sejak 00.00 WIB.
@@ -77,6 +78,8 @@ pnpm exec wrangler d1 execute sorak-db --remote -c apps/api/wrangler.jsonc --com
 - **Evaluasi offline vs metrik produksi:** evaluasi offline memakai set materi tetap, jadi bisa dibandingkan antar versi prompt sebelum dirilis. Metrik produksi (`ai_generations`) menunjukkan apa yang terjadi dengan materi guru sungguhan setelah dirilis. Keduanya memakai fungsi validasi yang sama, sehingga angkanya bisa dibandingkan.
 
 ## 4. Trade-off
+
+- **Evaluasi menangkap bug yang tidak tertangkap test.** `gen-text-v1` lolos semua test (output Groq di-mock), tetapi evaluasi sungguhan hanya 34,6%: model sering memberi jumlah soal yang salah, karena mode strict tidak mendukung `minItems`/`maxItems`. `gen-text-v2` memakai objek berkunci tetap, sehingga schema-nya lebih besar (10 salinan skema soal) dan bentuk output tidak lagi berupa array alami; sebagai gantinya jumlah soal dipaksa penyedia, bukan sekadar diminta di prompt.
 
 - **Grounded ≠ benar.** Grounding check murah dan bisa diuji, tetapi tidak menangkap soal yang mengutip kalimat benar dengan kunci jawaban salah. Pemeriksa AI kedua bisa menangkapnya, tetapi akan menggandakan token di bawah batas 8.000 per menit. Pertahanan terakhirnya tetap peninjauan guru.
 - **Bukti terlalu panjang dipotong, bukan ditolak.** Satu bukti 230 huruf tidak menggagalkan 10 soal yang lain.

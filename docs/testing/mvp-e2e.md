@@ -1,8 +1,8 @@
 # Uji end-to-end MVP (F-01 sampai F-10)
 
 - Tanggal: 2026-10-26 (Hari 6)
-- Kode: commit `3a843c1` ditambah perubahan Hari 6 Fase 5
-- Test otomatis: `pnpm -r typecheck` dan `pnpm -r test` lulus di 5 paket (661 test: shared 132, ai-eval 17, web 155, realtime 210, api 147)
+- Kode: commit `3a843c1` ditambah perubahan Hari 6 Fase 5 dan perbaikan bug kritis no. 1
+- Test otomatis: `pnpm -r typecheck` dan `pnpm -r test` lulus di 5 paket (671 test: shared 132, ai-eval 19, web 155, realtime 210, api 155)
 - MVP dinyatakan selesai kalau semua baris di bawah berstatus **Lulus** atau **Diubah dengan alasan**, dan tidak ada bug kritis yang terbuka.
 
 Arti kolom Hasil:
@@ -26,7 +26,7 @@ Nama test ditulis sebagai `file › describe › it`.
 | F-07 | Uji otomatis: pemain dengan latency 800 ms dan 50 ms dengan waktu reaksi sama mendapat skor setara (selisih di bawah 5%) | Test keadilan latency | Lulus (otomatis) | `apps/realtime/test/fairness.test.ts › keadilan latency … › dengan kompensasi: selisih skor 50 ms vs 800 ms di bawah 5%` (pembandingnya, `› dengan jam server saja … selisihnya di atas 5%`, membuktikan test-nya peka); `apps/realtime/test/reconnect.test.ts › kompensasi latency end-to-end` |
 | F-08 | Semua nickname di daftar uji kata kasar ditolak | Test moderasi (daftar kata, leetspeak, spasi, huruf berulang) | Lulus (otomatis) | `apps/realtime/test/moderation.test.ts › isNicknameAllowed: kata panjang …`, `› kata pendek …`, `› nama wajar (Scunthorpe problem)`; `apps/realtime/test/reconnect.test.ts › moderasi nickname › nama kasar -> NICKNAME_REJECTED …` |
 | F-09 | Hasil tersimpan permanen di D1 lewat Queue; tampil di halaman riwayat | Test event game_ended, consumer idempotent, API riwayat; manual: game production sampai laporan di Riwayat | Lulus (otomatis); manual menunggu (langkah 3.5) | `apps/realtime/test/game-ended.test.ts › … game 3 soal selesai -> tepat satu event yang lolos skema …`; `apps/api/test/game-events.test.ts › consumer sorak-game-events › event valid -> 1 baris games …` dan `› pesan yang sama datang dua kali (at-least-once) …`; `apps/api/test/game-history.test.ts › GET /api/games/:id › laporan: …` |
-| F-10 | Minimal 90% output lolos validasi skema pada set evaluasi; soal tidak terpakai sebelum host menyetujui | Test endpoint (Groq di-mock), test layar review; evaluasi `tools/ai-eval` dengan Groq sungguhan; manual: buat kuis dari materi di production | "Tidak terpakai sebelum disetujui": Lulus (otomatis). **≥ 90% lolos skema: menunggu evaluasi sungguhan** (langkah 2); dry-run hanya membuktikan alurnya | `apps/api/test/ai.test.ts › panggilan Groq › draf tidak masuk ke kuis mana pun`; `apps/web/test/ai-draft.test.ts › appendSelected dan roomLeft › hanya yang dicentang ditambahkan …`; `apps/api/test/ai-logic.test.ts › parseDrafts`; degradasi: `apps/api/test/ai.test.ts › akses dan validasi › tanpa GROQ_API_KEY: 503 AI_UNAVAILABLE …`, `› kuota harian per guru`. Hasil evaluasi: `tools/ai-eval/results/<tanggal>-gen-text-v1.md` (diisi setelah langkah 2). |
+| F-10 | Minimal 90% output lolos validasi skema pada set evaluasi; soal tidak terpakai sebelum host menyetujui | Test endpoint (Groq di-mock), test layar review; evaluasi `tools/ai-eval` dengan Groq sungguhan; manual: buat kuis dari materi di production | "Tidak terpakai sebelum disetujui": Lulus (otomatis). **≥ 90% lolos skema: gagal di `gen-text-v1` (34,6%)**, diperbaiki di `gen-text-v2` (bug no. 1), menunggu evaluasi ulang (langkah 2) | `apps/api/test/ai.test.ts › panggilan Groq › draf tidak masuk ke kuis mana pun`; `apps/web/test/ai-draft.test.ts › appendSelected dan roomLeft › hanya yang dicentang ditambahkan …`; `apps/api/test/ai-logic.test.ts › parseDrafts`; degradasi: `apps/api/test/ai.test.ts › akses dan validasi › tanpa GROQ_API_KEY: 503 AI_UNAVAILABLE …`, `› kuota harian per guru`. Hasil evaluasi: `tools/ai-eval/results/2026-10-26-gen-text-v1.md` (9/26 lolos, 87,8% grounded, p50 7,1 dtk, p95 8,5 dtk) dan `…-gen-text-v2.md` (diisi setelah evaluasi ulang). |
 
 ## 2. Evaluasi AI dengan Groq sungguhan (F-10)
 
@@ -40,7 +40,8 @@ Remove-Item Env:GROQ_API_KEY
 
 - Lamanya sekitar 15–25 menit, dan memakai sekitar 130.000 dari 200.000 token per hari. Jangan generate dari aplikasi selama skrip berjalan.
 - Isi "Catatan Surya" pada 5 soal acak di file `.md` hasilnya, lalu commit `.md` dan `.json`.
-- Tulis di sini: lolos skema ___% (target ≥ 90%), grounded ___%, latency p50 ___ / p95 ___, dan hasil materi injeksi ___.
+- `gen-text-v1` (2026-10-26): lolos skema **34,6%** (9/26, target ≥ 90%), grounded 87,8% (79/90), latency p50 7,1 / p95 8,5 detik, 4 gagal di sisi penyedia (`http_400`), materi injeksi 0/3 lolos (tidak bisa disimpulkan). Penyebab dan perbaikan: bug no. 1.
+- `gen-text-v2`: lolos skema ___% (target ≥ 90%), grounded ___%, latency p50 ___ / p95 ___, hasil materi injeksi ___.
 
 Kalau lolos skema di bawah 90%: catat alasan gagal terbanyak dari ringkasan (misalnya `wrong_count` atau `invalid_schema` di path tertentu). Itu termasuk bug kritis untuk F-10.
 
@@ -84,7 +85,8 @@ Tingkat: **kritis** (MVP tidak bisa dipakai di kelas, atau data salah atau hilan
 
 | No | Tingkat | Fitur | Gejala | Langkah reproduksi | Status |
 |---|---|---|---|---|---|
-| 1 | | | | | |
+| 1 | kritis | F-10 | Evaluasi `gen-text-v1`: hanya 34,6% output lolos skema. `wrong_count` × 15: jumlah soal tidak tepat 10, karena mode strict Groq tidak mendukung `minItems`/`maxItems` sehingga panjang array tidak dipaksa. Grounding juga menandai kutipan yang benar sebagai tidak grounded kalau model menambah titik di ujung kutipan. | `pnpm --filter ai-eval run eval` dengan `gen-text-v1` | Diperbaiki di `gen-text-v2`: soal di objek berkunci `soal_1..soal_N` yang semuanya wajib (jumlah dipaksa constrained decoding), tanda baca di ujung kutipan diabaikan, dan kutipan berelipsis diterima kalau setiap potongannya ada di materi. Menunggu evaluasi ulang. |
+| 2 | mengganggu (dipantau) | F-10 | `http_400` × 4 dari Groq, 3 di antaranya di semua percobaan materi `08-bahasa-teks-prosedur`. Isi error tidak tercatat di `gen-text-v1`. | Sama dengan no. 1 | Diagnosis ditambahkan: laporan evaluasi sekarang memuat kode dan pesan error Groq, dan log Worker `ai_generate` memuat kode error (`http_400:<kode>`). Ditindaklanjuti setelah evaluasi `gen-text-v2`. |
 
 Bug kritis diperbaiki di Hari 6, masing-masing dengan commit sendiri. Bug lain dicatat di sini untuk Hari 11.
 

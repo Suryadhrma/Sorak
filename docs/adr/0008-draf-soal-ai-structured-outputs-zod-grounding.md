@@ -13,6 +13,7 @@ Angka dan batasan (dicek di console.groq.com/docs, 26 Oktober 2026):
 - **Mode strict:** semua properti wajib ada di `required`, setiap objek `additionalProperties: false`. Kata kunci panjang dan jumlah (`maxLength`, `minItems`, `maxItems`) tidak tercantum sebagai yang didukung. Mode ini tidak bisa digabung dengan streaming atau tool use.
 - **Worker:** CPU 10 ms per request. Menunggu Groq adalah I/O dan tidak dihitung; parse dan validasi beberapa KB JSON yang dihitung.
 - Prinsip dari Hari 2: data dari luar tidak dipercaya, termasuk dari AI.
+- **Evaluasi pertama (`gen-text-v1`, 26 Oktober 2026):** dengan soal sebagai array, hanya 9 dari 26 jawaban 200 yang lolos validasi (34,6%); 15 gagal karena jumlah soal tidak sama dengan yang diminta. Mode strict menjamin bentuk, tetapi tanpa `minItems`/`maxItems` panjang array tidak dipaksa. `gen-text-v2` menaruh soal di objek berkunci `soal_1..soal_N` yang semuanya wajib, sehingga jumlahnya ikut dipaksa constrained decoding.
 
 ## Pilihan
 
