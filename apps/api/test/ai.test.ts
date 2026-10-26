@@ -25,6 +25,10 @@ const draft = (i: number, evidence = "Ribosom adalah tempat sintesis protein.") 
 /** Lima soal, yang terakhir buktinya karangan (tidak ada di materi). */
 const fiveDrafts = () => [...Array.from({ length: 4 }, (_, i) => draft(i)), draft(4, "Ribosom menghasilkan energi untuk sel.")];
 
+/** Isi content Groq: objek questions berkunci soal_1..soal_N, seperti yang dipaksa schema. */
+const keyed = (questions: unknown[]) =>
+  JSON.stringify({ questions: Object.fromEntries(questions.map((question, i) => [`soal_${i + 1}`, question])) });
+
 /** Bentuk respons chat completions Groq; hanya field yang dibaca server. */
 function groqCompletion(content: string, usage = { prompt_tokens: 1200, completion_tokens: 900 }) {
   return Response.json({
@@ -131,7 +135,7 @@ describe("akses dan validasi", () => {
 describe("panggilan Groq", () => {
   it("sukses: 200 AiDraftResponse dengan grounded, baris ok mencatat token, grounded, dan versi prompt", async () => {
     const host = await signedInHost();
-    const fetchSpy = mockGroq(() => groqCompletion(JSON.stringify({ questions: fiveDrafts() })));
+    const fetchSpy = mockGroq(() => groqCompletion(keyed(fiveDrafts())));
 
     const res = await generate(host);
     expect(res.status).toBe(200);
@@ -170,7 +174,7 @@ describe("panggilan Groq", () => {
   it.each(AI_QUESTION_COUNTS)("jumlah soal %i diteruskan ke prompt", async (count) => {
     const host = await signedInHost();
     const questions = Array.from({ length: count }, (_, i) => draft(i));
-    const fetchSpy = mockGroq(() => groqCompletion(JSON.stringify({ questions })));
+    const fetchSpy = mockGroq(() => groqCompletion(keyed(questions)));
     const res = await generate(host, { sourceText, count });
     expect(res.status).toBe(200);
     expect(String(fetchSpy.mock.calls[0]?.[1]?.body)).toContain(`${count} soal`);
@@ -178,7 +182,7 @@ describe("panggilan Groq", () => {
 
   it("isi materi dan isi soal tidak disimpan di D1", async () => {
     const host = await signedInHost();
-    mockGroq(() => groqCompletion(JSON.stringify({ questions: fiveDrafts() })));
+    mockGroq(() => groqCompletion(keyed(fiveDrafts())));
     await generate(host);
     const row = await env.DB.prepare("SELECT * FROM ai_generations WHERE host_id = ?").bind(host.id).first();
     const stored = JSON.stringify(row);
@@ -188,7 +192,7 @@ describe("panggilan Groq", () => {
 
   it("draf tidak masuk ke kuis mana pun", async () => {
     const host = await signedInHost();
-    mockGroq(() => groqCompletion(JSON.stringify({ questions: fiveDrafts() })));
+    mockGroq(() => groqCompletion(keyed(fiveDrafts())));
     const before = await env.DB.prepare("SELECT COUNT(*) AS n FROM questions").first<{ n: number }>();
     await generate(host);
     const after = await env.DB.prepare("SELECT COUNT(*) AS n FROM questions").first<{ n: number }>();
@@ -198,7 +202,7 @@ describe("panggilan Groq", () => {
   it("output tidak lolos validasi (3 pilihan): 502 AI_INVALID_OUTPUT, baris invalid_schema dengan token", async () => {
     const host = await signedInHost();
     const questions = fiveDrafts().map((q, i) => (i === 2 ? { ...q, options: ["A", "B", "C"] } : q));
-    mockGroq(() => groqCompletion(JSON.stringify({ questions })));
+    mockGroq(() => groqCompletion(keyed(questions)));
 
     const res = await generate(host);
     expect(res.status).toBe(502);
@@ -244,6 +248,21 @@ describe("panggilan Groq", () => {
     expect(await generations(host.id)).toMatchObject([{ status: "provider_error" }]);
   });
 
+  it("Groq 400: kode error Groq ikut di log ai_generate, pesannya tidak", async () => {
+    const host = await signedInHost();
+    mockGroq(() =>
+      Response.json(
+        { error: { message: "Failed to generate JSON. materi rahasia", type: "invalid_request_error", code: "json_validate_failed" } },
+        { status: 400 },
+      ),
+    );
+    const logSpy = vi.spyOn(console, "log");
+    expect((await generate(host)).status).toBe(503);
+    const logged = logSpy.mock.calls.flat().find((entry) => typeof entry === "object" && entry !== null && "event" in entry && entry.event === "ai_generate");
+    expect(logged).toMatchObject({ status: "provider_error", reason: "http_400:json_validate_failed" });
+    expect(JSON.stringify(logSpy.mock.calls)).not.toContain("materi rahasia");
+  });
+
   it("timeout (AbortSignal.timeout) dan error jaringan: 503 AI_UNAVAILABLE, baris provider_error", async () => {
     const host = await signedInHost();
     const fetchSpy = vi.spyOn(globalThis, "fetch").mockRejectedValueOnce(new DOMException("The operation timed out.", "TimeoutError"));
@@ -259,7 +278,7 @@ describe("kuota harian per guru", () => {
   it(`setelah ${AI_DAILY_LIMIT_PER_HOST} permintaan hari ini: 429 AI_QUOTA_EXCEEDED tanpa memanggil Groq, dan ditolak pun dicatat`, async () => {
     const host = await signedInHost();
     await fillQuota(host.id, Date.now());
-    const fetchSpy = mockGroq(() => groqCompletion(JSON.stringify({ questions: fiveDrafts() })));
+    const fetchSpy = mockGroq(() => groqCompletion(keyed(fiveDrafts())));
 
     const res = await generate(host);
     expect(res.status).toBe(429);
@@ -273,7 +292,7 @@ describe("kuota harian per guru", () => {
   it("satu di bawah batas masih boleh", async () => {
     const host = await signedInHost();
     await fillQuota(host.id, Date.now(), AI_DAILY_LIMIT_PER_HOST - 1);
-    mockGroq(() => groqCompletion(JSON.stringify({ questions: fiveDrafts() })));
+    mockGroq(() => groqCompletion(keyed(fiveDrafts())));
     expect((await generate(host)).status).toBe(200);
   });
 
@@ -281,7 +300,7 @@ describe("kuota harian per guru", () => {
     const full = await signedInHost();
     const other = await signedInHost();
     await fillQuota(full.id, Date.now());
-    mockGroq(() => groqCompletion(JSON.stringify({ questions: fiveDrafts() })));
+    mockGroq(() => groqCompletion(keyed(fiveDrafts())));
     expect((await generate(full)).status).toBe(429);
     expect((await generate(other)).status).toBe(200);
   });
@@ -289,14 +308,14 @@ describe("kuota harian per guru", () => {
   it("permintaan sebelum 00.00 WIB hari ini tidak dihitung", async () => {
     const host = await signedInHost();
     await fillQuota(host.id, wibDayStart(Date.now()) - 1);
-    mockGroq(() => groqCompletion(JSON.stringify({ questions: fiveDrafts() })));
+    mockGroq(() => groqCompletion(keyed(fiveDrafts())));
     expect((await generate(host)).status).toBe(200);
   });
 
   it("permintaan tepat pukul 00.00 WIB hari ini dihitung", async () => {
     const host = await signedInHost();
     await fillQuota(host.id, wibDayStart(Date.now()));
-    mockGroq(() => groqCompletion(JSON.stringify({ questions: fiveDrafts() })));
+    mockGroq(() => groqCompletion(keyed(fiveDrafts())));
     expect((await generate(host)).status).toBe(429);
   });
 

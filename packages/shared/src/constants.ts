@@ -179,7 +179,7 @@ export const AI_EVIDENCE_MAX_CHARS = 200;
 export const AI_GROUNDING_MIN_CHARS = 20;
 export const AI_REQUEST_TIMEOUT_MS = 25_000;
 /** Naikkan setiap kali prompt berubah, lalu jalankan ulang evaluasi (tools/ai-eval). */
-export const AI_PROMPT_VERSION = "gen-text-v1";
+export const AI_PROMPT_VERSION = "gen-text-v2";
 
 /** Batas baris halaman "Kuis saya". */
 export const QUIZ_LIST_LIMIT = 100;

@@ -21,7 +21,9 @@ const question = (i: number, extra: Record<string, unknown> = {}) => ({
   evidence: "Ribosom adalah tempat sintesis protein.",
   ...extra,
 });
-const output = (questions: unknown[]) => JSON.stringify({ questions });
+/** Bentuk output Groq: objek `questions` berkunci soal_1..soal_N (jumlahnya dipaksa schema), bukan array. */
+const output = (questions: unknown[]) =>
+  JSON.stringify({ questions: Object.fromEntries(questions.map((question, i) => [`soal_${i + 1}`, question])) });
 const five = () => Array.from({ length: 5 }, (_, i) => question(i));
 
 /** Semua objek di JSON Schema strict: additionalProperties false dan semua properti wajib (aturan mode strict Groq). */
@@ -63,14 +65,23 @@ describe("buildTextPrompt", () => {
     expect(strictProblems(prompt.responseFormat.json_schema.schema)).toEqual([]);
   });
 
-  it("skema meminta array questions berisi prompt, options, correctIndex, explanation, evidence (tanpa grounded)", () => {
-    const schema = prompt.responseFormat.json_schema.schema;
-    const item = schema.properties.questions.items;
-    expect(Object.keys(item.properties).sort()).toEqual(["correctIndex", "evidence", "explanation", "options", "prompt"]);
+  it("jumlah soal dipaksa schema: tepat soal_1..soal_N, semuanya wajib (strict tidak mendukung minItems/maxItems)", () => {
+    for (const count of [5, 10] as const) {
+      const { questions } = buildTextPrompt({ sourceText, count }).responseFormat.json_schema.schema.properties;
+      const keys = Array.from({ length: count }, (_, i) => `soal_${i + 1}`);
+      expect(Object.keys(questions.properties)).toEqual(keys);
+      expect(questions.required).toEqual(keys);
+      expect(questions.additionalProperties).toBe(false);
+    }
+  });
+
+  it("setiap soal berisi prompt, options, correctIndex, explanation, evidence (tanpa grounded)", () => {
+    const item = prompt.responseFormat.json_schema.schema.properties.questions.properties.soal_1;
+    expect(Object.keys(item?.properties ?? {}).sort()).toEqual(["correctIndex", "evidence", "explanation", "options", "prompt"]);
   });
 
   it("versi prompt tercatat", () => {
-    expect(AI_PROMPT_VERSION).toBe("gen-text-v1");
+    expect(AI_PROMPT_VERSION).toBe("gen-text-v2");
   });
 });
 
@@ -82,6 +93,22 @@ describe("isGrounded", () => {
   it("beda spasi, huruf besar, dan tanda kutip lengkung tetap dianggap sama -> true", () => {
     expect(isGrounded("  RIBOSOM   adalah tempat\nsintesis protein ", sourceText)).toBe(true);
     expect(isGrounded("“Sel” adalah unit terkecil","\"Sel\" adalah unit terkecil penyusun makhluk hidup.")).toBe(true);
+  });
+
+  it("tanda baca di ujung kutipan diabaikan (model sering menambah titik atau koma) -> true", () => {
+    // Materi: "... dan masuk ke dalam sel." Kutipan berhenti di tengah kalimat lalu diberi titik.
+    expect(isGrounded("Membran sel mengatur zat yang keluar.", "Membran sel mengatur zat yang keluar dan masuk ke dalam sel.")).toBe(true);
+    expect(isGrounded("“Ribosom adalah tempat sintesis protein”,", sourceText)).toBe(true);
+  });
+
+  it("kutipan yang dipotong dengan elipsis: setiap potongan harus ada di materi, berurutan", () => {
+    expect(isGrounded("Sel adalah unit terkecil … tempat sintesis protein", sourceText)).toBe(true);
+    expect(isGrounded("Ribosom adalah tempat sintesis protein... Sel adalah unit terkecil", sourceText)).toBe(false);
+    expect(isGrounded("Sel adalah unit terkecil … sel tumbuhan bersel dua", sourceText)).toBe(false);
+  });
+
+  it("potongan elipsis yang terlalu pendek tidak dihitung sebagai bukti -> false", () => {
+    expect(isGrounded("Ribosom adalah tempat sintesis protein … DNA", sourceText)).toBe(false);
   });
 
   it("kutipan karangan (tidak ada di materi) -> false", () => {
@@ -117,7 +144,7 @@ describe("parseDrafts", () => {
   it("3 pilihan -> invalid_schema di path options", () => {
     const result = parseDrafts(output([question(0, { options: ["A", "B", "C"] }), ...five().slice(1)]), { count: 5, sourceText });
     expect(result).toMatchObject({ ok: false, reason: "invalid_schema" });
-    if (!result.ok) expect(result.detail).toContain("questions.0.options");
+    if (!result.ok) expect(result.detail).toContain("questions.soal_1.options");
   });
 
   it("pilihan kembar -> invalid_schema", () => {
@@ -137,6 +164,22 @@ describe("parseDrafts", () => {
 
   it("jumlah soal tidak sama dengan yang diminta -> wrong_count", () => {
     expect(parseDrafts(output(five().slice(0, 4)), { count: 5, sourceText })).toMatchObject({ ok: false, reason: "wrong_count" });
+    expect(parseDrafts(output([...five(), question(5)]), { count: 5, sourceText })).toMatchObject({ ok: false, reason: "wrong_count" });
+  });
+
+  it("kunci yang tidak sesuai urutan soal_1..soal_N -> wrong_count", () => {
+    const skipped = JSON.stringify({ questions: Object.fromEntries(five().map((q, i) => [`soal_${i + 2}`, q])) });
+    expect(parseDrafts(skipped, { count: 5, sourceText })).toMatchObject({ ok: false, reason: "wrong_count" });
+  });
+
+  it("draf dikembalikan urut soal_1..soal_N walau urutan kunci di JSON berbeda", () => {
+    const reversed = JSON.stringify({ questions: Object.fromEntries(five().map((q, i) => [`soal_${i + 1}`, q]).reverse()) });
+    const result = parseDrafts(reversed, { count: 5, sourceText });
+    expect(result.ok && result.drafts.map((d) => d.prompt)).toEqual(five().map((q) => q.prompt));
+  });
+
+  it("bentuk lama (array) ditolak sebagai invalid_schema", () => {
+    expect(parseDrafts(JSON.stringify({ questions: five() }), { count: 5, sourceText })).toMatchObject({ ok: false, reason: "invalid_schema" });
   });
 
   it("dua soal dengan teks yang sama -> duplicate_prompt", () => {

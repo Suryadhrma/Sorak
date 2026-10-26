@@ -99,7 +99,8 @@ export function fakeTransport(materials: readonly Material[], clock: ReturnType<
 
     // Percobaan kedua materi ketiga mengembalikan JSON terpotong, supaya cabang gagal skema ikut teruji.
     const broken = material === materials[2] && call === 2;
-    const content = broken ? '{"questions": [{"prompt": "terpotong' : JSON.stringify({ questions: fakeQuestions(material, count) });
+    const questions = Object.fromEntries(fakeQuestions(material, count).map((question, i) => [`soal_${i + 1}`, question]));
+    const content = broken ? '{"questions": {"soal_1": {"prompt": "terpotong' : JSON.stringify({ questions });
     return {
       kind: "response",
       status: 200,

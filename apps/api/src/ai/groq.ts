@@ -18,6 +18,15 @@ const ChatCompletion = z.object({
   usage: z.object({ prompt_tokens: z.number().int().nonnegative(), completion_tokens: z.number().int().nonnegative() }),
 });
 
+// Kode error Groq (misalnya "json_validate_failed") boleh masuk log; pesannya tidak, karena bisa memuat potongan output.
+const GroqError = z.object({ error: z.object({ code: z.string().regex(/^[a-z0-9_]{1,40}$/) }) });
+
+async function errorCode(res: Response): Promise<string | null> {
+  const body: unknown = await res.json().catch(() => null);
+  const parsed = GroqError.safeParse(body);
+  return parsed.success ? parsed.data.error.code : null;
+}
+
 /** Header retry-after Groq berisi detik. Nilai yang tidak terbaca diganti default, supaya web tetap bisa menghitung mundur. */
 function retryAfterSec(header: string | null): number {
   const seconds = Number(header);
@@ -61,8 +70,10 @@ export async function callGroq(credentials: GroqCredentials, prompt: GroqPrompt)
   }
 
   if (res.status === 429) return { kind: "rate_limited", retryAfterSec: retryAfterSec(res.headers.get("retry-after")) };
-  // Isi body error tidak dibaca ke log: cukup status, supaya pesan Groq tidak membawa data ke Workers Logs.
-  if (!res.ok) return { kind: "failed", reason: `http_${res.status}` };
+  if (!res.ok) {
+    const code = await errorCode(res);
+    return { kind: "failed", reason: code ? `http_${res.status}:${code}` : `http_${res.status}` };
+  }
 
   let body: unknown;
   try {

@@ -2,38 +2,66 @@ import { AI_EVIDENCE_MAX_CHARS, AI_EXPLANATION_MAX_CHARS, AI_OPTION_COUNT, type 
 
 export type ChatMessage = { role: "system" | "user"; content: string };
 
-/**
- * JSON Schema untuk Groq Structured Outputs mode strict: setiap objek tertutup (additionalProperties false) dan
- * semua properti wajib. Batas panjang dan jumlah tidak ditulis di sini (dokumentasi Groq tidak mencantumkannya
- * sebagai kata kunci yang didukung); batas itu ditegakkan Zod di validate.ts.
- */
-const DRAFT_SCHEMA = {
+const QUESTION_SCHEMA = {
   type: "object",
   properties: {
-    questions: {
-      type: "array",
-      items: {
-        type: "object",
-        properties: {
-          prompt: { type: "string", description: "Teks soal dalam Bahasa Indonesia" },
-          options: { type: "array", items: { type: "string" }, description: `Tepat ${AI_OPTION_COUNT} pilihan jawaban` },
-          correctIndex: { type: "integer", enum: [0, 1, 2, 3], description: "Indeks pilihan yang benar" },
-          explanation: { type: "string", description: "Satu sampai dua kalimat kenapa jawabannya benar" },
-          evidence: { type: "string", description: "Kutipan persis dari materi yang mendukung jawaban benar" },
-        },
-        required: ["prompt", "options", "correctIndex", "explanation", "evidence"],
-        additionalProperties: false,
-      },
-    },
+    prompt: { type: "string", description: "Teks soal dalam Bahasa Indonesia" },
+    options: { type: "array", items: { type: "string" }, description: `Tepat ${AI_OPTION_COUNT} pilihan jawaban` },
+    correctIndex: { type: "integer", enum: [0, 1, 2, 3], description: "Indeks pilihan yang benar" },
+    explanation: { type: "string", description: "Satu sampai dua kalimat kenapa jawabannya benar" },
+    evidence: { type: "string", description: "Kutipan persis dari materi yang mendukung jawaban benar" },
   },
-  required: ["questions"],
+  required: ["prompt", "options", "correctIndex", "explanation", "evidence"],
   additionalProperties: false,
 } as const;
 
+export type DraftSchema = {
+  type: "object";
+  properties: {
+    questions: {
+      type: "object";
+      properties: Record<string, typeof QUESTION_SCHEMA>;
+      required: string[];
+      additionalProperties: false;
+    };
+  };
+  required: ["questions"];
+  additionalProperties: false;
+};
+
 export type ResponseFormat = {
   type: "json_schema";
-  json_schema: { name: string; strict: true; schema: typeof DRAFT_SCHEMA };
+  json_schema: { name: string; strict: true; schema: DraftSchema };
 };
+
+/** Kunci soal di output: soal_1 sampai soal_N. */
+export function draftKeys(count: number): string[] {
+  return Array.from({ length: count }, (_, i) => `soal_${i + 1}`);
+}
+
+/**
+ * JSON Schema untuk Groq Structured Outputs mode strict: setiap objek tertutup (additionalProperties false) dan
+ * semua properti wajib. Soal ditaruh di objek berkunci soal_1..soal_N, bukan array: mode strict tidak mendukung
+ * minItems/maxItems, dan dengan array model terbukti sering memberi jumlah soal yang salah (evaluasi gen-text-v1:
+ * 15 dari 26 jawaban). Kunci yang semuanya wajib memaksa jumlahnya lewat constrained decoding. Batas panjang teks
+ * tetap ditegakkan Zod di validate.ts.
+ */
+function draftSchema(count: number): DraftSchema {
+  const keys = draftKeys(count);
+  return {
+    type: "object",
+    properties: {
+      questions: {
+        type: "object",
+        properties: Object.fromEntries(keys.map((key) => [key, QUESTION_SCHEMA])),
+        required: keys,
+        additionalProperties: false,
+      },
+    },
+    required: ["questions"],
+    additionalProperties: false,
+  };
+}
 
 const SYSTEM_PROMPT = `Kamu membantu guru membuat soal pilihan ganda untuk siswa SMP/SMA.
 
@@ -61,8 +89,11 @@ export function buildTextPrompt({ sourceText, count }: AiGenerateFromTextInput):
   return {
     messages: [
       { role: "system", content: SYSTEM_PROMPT },
-      { role: "user", content: `Buat tepat ${count} soal dari materi berikut.\n<materi>\n${fenceMaterial(sourceText)}\n</materi>` },
+      {
+        role: "user",
+        content: `Buat tepat ${count} soal (soal_1 sampai soal_${count}) dari materi berikut.\n<materi>\n${fenceMaterial(sourceText)}\n</materi>`,
+      },
     ],
-    responseFormat: { type: "json_schema", json_schema: { name: "draf_soal", strict: true, schema: DRAFT_SCHEMA } },
+    responseFormat: { type: "json_schema", json_schema: { name: "draf_soal", strict: true, schema: draftSchema(count) } },
   };
 }

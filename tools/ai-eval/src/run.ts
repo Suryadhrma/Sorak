@@ -47,6 +47,21 @@ const MAX_RATE_LIMIT_RETRIES = 5;
 // Perkiraan awal satu permintaan 10 soal (input + output); diganti angka nyata terbesar setelah respons pertama.
 const INITIAL_TOKEN_ESTIMATE = 5_000;
 
+/**
+ * Kode dan pesan error Groq untuk laporan evaluasi (materinya milik kita sendiri, jadi aman dicatat, tidak seperti
+ * log Worker). failed_generation tidak diambil: bisa sangat panjang.
+ */
+export function providerDetail(body: unknown): string | null {
+  if (typeof body !== "object" || body === null || !("error" in body)) return null;
+  const { error } = body;
+  if (typeof error !== "object" || error === null) return null;
+  const parts: string[] = [];
+  if ("code" in error && typeof error.code === "string") parts.push(`code=${error.code}`);
+  if ("schema_path" in error && typeof error.schema_path === "string") parts.push(`schema_path=${error.schema_path}`);
+  if ("message" in error && typeof error.message === "string") parts.push(`message=${error.message.slice(0, 300)}`);
+  return parts.length > 0 ? parts.join("; ") : null;
+}
+
 const seconds = (ms: number) => `${(ms / 1000).toFixed(1)} dtk`;
 
 /**
@@ -111,6 +126,7 @@ export async function runEval(options: RunOptions): Promise<RunResult> {
         }
         if (result.status !== 200) {
           attempt.reason = `http_${result.status}`;
+          attempt.detail = providerDetail(result.body);
           break;
         }
         const completion = readCompletion(result.body);

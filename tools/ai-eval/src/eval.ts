@@ -91,7 +91,7 @@ async function main() {
   const date = new Date(clock.now() + WIB_OFFSET_MS).toISOString().slice(0, 10);
   const meta = { date, model, promptVersion: AI_PROMPT_VERSION, dryRun, runs, count, waitedMs: result.waitedMs, stoppedEarly: result.stoppedEarly };
   const summary = summarize(result.attempts, materials);
-  const markdown = buildMarkdown(meta, summary, pickSamples(result.attempts, 5, random));
+  const markdown = buildMarkdown(meta, summary, pickSamples(result.attempts, 5, random), result.attempts);
 
   const outDir = new URL("results/", root);
   await mkdir(outDir, { recursive: true });

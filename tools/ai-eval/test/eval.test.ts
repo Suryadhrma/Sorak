@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { fakeClock, fakeTransport, seededRandom } from "../src/fake.ts";
 import { buildMarkdown, percentile, pickSamples, summarize } from "../src/report.ts";
-import { runEval, type Material, type Transport, type TransportResult } from "../src/run.ts";
+import { providerDetail, runEval, type Material, type Transport, type TransportResult } from "../src/run.ts";
 
 const sentences = [
   "Sel adalah unit terkecil penyusun makhluk hidup.",
@@ -64,6 +64,14 @@ describe("runEval dengan Groq palsu", () => {
     expect(summary).toMatchObject({ completed: 0, providerFailures: 3, schemaPassRate: null, failureReasons: { timeout: 3 } });
   });
 
+  it("HTTP 400 dari Groq: kode, schema_path, dan pesan error dicatat di detail", async () => {
+    const body = { error: { message: "Failed to generate JSON", type: "invalid_request_error", code: "json_validate_failed", failed_generation: "x".repeat(5000) } };
+    const rate = { remainingTokens: 8_000, resetTokensMs: 0, remainingRequests: 999, retryAfterSec: null, observedAt: 0 };
+    const result = await quietRun(async () => ({ kind: "response", status: 400, body, rate }), fakeClock(0), 1);
+    expect(result.attempts[0]).toMatchObject({ completed: false, reason: "http_400", detail: "code=json_validate_failed; message=Failed to generate JSON" });
+    expect(providerDetail({ hasil: "aneh" })).toBeNull();
+  });
+
   it("berhenti kalau jatah permintaan harian habis", async () => {
     const clock = fakeClock(0);
     const real = fakeTransport(materials, clock);
@@ -97,8 +105,10 @@ describe("laporan", () => {
       { date: "2026-10-26", model: "m", promptVersion: "gen-text-v1", dryRun: true, runs: 3, count: 5, waitedMs: result.waitedMs, stoppedEarly: null },
       summary,
       samples,
+      result.attempts,
     );
     expect(markdown).toContain("88,9%** (8/9) ✗ di bawah target");
+    expect(markdown).toContain("- `invalid_json` (03-injeksi, percobaan 2): ");
     expect(markdown).toContain("| 03-injeksi | 2/3 |");
     expect(markdown).toContain("Kesimpulan otomatis: soal tetap tentang materi");
     expect(markdown.match(/Catatan Surya:/g)).toHaveLength(5);
@@ -111,5 +121,15 @@ describe("laporan", () => {
       inputTokens: 1, outputTokens: 1, latencyMs: 1, retries: 0, drafts: [draft],
     };
     expect(summarize([attempt], materials).injection?.offTopic).toBe(1);
+  });
+
+  it("materi injeksi tanpa percobaan yang lolos: kesimpulan 'belum bisa disimpulkan', bukan 'keluar dari materi'", () => {
+    const failed = {
+      material: "03-injeksi", run: 1, completed: true, passed: false, reason: "wrong_count", detail: null, questions: 0, grounded: 0,
+      inputTokens: 1, outputTokens: 1, latencyMs: 1, retries: 0, drafts: [],
+    };
+    const meta = { date: "2026-10-26", model: "m", promptVersion: "v", dryRun: false, runs: 1, count: 5, waitedMs: 0, stoppedEarly: null };
+    const markdown = buildMarkdown(meta, summarize([failed], materials), [], [failed]);
+    expect(markdown).toContain("Kesimpulan otomatis: belum bisa disimpulkan");
   });
 });
