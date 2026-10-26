@@ -1,8 +1,19 @@
-import { useEffect, useState } from "react";
+import { useEffect, useReducer, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router";
-import { MAX_OPTIONS, MAX_QUESTIONS_PER_QUIZ, MIN_OPTIONS, TIME_LIMIT_MAX_SEC, TIME_LIMIT_MIN_SEC } from "@sorak/shared";
+import {
+  AiGenerateFromTextInput,
+  MAX_OPTIONS,
+  MAX_QUESTIONS_PER_QUIZ,
+  MIN_OPTIONS,
+  TIME_LIMIT_MAX_SEC,
+  TIME_LIMIT_MIN_SEC,
+  fieldErrors,
+} from "@sorak/shared";
+import { AiMaterialDialog, AiReview, type AiCount } from "../AiDrafts.tsx";
 import { AnswerTile, answerLetter } from "../AnswerOption.tsx";
 import { CheckMark } from "../CheckMark.tsx";
+import { AiRequestError, generateDrafts } from "../ai-api.ts";
+import { aiReducer, appendSelected, initialAiState, roomLeft, toReviewDrafts } from "../ai-draft.ts";
 import { ApiRequestError, createQuiz, describeError, getQuiz, updateQuiz } from "../api.ts";
 import {
   draftFromQuiz,
@@ -44,6 +55,16 @@ export function QuizEditorPage() {
   const [saveError, setSaveError] = useState<string | null>(null);
   // Soal yang sedang diedit (fokus terakhir), ditandai kapur di daftar soal kiri.
   const [activeKey, setActiveKey] = useState<string | null>(null);
+  // Draf soal AI. Materi dan jumlah soal disimpan di sini supaya tidak hilang saat dialog ditutup lalu dibuka lagi.
+  const [ai, dispatchAi] = useReducer(aiReducer, initialAiState);
+  const [aiOpen, setAiOpen] = useState(false);
+  const [sourceText, setSourceText] = useState("");
+  const [aiCount, setAiCount] = useState<AiCount>(5);
+  const [sourceError, setSourceError] = useState<string | undefined>(undefined);
+  const [waitingRetry, setWaitingRetry] = useState(false);
+  const aiRequest = useRef<AbortController | null>(null);
+
+  useEffect(() => () => aiRequest.current?.abort(), []);
 
   useEffect(() => {
     if (!id) return;
@@ -82,6 +103,63 @@ export function QuizEditorPage() {
   function changeQuestionList(questions: QuestionDraft[]) {
     editDraft({ questions });
     setErrors({});
+  }
+
+  async function handleGenerate() {
+    if (ai.quotaMessage) return;
+    const input = AiGenerateFromTextInput.safeParse({ sourceText, count: aiCount });
+    if (!input.success) {
+      setSourceError(fieldErrors(input.error.issues).sourceText ?? "Materi belum valid.");
+      return;
+    }
+    setSourceError(undefined);
+    const controller = new AbortController();
+    aiRequest.current = controller;
+    dispatchAi({ type: "start" });
+    try {
+      const response = await generateDrafts(input.data, controller.signal);
+      if (controller.signal.aborted) return;
+      dispatchAi({ type: "succeeded", drafts: toReviewDrafts(response.drafts, () => crypto.randomUUID()) });
+      setAiOpen(false);
+    } catch (error) {
+      // Batal: reducer sudah kembali ke idle, error abort tidak perlu ditampilkan.
+      if (controller.signal.aborted) return;
+      if (error instanceof ApiRequestError && error.code === "VALIDATION_FAILED") setSourceError(error.fields.sourceText);
+      dispatchAi({
+        type: "failed",
+        code: error instanceof ApiRequestError ? error.code : null,
+        message: describeError(error),
+        retryAfterSec: error instanceof AiRequestError ? error.retryAfterSec : null,
+        now: performance.now(),
+      });
+    } finally {
+      if (aiRequest.current === controller) aiRequest.current = null;
+    }
+  }
+
+  function cancelGenerate() {
+    aiRequest.current?.abort();
+    dispatchAi({ type: "cancel" });
+  }
+
+  function closeAiDialog() {
+    cancelGenerate();
+    setAiOpen(false);
+  }
+
+  function openAiDialog() {
+    if (ai.flow.kind === "added") dispatchAi({ type: "dismiss" });
+    setAiOpen(true);
+  }
+
+  function addAiDrafts() {
+    if (ai.flow.kind !== "review") return;
+    const selected = ai.flow.drafts.filter((item) => item.selected).length;
+    const questions = appendSelected(draft.questions, ai.flow.drafts, () => crypto.randomUUID());
+    const firstNumber = questions.length - selected + 1;
+    changeQuestionList(questions);
+    setActiveKey(questions[firstNumber - 1]?.key ?? null);
+    dispatchAi({ type: "added", count: selected, firstNumber });
   }
 
   /** Berhasil: kembali ke Kuis saya, yang menampilkan "tersimpan" dan menyorot baris kuis ini. Gagal: tetap di sini. */
@@ -197,6 +275,66 @@ export function QuizEditorPage() {
             />
             <FieldError id="quiz-description-error" message={errors.description} />
           </div>
+
+          <div className="ai-pembuka">
+            <button type="button" className="button" onClick={openAiDialog} disabled={ai.flow.kind === "review"}>
+              Buat dari materi
+            </button>
+            <p className="muted">
+              {ai.flow.kind === "review"
+                ? "Selesaikan draf di bawah dulu: tambahkan atau buang."
+                : "Tempel teks pelajaran; AI menyusun draf soal untuk kamu periksa."}
+            </p>
+          </div>
+
+          {aiOpen && (ai.flow.kind === "idle" || ai.flow.kind === "loading" || ai.flow.kind === "error") && (
+            <AiMaterialDialog
+              flow={ai.flow}
+              quotaMessage={ai.quotaMessage}
+              sourceText={sourceText}
+              count={aiCount}
+              sourceError={sourceError}
+              waitingRetry={waitingRetry}
+              onSourceText={(text) => {
+                setSourceText(text);
+                setSourceError(undefined);
+              }}
+              onCount={setAiCount}
+              onGenerate={handleGenerate}
+              onCancel={cancelGenerate}
+              onClose={closeAiDialog}
+              onWaitingRetry={setWaitingRetry}
+            />
+          )}
+
+          {ai.flow.kind === "review" && (
+            <AiReview
+              drafts={ai.flow.drafts}
+              room={roomLeft(draft.questions)}
+              onEdit={(key, patch) => dispatchAi({ type: "edit", key, patch })}
+              onAdd={addAiDrafts}
+              onDiscard={() => dispatchAi({ type: "discard" })}
+            />
+          )}
+
+          {ai.flow.kind === "added" && (
+            <div className="ai-ditambah" role="status">
+              <p className="notice">
+                <CheckMark />
+                {ai.flow.count} soal dari AI ditambahkan sebagai soal{" "}
+                <span className="ai-ditambah-nomor">
+                  {ai.flow.count === 1
+                    ? ai.flow.firstNumber
+                    : `${ai.flow.firstNumber}–${ai.flow.firstNumber + ai.flow.count - 1}`}
+                </span>
+                . Tekan Simpan supaya tersimpan.
+              </p>
+              <a href={`#soal-${ai.flow.firstNumber}`}>Lihat soalnya</a>
+              <button type="button" className="button button-teks" onClick={() => dispatchAi({ type: "dismiss" })}>
+                Tutup
+              </button>
+            </div>
+          )}
 
           <ol className="question-list">
             {draft.questions.map((question, index) => {

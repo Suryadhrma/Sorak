@@ -1602,6 +1602,280 @@ a.buku-baris-judul:hover {
   margin-left: auto;
 }
 
+/* Buat dari materi (Hari 6): pembuka, dialog materi, layar review draf AI, dan pesan setelah ditambahkan. */
+.ai-pembuka {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-3);
+}
+
+.ai-dialog {
+  width: min(48rem, 100% - 2 * var(--space-3));
+}
+
+.buku .ai-materi {
+  min-height: 12rem;
+  resize: vertical;
+  line-height: 1.5;
+}
+
+.ai-hitung {
+  margin: 0;
+  color: var(--color-muted);
+  font-size: var(--font-size-small);
+  font-variant-numeric: tabular-nums;
+}
+
+.ai-hitung-lewat {
+  color: var(--color-danger);
+  font-weight: 700;
+}
+
+.ai-jumlah {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.ai-jumlah > legend {
+  padding: 0;
+  margin-bottom: var(--space-2);
+  color: var(--color-muted);
+  font-size: var(--font-size-small);
+  font-weight: 700;
+}
+
+/* Pil pilihan jumlah: radio disembunyikan secara visual, pil itu sendiri penandanya (seperti Tandai benar). */
+.ai-jumlah-pil {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--tombol-guru);
+  padding: 0 var(--space-4);
+  border-radius: var(--radius-tombol-guru);
+  box-shadow: inset 0 0 0 2px var(--garis);
+  color: var(--color-muted);
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.ai-jumlah-pil input {
+  position: absolute;
+  opacity: 0;
+  width: 1px;
+  height: 1px;
+  margin: 0;
+}
+
+.ai-jumlah-pil:has(:checked) {
+  background: var(--tinta);
+  color: var(--kapur);
+  box-shadow: var(--shadow-alas-gelap);
+}
+
+.ai-jumlah-pil:has(:focus-visible) {
+  outline: 3px solid var(--color-focus);
+  outline-offset: 2px;
+}
+
+.ai-tunggu {
+  display: grid;
+  justify-items: center;
+  gap: var(--space-2);
+  padding: var(--space-5) var(--space-3);
+  text-align: center;
+}
+
+/* Turus menunggu di atas kertas: tinta, bukan kapur (kapur kuning kurang terbaca di latar terang), dan lebih besar. */
+.ai-tunggu .tally-waiting {
+  color: var(--tinta);
+  font-size: 3rem;
+}
+
+.ai-tunggu-teks {
+  font-size: var(--font-size-guru-sub);
+  font-weight: 800;
+}
+
+.ai-review {
+  display: grid;
+  gap: var(--space-4);
+  padding: var(--space-4);
+  border-radius: var(--radius-panel);
+  background: var(--kapur-muda);
+  box-shadow: inset 0 0 0 2px var(--tinta);
+}
+
+.ai-review-kepala {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.ai-review-kepala h2,
+.ai-review-kepala p {
+  margin: 0;
+}
+
+.ai-review-kepala h2 {
+  font-size: var(--font-size-guru-sub);
+  font-weight: 800;
+}
+
+.ai-draf > fieldset {
+  margin: 0;
+  padding: var(--space-3) var(--space-3) var(--space-4);
+  border: 0;
+  border-radius: var(--radius-kartu);
+  background: var(--kertas);
+  box-shadow: inset 0 0 0 2px var(--garis);
+  display: grid;
+  gap: var(--space-3);
+}
+
+.ai-draf > fieldset > legend {
+  padding: 0;
+  margin-bottom: var(--space-2);
+  font-family: var(--font-angka);
+  font-weight: 800;
+  font-size: var(--font-size-editor-nomor);
+  line-height: 1;
+}
+
+/* Draf yang tidak dicentang tetap bisa dibaca dan diedit, hanya diredupkan supaya jelas tidak ikut ditambahkan. */
+.ai-draf-dilewati > fieldset {
+  opacity: 0.7;
+}
+
+.ai-draf-pakai {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  justify-self: start;
+  min-height: var(--tap-target);
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.buku .ai-draf-pakai input {
+  width: 1.375rem;
+  min-height: 0;
+  height: 1.375rem;
+  padding: 0;
+  margin: 0;
+  box-shadow: none;
+  accent-color: var(--tinta);
+}
+
+.ai-draf-peringatan {
+  margin: 0;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-kecil);
+  box-shadow: inset 0 0 0 2px var(--color-danger);
+  color: var(--color-danger);
+  font-weight: 800;
+}
+
+.ai-draf .options {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  display: grid;
+  gap: var(--space-3);
+}
+
+.ai-draf .options > legend {
+  padding: 0;
+  margin-bottom: var(--space-2);
+  color: var(--color-muted);
+  font-size: var(--font-size-small);
+  font-weight: 700;
+}
+
+/* Draf AI selalu 4 pilihan tanpa tombol Hapus; tambah atau hapus pilihan dilakukan di editor setelah ditambahkan. */
+.option-row.ai-pilihan {
+  grid-template-columns: var(--ubin-pilihan) minmax(0, 1fr) var(--tandai-lebar);
+}
+
+.ai-bukti {
+  margin: 0;
+  display: grid;
+  gap: var(--space-1);
+  color: var(--color-muted);
+  font-size: var(--font-size-small);
+}
+
+.ai-bukti figcaption {
+  font-weight: 700;
+}
+
+.ai-bukti blockquote {
+  margin: 0;
+  padding-left: var(--space-3);
+  border-left: 3px solid var(--garis);
+  font-style: italic;
+  overflow-wrap: anywhere;
+}
+
+.ai-review-aksi {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.ai-review-catatan {
+  flex-basis: 100%;
+  text-align: right;
+}
+
+.ai-ditambah {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-3);
+}
+
+.ai-ditambah .notice {
+  font-weight: 700;
+}
+
+.ai-ditambah-nomor {
+  white-space: nowrap;
+}
+
+/* Centang ikut mengalir di awal kalimat, supaya di HP tidak jatuh ke baris sendiri. */
+.ai-ditambah .check-mark {
+  margin-right: var(--space-1);
+  vertical-align: -0.2em;
+}
+
+@media (max-width: 30rem) {
+  .ai-review {
+    padding: var(--space-3) var(--space-2);
+  }
+
+  .option-row.ai-pilihan {
+    grid-template-columns: var(--ubin-pilihan) minmax(0, 1fr);
+  }
+
+  .ai-review-catatan {
+    text-align: left;
+  }
+}
+
+/* Draf masuk berurutan, sedikit bergeser dari kiri; tanpa gerak cukup langsung tampil. */
+@media (prefers-reduced-motion: no-preference) {
+  .ai-draf {
+    animation: baris-masuk var(--gerak-baris) backwards;
+    animation-delay: calc(var(--urutan) * var(--gerak-baris-jeda) / 2);
+  }
+}
+
 .report-head h2,
 .report-prompt,
 .report-percent {

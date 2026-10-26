@@ -1,5 +1,6 @@
 import { DEFAULT_TIME_LIMIT_SEC, MIN_OPTIONS, QuizId, QuizInput, fieldErrors, type QuestionOrigin, type QuizDetail } from "@sorak/shared";
 import { z } from "zod";
+import { deriveOrigin, type GradedContent } from "./ai-draft.ts";
 
 /**
  * Bentuk form editor. Berbeda dari QuizInput karena form butuh `key` stabil untuk React
@@ -14,6 +15,11 @@ export type QuestionDraft = {
   timeLimitSec: number;
   explanation: string;
   origin: QuestionOrigin;
+  /**
+   * Isi asli soal AI (dari draf, atau dari server kalau origin-nya `ai`). Origin dihitung ulang saat simpan,
+   * jadi soal AI yang diubah di editor, termasuk setelah ditambahkan, tercatat `ai_edited`.
+   */
+  aiSource?: GradedContent;
 };
 
 export type QuizDraft = { title: string; description: string; questions: QuestionDraft[] };
@@ -49,6 +55,9 @@ export function draftFromQuiz(quiz: QuizDetail): QuizDraft {
       timeLimitSec: question.timeLimitSec,
       explanation: question.explanation ?? "",
       origin: question.origin,
+      ...(question.origin === "ai"
+        ? { aiSource: { prompt: question.prompt, options: [...question.options], correctIndex: question.correctIndex } }
+        : {}),
     })),
   };
 }
@@ -67,7 +76,7 @@ export function validateDraft(draft: QuizDraft): DraftValidation {
       correctIndex: question.correctIndex,
       timeLimitSec: question.timeLimitSec,
       explanation: nullIfBlank(question.explanation),
-      origin: question.origin,
+      origin: question.aiSource ? deriveOrigin(question.aiSource, question) : question.origin,
     })),
   });
   if (result.success) return { ok: true, input: result.data };

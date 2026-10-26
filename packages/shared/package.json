@@ -4,6 +4,7 @@
   "private": true,
   "description": "Kontrak bersama Sorak: protokol WebSocket, skema Zod, bentuk storage Durable Object, dan event Queue.",
   "type": "module",
+  "sideEffects": false,
   "exports": {
     ".": "./src/index.ts"
   },
