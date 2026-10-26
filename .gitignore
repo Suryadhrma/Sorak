@@ -5,3 +5,5 @@ dist
 .wrangler
 .dev.vars
 client_secret_*.json
+# Hasil --dry-run (output palsu) tidak di-commit; hasil evaluasi sungguhan di-commit.
+tools/ai-eval/results/*-dry-run.*

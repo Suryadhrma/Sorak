@@ -1,0 +1,19 @@
+{
+  "name": "ai-eval",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Evaluasi offline draf soal AI: materi contoh, panggilan Groq dengan jeda batas token per menit, dan laporan.",
+  "type": "module",
+  "scripts": {
+    "eval": "node --experimental-strip-types --disable-warning=ExperimentalWarning src/eval.ts",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@sorak/shared": "workspace:*"
+  },
+  "devDependencies": {
+    "typescript": "^7.0.2",
+    "vitest": "^4.1.11"
+  }
+}

@@ -1,0 +1,11 @@
+# Proklamasi Kemerdekaan Indonesia
+
+Pada awal Agustus 1945, posisi Jepang dalam Perang Dunia II semakin terdesak. Amerika Serikat menjatuhkan bom atom di kota Hiroshima pada 6 Agustus 1945 dan di kota Nagasaki pada 9 Agustus 1945. Pada 15 Agustus 1945, Jepang menyerah tanpa syarat kepada Sekutu. Berita kekalahan Jepang diketahui para pemuda Indonesia melalui siaran radio luar negeri, walaupun pemerintah pendudukan Jepang berusaha merahasiakannya.
+
+Kekalahan Jepang menimbulkan kekosongan kekuasaan di Indonesia. Golongan muda, antara lain Sukarni, Wikana, dan Chaerul Saleh, mendesak agar kemerdekaan segera diproklamasikan tanpa menunggu Jepang. Golongan tua, termasuk Soekarno dan Mohammad Hatta, ingin membicarakannya lebih dahulu dalam sidang Panitia Persiapan Kemerdekaan Indonesia atau PPKI. Perbedaan pendapat ini memuncak pada dini hari 16 Agustus 1945, ketika golongan muda membawa Soekarno dan Hatta ke Rengasdengklok, sebuah kota kecil di Karawang. Tujuannya menjauhkan kedua tokoh itu dari pengaruh Jepang. Peristiwa ini dikenal sebagai Peristiwa Rengasdengklok.
+
+Setelah tercapai kesepakatan bahwa proklamasi akan dilaksanakan secepatnya, Soekarno dan Hatta kembali ke Jakarta pada malam hari 16 Agustus 1945. Naskah proklamasi kemudian dirumuskan di rumah Laksamana Tadashi Maeda, seorang perwira Angkatan Laut Jepang, di Jalan Imam Bonjol Nomor 1. Soekarno menulis konsep naskah, sementara Hatta dan Achmad Soebardjo menyumbangkan gagasan. Naskah tulisan tangan itu lalu diketik oleh Sayuti Melik dengan beberapa perubahan, misalnya kata "wakil-wakil bangsa Indonesia" diganti menjadi "atas nama bangsa Indonesia". Naskah ketikan ditandatangani oleh Soekarno dan Hatta.
+
+Pada hari Jumat, 17 Agustus 1945, sekitar pukul 10.00 pagi, Soekarno membacakan teks proklamasi di halaman rumahnya, Jalan Pegangsaan Timur Nomor 56, Jakarta. Setelah pembacaan, bendera Merah Putih yang dijahit oleh Fatmawati dikibarkan oleh Latief Hendraningrat dan Suhud, diiringi lagu Indonesia Raya yang dinyanyikan bersama oleh para hadirin.
+
+Berita proklamasi disebarkan ke seluruh Indonesia dan ke luar negeri melalui berbagai cara, antara lain lewat pemancar radio, surat kabar, selebaran, dan kurir. Sehari kemudian, pada 18 Agustus 1945, PPKI bersidang dan mengesahkan Undang-Undang Dasar serta memilih Soekarno sebagai presiden dan Mohammad Hatta sebagai wakil presiden.

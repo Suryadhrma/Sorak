@@ -1,0 +1,13 @@
+# Sel: Unit Terkecil Kehidupan
+
+Semua makhluk hidup tersusun atas sel. Ada makhluk hidup yang hanya terdiri atas satu sel, seperti bakteri dan amoeba, dan ada yang tersusun atas miliaran sel, seperti manusia dan pohon mangga. Karena itu sel disebut sebagai unit struktural dan unit fungsional terkecil penyusun makhluk hidup.
+
+Sel pertama kali diamati oleh Robert Hooke pada tahun 1665. Ia melihat irisan tipis gabus melalui mikroskop sederhana dan menemukan ruang-ruang kecil yang mirip kamar. Ruang kecil itulah yang ia namai sel. Hampir dua abad kemudian, Matthias Schleiden meneliti jaringan tumbuhan dan Theodor Schwann meneliti jaringan hewan. Dari pengamatan keduanya lahir teori sel, yang menyatakan bahwa semua makhluk hidup tersusun atas sel.
+
+Berdasarkan ada atau tidaknya membran inti, sel dibedakan menjadi sel prokariotik dan sel eukariotik. Sel prokariotik tidak memiliki membran inti, sehingga materi genetiknya berada bebas di sitoplasma. Contohnya adalah sel bakteri. Sel eukariotik memiliki membran inti yang membungkus materi genetik. Sel hewan, sel tumbuhan, dan sel jamur termasuk sel eukariotik.
+
+Di dalam sel eukariotik terdapat organel, yaitu bagian-bagian kecil yang masing-masing memiliki tugas. Membran sel adalah lapisan tipis yang membungkus sel dan mengatur zat yang keluar dan masuk ke dalam sel. Inti sel atau nukleus menyimpan materi genetik berupa DNA dan mengendalikan seluruh kegiatan sel. Mitokondria menghasilkan energi melalui respirasi sel, sehingga sering dijuluki pembangkit tenaga sel. Ribosom adalah tempat sintesis protein. Retikulum endoplasma berperan dalam mengangkut zat di dalam sel, sedangkan badan Golgi mengemas dan mengirimkan zat hasil sel.
+
+Sel tumbuhan dan sel hewan memiliki beberapa perbedaan penting. Sel tumbuhan memiliki dinding sel dari selulosa yang membuat bentuknya tetap dan kaku, sedangkan sel hewan tidak memiliki dinding sel sehingga bentuknya lebih bervariasi. Sel tumbuhan memiliki kloroplas, yaitu organel yang mengandung klorofil dan menjadi tempat fotosintesis. Sel hewan tidak memiliki kloroplas. Vakuola pada sel tumbuhan berukuran besar dan biasanya hanya satu, sedangkan sel hewan memiliki vakuola kecil atau tidak memilikinya sama sekali. Sebaliknya, sel hewan memiliki sentriol yang berperan saat pembelahan sel, yang umumnya tidak ditemukan pada sel tumbuhan tingkat tinggi.
+
+Sel-sel yang memiliki bentuk dan fungsi sama berkumpul membentuk jaringan. Beberapa jaringan bekerja sama membentuk organ, misalnya jantung atau daun. Organ-organ yang bekerja sama membentuk sistem organ, dan seluruh sistem organ membentuk satu organisme utuh.

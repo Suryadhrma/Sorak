@@ -2,7 +2,7 @@ import { z } from "zod";
 import { AI_REQUEST_TIMEOUT_MS } from "@sorak/shared";
 import type { ChatMessage, ResponseFormat } from "./prompt.ts";
 
-const GROQ_CHAT_URL = "https://api.groq.com/openai/v1/chat/completions";
+export const GROQ_CHAT_URL = "https://api.groq.com/openai/v1/chat/completions";
 const DEFAULT_RETRY_AFTER_SEC = 30;
 
 export type Usage = { inputTokens: number; outputTokens: number };
@@ -24,19 +24,37 @@ function retryAfterSec(header: string | null): number {
   return header !== null && Number.isFinite(seconds) && seconds > 0 ? Math.ceil(seconds) : DEFAULT_RETRY_AFTER_SEC;
 }
 
-export async function callGroq(
-  { apiKey, model }: { apiKey: string; model: string },
-  { messages, responseFormat }: { messages: ChatMessage[]; responseFormat: ResponseFormat },
-): Promise<GroqResult> {
+export type GroqCredentials = { apiKey: string; model: string };
+export type GroqPrompt = { messages: ChatMessage[]; responseFormat: ResponseFormat };
+
+/**
+ * Request ke Groq. Diekspor supaya skrip evaluasi (tools/ai-eval) mengirim request yang persis sama dengan Worker,
+ * termasuk batas waktunya: jawaban yang lebih lambat dari itu juga gagal di produksi.
+ */
+export function groqRequestInit({ apiKey, model }: GroqCredentials, { messages, responseFormat }: GroqPrompt): RequestInit {
+  return {
+    method: "POST",
+    headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+    body: JSON.stringify({ model, messages, response_format: responseFormat, temperature: 0.4 }),
+    // Menunggu Groq adalah I/O, bukan CPU Worker; batas ini supaya guru tidak menunggu tanpa ujung.
+    signal: AbortSignal.timeout(AI_REQUEST_TIMEOUT_MS),
+  };
+}
+
+/** Isi jawaban dan pemakaian token dari body 200 Groq, atau null kalau bentuknya bukan chat completion. */
+export function readCompletion(body: unknown): { content: string; usage: Usage } | null {
+  const completion = ChatCompletion.safeParse(body);
+  if (!completion.success) return null;
+  const [choice] = completion.data.choices;
+  if (!choice) return null;
+  const { prompt_tokens, completion_tokens } = completion.data.usage;
+  return { content: choice.message.content, usage: { inputTokens: prompt_tokens, outputTokens: completion_tokens } };
+}
+
+export async function callGroq(credentials: GroqCredentials, prompt: GroqPrompt): Promise<GroqResult> {
   let res: Response;
   try {
-    res = await fetch(GROQ_CHAT_URL, {
-      method: "POST",
-      headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
-      body: JSON.stringify({ model, messages, response_format: responseFormat, temperature: 0.4 }),
-      // Menunggu Groq adalah I/O, bukan CPU Worker; batas ini supaya guru tidak menunggu tanpa ujung.
-      signal: AbortSignal.timeout(AI_REQUEST_TIMEOUT_MS),
-    });
+    res = await fetch(GROQ_CHAT_URL, groqRequestInit(credentials, prompt));
   } catch (error) {
     const reason = error instanceof DOMException && error.name === "TimeoutError" ? "timeout" : "network";
     return { kind: "failed", reason };
@@ -52,10 +70,6 @@ export async function callGroq(
   } catch {
     return { kind: "failed", reason: "body_not_json" };
   }
-  const completion = ChatCompletion.safeParse(body);
-  if (!completion.success) return { kind: "failed", reason: "unexpected_shape" };
-  const [choice] = completion.data.choices;
-  if (!choice) return { kind: "failed", reason: "unexpected_shape" };
-  const { prompt_tokens, completion_tokens } = completion.data.usage;
-  return { kind: "ok", content: choice.message.content, usage: { inputTokens: prompt_tokens, outputTokens: completion_tokens } };
+  const completion = readCompletion(body);
+  return completion ? { kind: "ok", ...completion } : { kind: "failed", reason: "unexpected_shape" };
 }

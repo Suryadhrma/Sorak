@@ -1,0 +1,9 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    // DOM untuk fetch, Response, dan console; API Node yang dipakai dideklarasikan di src/node.d.ts.
+    "lib": ["ES2022", "DOM"],
+    "types": []
+  },
+  "include": ["src", "test"]
+}
