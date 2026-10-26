@@ -7,5 +7,7 @@ declare namespace Cloudflare {
     TEST_GAME_EVENTS_CONSUMER: unknown;
     GOOGLE_CLIENT_ID: string;
     JWT_SECRET: string;
+    // Secret opsional, jadi tidak ikut `wrangler types` kalau belum ada di .dev.vars; nilai test di vitest.config.ts.
+    GROQ_API_KEY: string;
   }
 }

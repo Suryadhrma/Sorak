@@ -29,7 +29,7 @@ async function readQuizInput(c: Context<QuizEnv>): Promise<QuizInput | Response>
   }
   const input = QuizInput.safeParse(body);
   if (!input.success) {
-    return apiError(c, 400, "VALIDATION_FAILED", "Isi kuis belum valid", fieldErrors(input.error.issues));
+    return apiError(c, 400, "VALIDATION_FAILED", "Isi kuis belum valid", { fields: fieldErrors(input.error.issues) });
   }
   return input.data;
 }

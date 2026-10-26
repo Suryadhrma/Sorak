@@ -3,11 +3,15 @@
   "name": "sorak",
   "main": "src/index.ts",
   "compatibility_date": "2026-08-22",
-  // Lokal ditimpa .dev.vars. GOOGLE_CLIENT_SECRET dan JWT_SECRET lewat wrangler secret put.
+  // Lokal ditimpa .dev.vars. GOOGLE_CLIENT_SECRET, JWT_SECRET, dan GROQ_API_KEY lewat wrangler secret put.
   "vars": {
     "APP_ORIGIN": "https://sorak.helpu.workers.dev",
     // Client ID memang publik: ikut di URL login Google.
-    "GOOGLE_CLIENT_ID": "1094752542047-easm89psmopsfrbqe2fv515eogg1udno.apps.googleusercontent.com"
+    "GOOGLE_CLIENT_ID": "1094752542047-easm89psmopsfrbqe2fv515eogg1udno.apps.googleusercontent.com",
+    // ID model Groq di konfigurasi, bukan kode: kalau Groq menghentikan model, cukup ganti di sini.
+    // Dicek 26 Okt 2026 di console.groq.com/docs (keduanya mendukung Structured Outputs strict).
+    "GROQ_TEXT_MODEL": "openai/gpt-oss-120b",
+    "GROQ_VISION_MODEL": "qwen/qwen3.8-27b"
   },
   "assets": {
     "directory": "../web/dist",

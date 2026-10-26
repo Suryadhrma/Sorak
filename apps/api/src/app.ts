@@ -2,6 +2,7 @@ import { Hono } from "hono";
 import { csrf } from "hono/csrf";
 import { HTTPException } from "hono/http-exception";
 import { z } from "zod";
+import { aiRoutes } from "./ai-routes.ts";
 import { apiError } from "./api-error.ts";
 import { authRoutes } from "./auth.ts";
 import { gameRoutes } from "./game-routes.ts";
@@ -31,6 +32,8 @@ app.route("/api/auth", authRoutes);
 app.get("/api/me", requireHost, (c) => c.json(c.var.host));
 
 app.route("/api/quizzes", quizRoutes);
+
+app.route("/api/ai", aiRoutes);
 
 app.route("/api/games", gameRoutes);
 

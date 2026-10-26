@@ -61,7 +61,7 @@ roomRoutes.post("/", requireHost, async (c) => {
     throw error;
   }
   const input = CreateRoomInput.safeParse(body);
-  if (!input.success) return apiError(c, 400, "VALIDATION_FAILED", "Kuis belum dipilih", fieldErrors(input.error.issues));
+  if (!input.success) return apiError(c, 400, "VALIDATION_FAILED", "Kuis belum dipilih", { fields: fieldErrors(input.error.issues) });
 
   // Kuis milik host lain dijawab sama dengan kuis yang tidak ada.
   const quiz = await findQuiz(c.env.DB, c.var.host.id, input.data.quizId);

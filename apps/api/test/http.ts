@@ -5,8 +5,9 @@ import { app } from "../src/app.ts";
 /** Sama dengan APP_ORIGIN di vitest.config.ts. */
 export const ORIGIN = "https://sorak.test";
 
-export function request(path: string, init?: RequestInit) {
-  return app.request(`${ORIGIN}${path}`, init, env);
+/** `bindings` menimpa env test, misalnya untuk menguji secret yang tidak ada. */
+export function request(path: string, init?: RequestInit, bindings: Env = env) {
+  return app.request(`${ORIGIN}${path}`, init, bindings);
 }
 
 /** Nilai cookie dari header Set-Cookie, beserta atributnya. */
@@ -34,12 +35,12 @@ export async function signedInHost() {
   const token = await sign({ sub: id, sv: 0, exp: Math.floor(Date.now() / 1000) + 3600 }, env.JWT_SECRET, "HS256");
   const send = (
     path: string,
-    init: { method?: string; json?: unknown; body?: string; headers?: Record<string, string> } = {},
+    init: { method?: string; json?: unknown; body?: string; headers?: Record<string, string>; bindings?: Env } = {},
   ) => {
     const headers: Record<string, string> = { Cookie: `sorak_session=${token}`, Origin: ORIGIN, ...init.headers };
     if (init.json !== undefined || init.body !== undefined) headers["Content-Type"] = "application/json";
     const body = init.body ?? (init.json === undefined ? undefined : JSON.stringify(init.json));
-    return request(path, { method: init.method ?? "GET", headers, body });
+    return request(path, { method: init.method ?? "GET", headers, body }, init.bindings);
   };
   return { id, send };
 }

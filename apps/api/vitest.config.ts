@@ -66,6 +66,8 @@ export default defineConfig(async () => {
             GOOGLE_CLIENT_ID: "test-client.apps.googleusercontent.com",
             GOOGLE_CLIENT_SECRET: "test-client-secret",
             JWT_SECRET: "test-jwt-secret-0123456789abcdefghijklmnop",
+            // Groq di-mock lewat globalThis.fetch; key ini tidak pernah sampai ke Groq.
+            GROQ_API_KEY: "test-groq-key",
           },
           workers: [
             {
